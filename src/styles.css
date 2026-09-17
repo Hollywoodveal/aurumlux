@@ -34,6 +34,7 @@
   --color-gold-deep: var(--gold-deep);
   --color-ivory: var(--ivory);
   --color-shelf: var(--shelf);
+  --color-scrim: var(--scrim);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -77,10 +78,108 @@
   --chart-4: oklch(0.9 0.06 90);
   --chart-5: oklch(0.4 0.05 78);
 
+  --scrim: oklch(0 0 0 / 70%);
+
   --gradient-gold: linear-gradient(135deg, oklch(0.9 0.09 92), oklch(0.72 0.13 84) 45%, oklch(0.55 0.08 80));
   --gradient-shelf: linear-gradient(180deg, oklch(0.17 0.006 60), oklch(0.1 0.004 60));
   --shadow-lux: 0 18px 45px -18px oklch(0 0 0 / 85%);
   --shadow-gold: 0 0 24px -6px oklch(0.82 0.132 87 / 28%);
+  --shadow-plank: 0 10px 24px -14px oklch(0 0 0 / 90%);
+}
+
+/*
+ * Neutral — the sepia paper tone in the middle, matching the reader's own sepia.
+ * `--ivory` and `--gold` are deliberately inverted into dark, saturated values:
+ * the components use `text-ivory` for headings and `text-gold` for body accents,
+ * so on a pale ground those tokens have to carry the contrast.
+ */
+:root[data-theme="neutral"] {
+  color-scheme: light;
+
+  --background: oklch(0.925 0.028 85);
+  --foreground: oklch(0.33 0.028 58);
+  --card: oklch(0.955 0.024 85);
+  --card-foreground: oklch(0.33 0.028 58);
+  --popover: oklch(0.955 0.024 85);
+  --popover-foreground: oklch(0.33 0.028 58);
+  --primary: oklch(0.5 0.11 78);
+  --primary-foreground: oklch(0.98 0.012 85);
+  --secondary: oklch(0.885 0.03 85);
+  --secondary-foreground: oklch(0.31 0.03 58);
+  --muted: oklch(0.895 0.028 85);
+  --muted-foreground: oklch(0.47 0.03 66);
+  --accent: oklch(0.865 0.04 82);
+  --accent-foreground: oklch(0.32 0.045 74);
+  --destructive: oklch(0.5 0.2 25);
+  --destructive-foreground: oklch(0.98 0.01 85);
+  --border: oklch(0.5 0.055 78 / 32%);
+  --input: oklch(0.52 0.05 78 / 45%);
+  --ring: oklch(0.5 0.11 78 / 60%);
+
+  --gold: oklch(0.5 0.105 76);
+  --gold-dim: oklch(0.6 0.085 78);
+  --gold-deep: oklch(0.36 0.075 70);
+  --ivory: oklch(0.29 0.03 56);
+  --shelf: oklch(0.895 0.03 85);
+
+  --chart-1: oklch(0.55 0.115 78);
+  --chart-2: oklch(0.63 0.095 82);
+  --chart-3: oklch(0.42 0.08 72);
+  --chart-4: oklch(0.71 0.075 86);
+  --chart-5: oklch(0.34 0.06 68);
+
+  --scrim: oklch(0.26 0.03 58 / 48%);
+
+  --gradient-gold: linear-gradient(135deg, oklch(0.6 0.11 88), oklch(0.5 0.12 78) 45%, oklch(0.4 0.09 72));
+  --gradient-shelf: linear-gradient(180deg, oklch(0.94 0.026 85), oklch(0.88 0.032 85));
+  --shadow-lux: 0 18px 45px -20px oklch(0.35 0.04 60 / 28%);
+  --shadow-gold: 0 0 24px -6px oklch(0.5 0.11 78 / 32%);
+  --shadow-plank: 0 10px 24px -16px oklch(0.35 0.04 60 / 32%);
+}
+
+/* Light — warm cream paper, same gold pushed darker so it still reads. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --background: oklch(0.975 0.012 85);
+  --foreground: oklch(0.26 0.018 60);
+  --card: oklch(0.995 0.006 85);
+  --card-foreground: oklch(0.26 0.018 60);
+  --popover: oklch(0.995 0.006 85);
+  --popover-foreground: oklch(0.26 0.018 60);
+  --primary: oklch(0.52 0.11 80);
+  --primary-foreground: oklch(0.99 0.008 85);
+  --secondary: oklch(0.93 0.016 85);
+  --secondary-foreground: oklch(0.28 0.018 60);
+  --muted: oklch(0.94 0.014 85);
+  --muted-foreground: oklch(0.48 0.022 70);
+  --accent: oklch(0.9 0.03 84);
+  --accent-foreground: oklch(0.3 0.04 76);
+  --destructive: oklch(0.52 0.2 25);
+  --destructive-foreground: oklch(0.99 0.008 85);
+  --border: oklch(0.52 0.05 80 / 30%);
+  --input: oklch(0.55 0.04 80 / 42%);
+  --ring: oklch(0.52 0.11 80 / 60%);
+
+  --gold: oklch(0.52 0.105 78);
+  --gold-dim: oklch(0.62 0.085 80);
+  --gold-deep: oklch(0.38 0.075 72);
+  --ivory: oklch(0.24 0.018 58);
+  --shelf: oklch(0.94 0.016 85);
+
+  --chart-1: oklch(0.57 0.115 80);
+  --chart-2: oklch(0.65 0.095 84);
+  --chart-3: oklch(0.44 0.08 74);
+  --chart-4: oklch(0.73 0.075 88);
+  --chart-5: oklch(0.36 0.06 70);
+
+  --scrim: oklch(0.28 0.02 60 / 45%);
+
+  --gradient-gold: linear-gradient(135deg, oklch(0.62 0.11 90), oklch(0.52 0.12 80) 45%, oklch(0.42 0.09 74));
+  --gradient-shelf: linear-gradient(180deg, oklch(0.985 0.01 85), oklch(0.93 0.018 85));
+  --shadow-lux: 0 18px 45px -20px oklch(0.35 0.03 60 / 22%);
+  --shadow-gold: 0 0 24px -6px oklch(0.52 0.11 80 / 30%);
+  --shadow-plank: 0 10px 24px -16px oklch(0.35 0.03 60 / 26%);
 }
 
 @layer base {
@@ -120,8 +219,8 @@
 @utility shelf-plank {
   background: var(--gradient-shelf);
   box-shadow:
-    inset 0 1px 0 oklch(0.82 0.132 87 / 18%),
-    0 10px 24px -14px oklch(0 0 0 / 90%);
+    inset 0 1px 0 color-mix(in oklab, var(--gold) 20%, transparent),
+    var(--shadow-plank);
 }
 
 @utility shadow-lux {
@@ -133,7 +232,7 @@
 }
 
 @utility hairline-gold {
-  border: 1px solid oklch(0.82 0.132 87 / 28%);
+  border: 1px solid color-mix(in oklab, var(--gold) 30%, transparent);
 }
 
 @utility no-scrollbar {

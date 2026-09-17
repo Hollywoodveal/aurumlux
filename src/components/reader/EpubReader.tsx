@@ -11,10 +11,13 @@ import {
   READER_FONTS,
   highlightAlphas,
   resolveFont,
+  resolveReaderTheme,
   THEME_COLORS,
   type ReaderPrefs,
   type ReaderTheme,
+  type ReaderThemeChoice,
 } from "@/lib/reader-prefs";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { ReadAloudBar, speechSupported, type ReadAloudControls } from "@/components/reader/ReadAloudBar";
 import { DictionarySheet } from "@/components/reader/DictionarySheet";
 import { SpokenHighlighter } from "@/lib/spoken-highlight";
@@ -23,7 +26,7 @@ import { SpokenHighlighter } from "@/lib/spoken-highlight";
 
 
 export { DEFAULT_PREFS };
-export type { ReaderPrefs, ReaderTheme };
+export type { ReaderPrefs, ReaderTheme, ReaderThemeChoice };
 
 export function ReaderSettings({
   prefs,
@@ -39,10 +42,11 @@ export function ReaderSettings({
   /** Shows the tap-to-read-aloud toggle (EPUB reader only). */
   showTapToRead?: boolean;
 }) {
+  const appTheme = useAppTheme();
 
   return (
     <div className="fixed inset-0 z-50 flex items-end">
-      <button aria-label="Close settings" onClick={onClose} className="absolute inset-0 bg-black/70" />
+      <button aria-label="Close settings" onClick={onClose} className="absolute inset-0 bg-scrim" />
       <div className="animate-rise pb-safe px-safe relative max-h-[88vh] w-full overflow-y-auto rounded-t-3xl border-t border-gold/25 bg-card py-5">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-xl text-gold">Reading</h3>
@@ -51,22 +55,29 @@ export function ReaderSettings({
           </button>
         </div>
 
-        <p className="mt-5 text-xs uppercase tracking-[0.16em] text-muted-foreground">Theme</p>
+        <p className="mt-5 text-xs uppercase tracking-[0.16em] text-muted-foreground">Page colour</p>
         <div className="mt-2 flex gap-2">
-          {(["light", "dark", "sepia"] as ReaderTheme[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => onChange({ ...prefs, theme: t })}
-              className={cn(
-                "min-h-11 flex-1 rounded-lg border py-2 text-sm capitalize",
-                prefs.theme === t ? "border-gold/60 text-gold" : "border-border text-muted-foreground",
-              )}
-              style={{ background: THEME_COLORS[t].bg, color: THEME_COLORS[t].fg }}
-            >
-              {t}
-            </button>
-          ))}
+          {(["auto", "light", "sepia", "dark"] as ReaderThemeChoice[]).map((t) => {
+            // "Auto" previews whatever the app theme currently resolves to.
+            const preview = THEME_COLORS[resolveReaderTheme(t, appTheme)];
+            return (
+              <button
+                key={t}
+                onClick={() => onChange({ ...prefs, theme: t })}
+                className={cn(
+                  "min-h-11 flex-1 rounded-lg border py-2 text-sm capitalize",
+                  prefs.theme === t ? "border-gold/60 ring-1 ring-gold/40" : "border-border",
+                )}
+                style={{ background: preview.bg, color: preview.fg }}
+              >
+                {t}
+              </button>
+            );
+          })}
         </div>
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Auto follows the theme you picked in Settings.
+        </p>
 
         {showFonts ? (
           <>
@@ -280,6 +291,8 @@ export function EpubReader({
   const hostRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<any>(null);
   const renditionRef = useRef<any>(null);
+  // Page colour actually painted: the per-book override, or the app theme when "auto".
+  const readerTheme = resolveReaderTheme(prefs.theme, useAppTheme());
   const [toc, setToc] = useState<{ label: string; href: string }[]>([]);
   const [panel, setPanel] = useState<null | "toc" | "settings" | "search" | "notes">(null);
   /** Word sent to the dictionary sheet, or null when it is closed. */
@@ -485,7 +498,7 @@ export function EpubReader({
   useEffect(() => {
     const rendition = renditionRef.current;
     if (!rendition || !ready) return;
-    const colors = THEME_COLORS[prefs.theme];
+    const colors = THEME_COLORS[readerTheme];
     const alphas = highlightAlphas(prefs.highlightIntensity);
     const font = resolveFont(prefs, book.fontOverride);
 
@@ -522,7 +535,7 @@ export function EpubReader({
 
     rendition.themes.select("aurum");
     rendition.themes.fontSize(`${prefs.fontSize}%`);
-  }, [prefs, ready, book.fontOverride]);
+  }, [prefs, readerTheme, ready, book.fontOverride]);
 
   const addBookmark = useCallback(async () => {
     const location = renditionRef.current?.currentLocation?.();
@@ -838,7 +851,7 @@ export function EpubReader({
 
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ background: THEME_COLORS[prefs.theme].bg }}>
+    <div className="fixed inset-0 flex flex-col" style={{ background: THEME_COLORS[readerTheme].bg }}>
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
         <button onClick={onBack} aria-label="Back to library" className="flex size-11 items-center justify-center text-gold">
           <ChevronLeft className="size-5" />
@@ -971,7 +984,7 @@ export function EpubReader({
           <button
             aria-label="Close panel"
             onClick={() => setPanel(null)}
-            className="absolute inset-0 bg-black/70"
+            className="absolute inset-0 bg-scrim"
           />
           <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
             <div className="flex items-center justify-between">

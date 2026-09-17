@@ -1,9 +1,34 @@
 /** Shared reader preferences, used by the EPUB, TXT and comic readers. */
 
+import type { AppTheme } from "@/lib/theme";
+
+/** The concrete page colours a reader can render. */
 export type ReaderTheme = "light" | "dark" | "sepia";
 
+/**
+ * What the reader's theme control is set to. `"auto"` — the default — defers to
+ * the app-wide theme, so choosing Light in Settings lightens the reader too; the
+ * concrete values are an explicit override for one book's reading session.
+ */
+export type ReaderThemeChoice = ReaderTheme | "auto";
+
+/** Which page colour each app theme implies. Neutral is the reader's sepia. */
+const APP_THEME_TO_READER: Record<AppTheme, ReaderTheme> = {
+  light: "light",
+  neutral: "sepia",
+  dark: "dark",
+};
+
+/** Collapse a possibly-`"auto"` choice into the page colour to actually paint. */
+export function resolveReaderTheme(
+  choice: ReaderThemeChoice,
+  appTheme: AppTheme,
+): ReaderTheme {
+  return choice === "auto" ? APP_THEME_TO_READER[appTheme] : choice;
+}
+
 export type ReaderPrefs = {
-  theme: ReaderTheme;
+  theme: ReaderThemeChoice;
   fontSize: number;
   lineHeight: number;
   margin: number;
@@ -27,7 +52,7 @@ export type ReaderPrefs = {
 };
 
 export const DEFAULT_PREFS: ReaderPrefs = {
-  theme: "dark",
+  theme: "auto",
   fontSize: 105,
   lineHeight: 1.6,
   margin: 20,
@@ -48,8 +73,8 @@ export function highlightAlphas(intensity: number) {
   return { word: strength, passage: strength * 0.28 };
 }
 
-
-export const DYSLEXIC_FONT = '"Atkinson Hyperlegible", "Verdana", system-ui, sans-serif';
+export const DYSLEXIC_FONT =
+  '"Atkinson Hyperlegible", "Verdana", system-ui, sans-serif';
 
 export const READER_FONTS = [
   { label: "Serif", value: "Georgia, serif" },
@@ -71,6 +96,8 @@ export function resolveFont(prefs: ReaderPrefs, fontOverride?: string | null) {
   return fontOverride || prefs.fontFamily;
 }
 
-export function withPrefDefaults(p: Partial<ReaderPrefs> | undefined | null): ReaderPrefs {
+export function withPrefDefaults(
+  p: Partial<ReaderPrefs> | undefined | null,
+): ReaderPrefs {
   return { ...DEFAULT_PREFS, ...(p ?? {}) };
 }

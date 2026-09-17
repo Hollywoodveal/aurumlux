@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { getFile, putAnnotation, uid, type Annotation, type BookMeta } from "@/lib/db";
 import { ReaderSettings, type ReaderPrefs } from "./EpubReader";
 import { ReadAloudBar } from "./ReadAloudBar";
+import { resolveReaderTheme } from "@/lib/reader-prefs";
+import { useAppTheme } from "@/hooks/useAppTheme";
 
 const THEME_BG: Record<string, string> = {
   light: "#faf8f4",
@@ -39,6 +41,8 @@ export function PdfReader({
   /** Live daily-target control, docked into the bottom bar. */
   goalHud?: React.ReactNode;
 }) {
+  // Page colour actually painted: the per-book override, or the app theme when "auto".
+  const readerTheme = resolveReaderTheme(prefs.theme, useAppTheme());
   const scrollRef = useRef<HTMLDivElement>(null);
   const docRef = useRef<any>(null);
   const [numPages, setNumPages] = useState(0);
@@ -172,7 +176,7 @@ export function PdfReader({
   }, [page, numPages]);
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ background: THEME_BG[prefs.theme] }}>
+    <div className="fixed inset-0 flex flex-col" style={{ background: THEME_BG[readerTheme] }}>
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
         <button onClick={onBack} aria-label="Back to library" className="p-2 text-gold">
           <ChevronLeft className="size-5" />
@@ -203,7 +207,7 @@ export function PdfReader({
             pageNumber={n}
             render={renderPage}
             onVisible={() => setPage(n)}
-            filter={FILTER[prefs.theme] ?? "none"}
+            filter={FILTER[readerTheme] ?? "none"}
           />
         ))}
         {numPages === 0 ? (
@@ -250,7 +254,7 @@ export function PdfReader({
 
       {panel === "search" || panel === "notes" ? (
         <div className="fixed inset-0 z-50 flex">
-          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-black/70" />
+          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-scrim" />
           <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-xl capitalize text-gold">{panel}</h3>

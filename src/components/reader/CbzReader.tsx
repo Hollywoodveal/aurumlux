@@ -5,7 +5,8 @@ import { Bookmark, ChevronLeft, ChevronRight, Maximize2, Minimize2, X } from "lu
 import { toast } from "sonner";
 import { getFile, putAnnotation, uid, type Annotation, type BookMeta } from "@/lib/db";
 import { ReaderSettings, type ReaderPrefs } from "./EpubReader";
-import { THEME_COLORS, withPrefDefaults } from "@/lib/reader-prefs";
+import { THEME_COLORS, resolveReaderTheme, withPrefDefaults } from "@/lib/reader-prefs";
+import { useAppTheme } from "@/hooks/useAppTheme";
 
 type ComicPage = { name: string; entry: any };
 
@@ -37,7 +38,7 @@ export function CbzReader({
   const [url, setUrl] = useState<string | null>(null);
   const urlCache = useRef<Map<number, string>>(new Map());
 
-  const theme = THEME_COLORS[prefs.theme] ?? THEME_COLORS.dark;
+  const theme = THEME_COLORS[resolveReaderTheme(prefs.theme, useAppTheme())] ?? THEME_COLORS.dark;
 
   useEffect(() => {
     let destroyed = false;
@@ -252,7 +253,7 @@ export function CbzReader({
 
       {panel === "notes" ? (
         <div className="fixed inset-0 z-50 flex">
-          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-black/70" />
+          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-scrim" />
           <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-xl text-gold">Notes</h3>

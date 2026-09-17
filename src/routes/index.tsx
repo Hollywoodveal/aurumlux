@@ -311,7 +311,7 @@ function LibraryPage() {
   const reading = books.filter((b) => b.status === "reading").sort((a, b) => b.lastOpened - a.lastOpened);
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-3xl pb-24 px-safe pt-safe">
+    <main className="mx-auto min-h-dvh w-full max-w-3xl pb-24 px-safe pt-safe lg:max-w-6xl">
       <header className="flex items-start justify-between">
         <div>
           <h1 className="font-display text-4xl leading-none text-gradient-gold">

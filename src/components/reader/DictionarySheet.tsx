@@ -57,7 +57,7 @@ export function DictionarySheet({ word, onClose }: { word: string; onClose: () =
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end">
-      <button aria-label="Close dictionary" onClick={onClose} className="absolute inset-0 bg-black/70" />
+      <button aria-label="Close dictionary" onClick={onClose} className="absolute inset-0 bg-scrim" />
       <div className="pb-safe px-safe-sm relative max-h-[70svh] w-full overflow-y-auto rounded-t-2xl border-t border-gold/25 bg-card pt-4">
         <div className="flex items-start justify-between gap-3 px-4">
           <div>

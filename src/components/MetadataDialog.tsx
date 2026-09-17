@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { CoverEditor } from "@/components/CoverEditor";
+import { StarRating } from "@/components/StarRating";
 import { type BookMeta } from "@/lib/db";
 import { useBookMutations } from "@/hooks/useLibrary";
 import { recountPages, refetchCover, refetchMetadata } from "@/lib/importer";
@@ -273,23 +274,11 @@ export function MetadataDialog({
                 {isLocked("rating") ? "Locked" : "Lock"}
               </button>
             </div>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setDraft((d) => ({ ...d, rating: d.rating === n ? 0 : n }))}
-                  className={cn(
-                    "size-9 rounded-full border text-sm",
-                    draft.rating >= n
-                      ? "border-gold/60 bg-gold/15 text-gold"
-                      : "border-border text-muted-foreground",
-                  )}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
+            <StarRating
+              value={draft.rating}
+              size="lg"
+              onChange={(rating) => setDraft((d) => ({ ...d, rating }))}
+            />
           </div>
 
           <div className="space-y-1.5">

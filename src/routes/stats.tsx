@@ -205,7 +205,7 @@ function StatsPage() {
   // be rendered after hydration without an SSR text mismatch.
   if (!hydrated) {
     return (
-      <main className="mx-auto min-h-dvh w-full max-w-3xl px-safe pt-safe">
+      <main className="mx-auto min-h-dvh w-full max-w-3xl px-safe pt-safe lg:max-w-5xl">
         <header className="flex items-center gap-2">
           <Link to="/" aria-label="Back to library" className="rounded-full border border-gold/25 p-2 text-gold">
             <ChevronLeft className="size-4" />
@@ -218,7 +218,7 @@ function StatsPage() {
 
   return (
 
-    <main className="mx-auto min-h-dvh w-full max-w-3xl pb-16 px-safe pt-safe">
+    <main className="mx-auto min-h-dvh w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-5xl">
       <header className="flex items-center gap-2">
         <Link to="/" aria-label="Back to library" className="rounded-full border border-gold/25 p-2 text-gold">
           <ChevronLeft className="size-4" />
@@ -226,7 +226,7 @@ function StatsPage() {
         <h1 className="font-display text-3xl text-gradient-gold">Statistics</h1>
       </header>
 
-      <section className="mt-6 grid grid-cols-2 gap-3">
+      <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           ["Books", books.length],
           ["Finished", stats.finished.length],

@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { getFile, putAnnotation, uid, type Annotation, type BookMeta } from "@/lib/db";
 import { ReaderSettings, type ReaderPrefs } from "./EpubReader";
 import { ReadAloudBar } from "./ReadAloudBar";
-import { THEME_COLORS, resolveFont, withPrefDefaults } from "@/lib/reader-prefs";
+import { THEME_COLORS, resolveFont, resolveReaderTheme, withPrefDefaults } from "@/lib/reader-prefs";
+import { useAppTheme } from "@/hooks/useAppTheme";
 
 /** Find a whitespace-normalised passage inside the raw text, from `from` onward. */
 function findPassage(hay: string, passage: string, from: number): number {
@@ -55,7 +56,7 @@ export function TxtReader({
   textRef.current = text;
 
   const fullPrefs = withPrefDefaults(prefs);
-  const theme = THEME_COLORS[fullPrefs.theme] ?? THEME_COLORS.dark;
+  const theme = THEME_COLORS[resolveReaderTheme(fullPrefs.theme, useAppTheme())] ?? THEME_COLORS.dark;
   const font = resolveFont(fullPrefs, book.fontOverride);
 
   /** Scroll a character range into comfortable view (auto page-turn while reading). */
@@ -255,7 +256,7 @@ export function TxtReader({
 
       {panel === "notes" ? (
         <div className="fixed inset-0 z-50 flex">
-          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-black/70" />
+          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-scrim" />
           <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-xl text-gold">Notes</h3>

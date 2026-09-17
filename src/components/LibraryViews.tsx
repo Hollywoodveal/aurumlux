@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { BookSpine } from "@/components/BookSpine";
 import { CoverImage } from "@/components/CoverImage";
+import { StarRating } from "@/components/StarRating";
 import type { BookMeta } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +59,7 @@ export function SpineShelf({ books, onSelect, selectable, selectedIds }: ShelfPr
 
 export function GridShelf({ books, onSelect, selectable, selectedIds }: ShelfProps) {
   return (
-    <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+    <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
       {books.map((book) => (
         <button
           key={book.id}
@@ -108,6 +109,8 @@ export function ListShelf({ books, onSelect, selectable, selectedIds }: ShelfPro
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-base text-ivory">{book.title}</p>
               <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+              {/* Read-only: the whole row is already a button, so no nested controls. */}
+              {book.rating ? <StarRating value={book.rating} size="sm" className="mt-1" /> : null}
               <div className="mt-1.5 h-[2px] w-full overflow-hidden rounded bg-secondary">
                 <div className="h-full bg-gradient-gold" style={{ width: `${book.progress}%` }} />
               </div>

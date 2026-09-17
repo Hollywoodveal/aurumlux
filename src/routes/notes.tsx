@@ -88,7 +88,7 @@ function NotesPage() {
 
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe">
+    <main className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-4xl">
       <header className="flex items-center gap-2">
         <Link
           to="/"

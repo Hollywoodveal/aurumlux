@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ImportFromUrl } from "@/components/ImportFromUrl";
 import { SettingsSection } from "@/components/settings/SettingsSection";
+import { ThemePicker } from "@/components/settings/ThemePicker";
 
 import {
   ChevronLeft,
@@ -9,6 +10,7 @@ import {
   HardDrive,
   Lock,
   SearchCheck,
+  Palette,
   ShieldCheck,
   Trash2,
   TriangleAlert,
@@ -168,7 +170,7 @@ function SettingsPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe">
+    <main className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-4xl">
       <header className="flex items-center gap-2">
         <Link to="/" aria-label="Back to library" className="rounded-full border border-gold/25 p-2 text-gold">
           <ChevronLeft className="size-4" />
@@ -177,9 +179,22 @@ function SettingsPage() {
       </header>
 
       <SettingsSection
+        id="appearance"
+        title="Appearance"
+        icon={<Palette className="size-4 text-gold" aria-hidden />}
+        className="mt-6"
+      >
+        <p className="mt-1 text-sm text-muted-foreground">
+          Choose how Aurum looks. The reader follows this automatically unless you pick a page colour
+          of its own while reading.
+        </p>
+        <ThemePicker />
+      </SettingsSection>
+
+      <SettingsSection
         id="import-url"
         title="Import from a link"
-        className="mt-6"
+        className="mt-4"
       >
         <p className="mt-1 text-sm text-muted-foreground">
           Paste a direct EPUB, PDF, CBZ or TXT link, or an OPDS catalog feed, and Aurum will download

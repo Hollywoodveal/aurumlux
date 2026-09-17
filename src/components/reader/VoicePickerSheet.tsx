@@ -58,7 +58,7 @@ export function VoicePickerSheet({
       <button
         aria-label="Close voice picker"
         onClick={onClose}
-        className="absolute inset-0 bg-black/70"
+        className="absolute inset-0 bg-scrim"
       />
       <div className="pb-safe px-safe relative w-full max-h-[88svh] overflow-y-auto rounded-t-2xl border-t border-gold/25 bg-card">
         <div className="flex items-center justify-between px-4 pt-4">

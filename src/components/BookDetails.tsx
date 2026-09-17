@@ -4,6 +4,7 @@ import { BookOpen, FolderPlus, Heart, Layers, Pencil, Target, Trash2, Type, X } 
 import { toast } from "sonner";
 import { CoverImage } from "@/components/CoverImage";
 import { MetadataDialog } from "@/components/MetadataDialog";
+import { StarRating } from "@/components/StarRating";
 import { Button } from "@/components/ui/button";
 import { useBookMutations } from "@/hooks/useLibrary";
 import type { BookMeta, ReadingStatus } from "@/lib/db";
@@ -36,6 +37,11 @@ export function BookDetails({
   const [confirming, setConfirming] = useState(false);
   const goal = bookGoalStatus(book);
 
+  const setRating = (rating: number) => {
+    save.mutate({ id: book.id, patch: { rating } });
+    toast.success(rating ? `Rated ${rating} of 5` : "Rating cleared");
+  };
+
   const setStatus = (status: ReadingStatus) =>
     save.mutate({
       id: book.id,
@@ -53,7 +59,7 @@ export function BookDetails({
         type="button"
         aria-label="Close details"
         onClick={onClose}
-        className="absolute inset-0 z-0 bg-black/75 backdrop-blur-sm"
+        className="absolute inset-0 z-0 bg-scrim backdrop-blur-sm"
       />
       <div className="animate-rise relative z-10 max-h-[88svh] w-full overflow-y-auto rounded-t-3xl border-t border-gold/25 bg-card px-safe pb-safe pt-4 shadow-lux sm:max-w-md sm:rounded-3xl sm:pb-6">
         <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-gold/30" />
@@ -82,13 +88,7 @@ export function BookDetails({
             <p className="mt-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
               {book.format.toUpperCase()} · {book.pageCount || "?"} pages · {fmtSize(book.fileSize)}
             </p>
-            <div className="mt-2 flex items-center gap-1 text-gold">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <span key={n} className={n <= book.rating ? "opacity-100" : "opacity-25"}>
-                  ★
-                </span>
-              ))}
-            </div>
+            <StarRating value={book.rating} onChange={setRating} className="mt-1 -ml-0.5" />
           </div>
         </div>
 
