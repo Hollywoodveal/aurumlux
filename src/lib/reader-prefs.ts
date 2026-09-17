@@ -22,8 +22,6 @@ export type ReaderPrefs = {
   highlightWords: boolean;
   /** Strength of the follow-along glow, 10 = whisper-faint, 90 = bold. */
   highlightIntensity: number;
-  /** Global timing nudge in ms: negative = highlight earlier, positive = later. */
-  highlightLead: number;
   /** Tap a word in the page to start narrating from exactly there. */
   tapToRead: boolean;
 };
@@ -41,7 +39,6 @@ export const DEFAULT_PREFS: ReaderPrefs = {
   speechRate: 1,
   highlightWords: true,
   highlightIntensity: 42,
-  highlightLead: 0,
   tapToRead: true,
 };
 

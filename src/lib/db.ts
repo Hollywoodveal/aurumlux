@@ -48,8 +48,6 @@ export type BookMeta = {
   /** Optional per-book goal: finish-by date (ms) and a daily reading target. */
   goalTargetDate?: number | null;
   goalDailyMinutes?: number;
-  /** Per-book follow-along timing offset in ms, set by the calibration step. */
-  highlightLeadMs?: number;
   /** Per-book typeface override; falls back to the global reader preference. */
   fontOverride?: string | null;
   /**

@@ -1,18 +1,5 @@
 const SW_URL = "/sw.js";
 
-function isBlockedHost(hostname: string) {
-  return (
-    hostname.startsWith("id-preview--") ||
-    hostname.startsWith("preview--") ||
-    hostname === "lovableproject.com" ||
-    hostname.endsWith(".lovableproject.com") ||
-    hostname === "lovableproject-dev.com" ||
-    hostname.endsWith(".lovableproject-dev.com") ||
-    hostname === "beta.lovable.dev" ||
-    hostname.endsWith(".beta.lovable.dev")
-  );
-}
-
 async function unregisterAppWorkers() {
   if (!("serviceWorker" in navigator)) return;
   const regs = await navigator.serviceWorker.getRegistrations();
@@ -27,12 +14,12 @@ async function unregisterAppWorkers() {
 export function registerServiceWorker() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
+  // `?sw=off` is the escape hatch for debugging a bad cached build; any other
+  // value (including `?sw=on`) must leave the worker enabled.
   const refused =
     !import.meta.env.PROD ||
     window.self !== window.top ||
-    isBlockedHost(window.location.hostname) ||
-    new URLSearchParams(window.location.search).has("sw") ||
-    new URL(window.location.href).searchParams.get("sw") === "off";
+    new URLSearchParams(window.location.search).get("sw") === "off";
 
   if (refused) {
     void unregisterAppWorkers();

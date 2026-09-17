@@ -770,25 +770,45 @@ The goal is to make reading digital books feel like owning a beautiful black-and
 
 Also add stats like heat map, genres, and author cloud, a way to sort books and the ability to deleted added books. it is very important to Add ability to edit metadata and delete books that have been added and make spine view the default view and make the default title A-Z when books are imported. Make the titles on the spines as legible as possible. and when I click a spine make want to bring up the details and from there I can click read if I want. I also want the ability to lock metadata. And make sure the import button works right
 
-This project was built with [Lovable](https://lovable.dev).
+---
 
-**Live app**: https://aurumlux.lovable.app
+## Project
 
-## Build with Lovable
+Aurum Books is a React 19 + TanStack Start app, built with Vite and Tailwind 4,
+shipped as an offline-first PWA. Reading happens entirely on the device: books
+are stored in IndexedDB and never uploaded.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/2215dc23-fa43-4e61-992a-ba8032b649e7).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+**Live app:** https://aurumlux.daiyveal.workers.dev
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+You need [Bun](https://bun.sh).
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+git clone https://github.com/Hollywoodveal/aurumlux.git
+cd aurumlux
+bun install
+bun run dev      # http://localhost:8080
 ```
+
+```sh
+bun run build    # production build into .output/
+npx tsc --noEmit # typecheck
+```
+
+## Deployment
+
+The app is deployed to Cloudflare Workers. The build emits a ready-to-use
+Wrangler config, so a deploy is:
+
+```sh
+bun run build
+npx wrangler deploy -c .output/server/wrangler.json
+```
+
+Pushes to `main` are built and deployed automatically by Cloudflare Workers
+Builds.
+
+Cache rules live in `public/_headers`: `sw.js` and the Workbox runtime are always
+revalidated so installed users pick up new builds, hashed files under `/assets/`
+are cached immutably for a year, and the web manifest is cached for an hour.

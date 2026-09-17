@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://aurumlux.lovable.app/sitemap.xml
+Sitemap: https://aurumlux.daiyveal.workers.dev/sitemap.xml

@@ -17,7 +17,6 @@ import {
 } from "@/lib/reader-prefs";
 import { ReadAloudBar, speechSupported, type ReadAloudControls } from "@/components/reader/ReadAloudBar";
 import { DictionarySheet } from "@/components/reader/DictionarySheet";
-import { CalibrateHighlightSheet } from "@/components/reader/CalibrateHighlightSheet";
 import { SpokenHighlighter } from "@/lib/spoken-highlight";
 
 
@@ -31,14 +30,14 @@ export function ReaderSettings({
   onChange,
   onClose,
   showFonts = true,
-  onCalibrate,
+  showTapToRead = false,
 }: {
   prefs: ReaderPrefs;
   onChange: (p: ReaderPrefs) => void;
   onClose: () => void;
   showFonts?: boolean;
-  /** Opens the follow-along calibration step (EPUB reader only). */
-  onCalibrate?: () => void;
+  /** Shows the tap-to-read-aloud toggle (EPUB reader only). */
+  showTapToRead?: boolean;
 }) {
 
   return (
@@ -213,7 +212,7 @@ export function ReaderSettings({
           </button>
         </div>
 
-        {onCalibrate ? (
+        {showTapToRead ? (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-[11px] text-muted-foreground">
             Tap any word to start reading aloud from there
@@ -235,55 +234,22 @@ export function ReaderSettings({
         ) : null}
 
         {prefs.highlightWords ? (
-          <>
-            <div className="mt-4">
-              <div className="flex justify-between text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                <span>Highlight strength</span>
-                <span className="text-gold">{prefs.highlightIntensity}%</span>
-              </div>
-              <input
-                type="range"
-                aria-label="Highlight strength"
-                min={10}
-                max={90}
-                step={5}
-                value={prefs.highlightIntensity}
-                onChange={(e) => onChange({ ...prefs, highlightIntensity: Number(e.target.value) })}
-                className="mt-2 w-full accent-[oklch(0.82_0.132_87)]"
-              />
+          <div className="mt-4">
+            <div className="flex justify-between text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              <span>Highlight strength</span>
+              <span className="text-gold">{prefs.highlightIntensity}%</span>
             </div>
-
-            <div className="mt-4">
-              <div className="flex justify-between text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                <span>Highlight timing</span>
-                <span className="text-gold">
-                  {prefs.highlightLead > 0 ? `+${prefs.highlightLead}` : prefs.highlightLead}ms
-                </span>
-              </div>
-              <input
-                type="range"
-                aria-label="Highlight timing"
-                min={-800}
-                max={800}
-                step={25}
-                value={prefs.highlightLead}
-                onChange={(e) => onChange({ ...prefs, highlightLead: Number(e.target.value) })}
-                className="mt-2 w-full accent-[oklch(0.82_0.132_87)]"
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Applies everywhere; calibration fine-tunes the current book.
-              </p>
-            </div>
-
-            {onCalibrate ? (
-              <button
-                onClick={onCalibrate}
-                className="mt-4 min-h-11 w-full rounded-xl border border-gold/50 bg-gold/10 text-sm text-gold"
-              >
-                Calibrate for this book
-              </button>
-            ) : null}
-          </>
+            <input
+              type="range"
+              aria-label="Highlight strength"
+              min={10}
+              max={90}
+              step={5}
+              value={prefs.highlightIntensity}
+              onChange={(e) => onChange({ ...prefs, highlightIntensity: Number(e.target.value) })}
+              className="mt-2 w-full accent-[oklch(0.82_0.132_87)]"
+            />
+          </div>
         ) : null}
 
       </div>
@@ -318,10 +284,6 @@ export function EpubReader({
   const [panel, setPanel] = useState<null | "toc" | "settings" | "search" | "notes">(null);
   /** Word sent to the dictionary sheet, or null when it is closed. */
   const [lookup, setLookup] = useState<string | null>(null);
-  /** Sample text for the follow-along calibration sheet, null when closed. */
-  const [calibrateText, setCalibrateText] = useState<string | null>(null);
-  /** This book's calibrated timing offset in ms. */
-  const [bookLead, setBookLead] = useState(book.highlightLeadMs ?? 0);
 
 
   const [chapter, setChapter] = useState("");
@@ -981,7 +943,6 @@ export function EpubReader({
             rate={prefs.speechRate}
             onPassage={handleSpokenPassage}
             onWord={handleSpokenWord}
-            lead={prefs.highlightLead + bookLead}
             mediaTitle={book.title}
             mediaArtist={book.author}
             controls={readAloudRef}
@@ -994,39 +955,13 @@ export function EpubReader({
         <DictionarySheet word={lookup} onClose={() => setLookup(null)} />
       ) : null}
 
-      {calibrateText !== null ? (
-        <CalibrateHighlightSheet
-          text={calibrateText}
-          lead={bookLead}
-          onSave={(next) => {
-            setBookLead(next);
-            setCalibrateText(null);
-            void updateBook(book.id, { highlightLeadMs: next });
-            toast.success(
-              next === 0 ? "Calibration cleared" : "Follow-along calibrated for this book",
-            );
-          }}
-          onClose={() => setCalibrateText(null)}
-        />
-      ) : null}
-
       {panel === "settings" ? (
 
         <ReaderSettings
           prefs={prefs}
           onChange={onPrefs}
           onClose={() => setPanel(null)}
-          onCalibrate={() => {
-            void (async () => {
-              const text = (await getSectionText()) ?? "";
-              if (!text.trim()) {
-                toast.error("No text on this page to calibrate against");
-                return;
-              }
-              setPanel(null);
-              setCalibrateText(text);
-            })();
-          }}
+          showTapToRead
         />
       ) : null}
 

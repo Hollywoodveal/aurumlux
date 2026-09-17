@@ -25,7 +25,7 @@ export const Route = createFileRoute("/notes")({
       },
       { property: "og:type", content: "website" },
     ],
-    links: [{ rel: "canonical", href: "https://aurumlux.lovable.app/notes" }],
+    links: [{ rel: "canonical", href: "https://aurumlux.daiyveal.workers.dev/notes" }],
   }),
   component: NotesPage,
 });

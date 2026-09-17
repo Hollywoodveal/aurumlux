@@ -3,12 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ImportFromUrl } from "@/components/ImportFromUrl";
 
 import {
-  AudioLines,
   ChevronLeft,
-  CloudDownload,
   Download,
   HardDrive,
-  Loader2,
   Lock,
   SearchCheck,
   ShieldCheck,
@@ -22,16 +19,6 @@ import { toast } from "sonner";
 import { useBooks, useBookMutations } from "@/hooks/useLibrary";
 import { fmtBytes, measureStorage, requestPersistentStorage, type StorageReport } from "@/lib/storage";
 import { allAnnotations, putAnnotation, putBook, type Annotation, type BookMeta } from "@/lib/db";
-import { PREMIUM_VOICES } from "@/lib/premium-tts";
-import {
-  CACHE_CAP_BYTES,
-  deleteAllVoicePacks,
-  deleteVoicePack,
-  downloadVoicePack,
-  listVoicePacks,
-  type VoicePack,
-} from "@/lib/voice-packs";
-import { loadTtsSettings } from "@/lib/tts-settings";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -73,9 +60,6 @@ function SettingsPage() {
   const [passphrase, setPassphrase] = useState("");
   const [indexing, setIndexing] = useState(false);
   const [indexProgress, setIndexProgress] = useState<string | null>(null);
-  const [packs, setPacks] = useState<VoicePack[]>([]);
-  const [voiceBusy, setVoiceBusy] = useState<string | null>(null);
-  const [voiceProgress, setVoiceProgress] = useState<string | null>(null);
   const [resume, setResume] = useState(true);
 
   useEffect(() => {
@@ -83,36 +67,6 @@ function SettingsPage() {
   }, []);
 
 
-  const refreshPacks = useCallback(() => {
-    void listVoicePacks()
-      .then(setPacks)
-      .catch(() => setPacks([]));
-  }, []);
-
-  useEffect(refreshPacks, [refreshPacks]);
-
-  const voiceBytes = packs.reduce((n, p) => n + p.bytes, 0);
-
-  async function downloadVoice(voice: string) {
-    setVoiceBusy(voice);
-    setVoiceProgress("Preparing…");
-    try {
-      const res = await downloadVoicePack(voice, loadTtsSettings(), (done, total) =>
-        setVoiceProgress(`${done}/${total}`),
-      );
-      refreshPacks();
-      void measureStorage().then(setReport);
-      toast.success(
-        res.added
-          ? `Downloaded ${res.added} passage${res.added === 1 ? "" : "s"} · ${fmtBytes(res.bytes)}`
-          : "That voice is already downloaded",
-      );
-    } catch {
-      toast.error("Download failed — check your connection and try again");
-    }
-    setVoiceBusy(null);
-    setVoiceProgress(null);
-  }
 
 
 
@@ -373,92 +327,6 @@ function SettingsPage() {
           <SearchCheck className="size-4" />
           {indexing ? (indexProgress ?? "Indexing…") : "Index my books"}
         </button>
-      </section>
-
-      <section className="mt-4 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="flex items-center gap-2 font-display text-xl text-ivory">
-          <AudioLines className="size-4 text-gold" /> Offline narration voices
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          The lifelike narrators are generated in the cloud. Download a voice and Aurum keeps its
-          narration on this device — a sample plus the opening of the books you're reading — so
-          read-aloud keeps working with no connection. Anything narrated while online is added to the
-          same voice automatically.
-        </p>
-        <p className="mt-2 text-[11px] uppercase tracking-[0.16em] text-gold/80">
-          {voiceBytes
-            ? `${fmtBytes(voiceBytes)} of ${fmtBytes(CACHE_CAP_BYTES)} · ${packs.length} voice${packs.length === 1 ? "" : "s"}`
-            : "No voices downloaded yet"}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Saved narration is capped at {fmtBytes(CACHE_CAP_BYTES)} — once it's full, the oldest
-          passages are cleared automatically.
-        </p>
-
-
-        <ul className="mt-3 space-y-2">
-          {PREMIUM_VOICES.map((v) => {
-            const pack = packs.find((p) => p.voice === v.id);
-            const busyHere = voiceBusy === v.id;
-            return (
-              <li key={v.id} className="flex items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-ivory">{v.label}</p>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                    {pack
-                      ? `${fmtBytes(pack.bytes)} · ${pack.clips} passage${pack.clips === 1 ? "" : "s"} · ${Math.round(pack.seconds / 60)} min`
-                      : "Streams only"}
-                  </p>
-                </div>
-                {pack ? (
-                  <button
-                    aria-label={`Delete offline narration for ${v.label}`}
-                    onClick={async () => {
-                      await deleteVoicePack(v.id);
-                      refreshPacks();
-                      void measureStorage().then(setReport);
-                      toast.success("Offline narration removed");
-                    }}
-                    className="shrink-0 text-destructive/70"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                ) : (
-                  <button
-                    aria-label={`Download ${v.label} for offline reading`}
-                    onClick={() => void downloadVoice(v.id)}
-                    disabled={!!voiceBusy}
-                    className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-gold/30 px-3 text-[10px] uppercase tracking-[0.16em] text-gold disabled:opacity-40"
-                  >
-                    {busyHere ? (
-                      <>
-                        <Loader2 className="size-3.5 animate-spin" /> {voiceProgress}
-                      </>
-                    ) : (
-                      <>
-                        <CloudDownload className="size-3.5" /> Download
-                      </>
-                    )}
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-
-        {voiceBytes ? (
-          <button
-            onClick={async () => {
-              await deleteAllVoicePacks();
-              refreshPacks();
-              void measureStorage().then(setReport);
-              toast.success("All downloaded narration removed");
-            }}
-            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-destructive/40 px-4 py-2 text-xs uppercase tracking-[0.16em] text-destructive"
-          >
-            <Trash2 className="size-4" /> Free {fmtBytes(voiceBytes)}
-          </button>
-        ) : null}
       </section>
 
 

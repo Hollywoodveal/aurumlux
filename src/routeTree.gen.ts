@@ -14,7 +14,6 @@ import { Route as NotesRouteImport } from './routes/notes'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StatsRouteImport } from './routes/stats'
-import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as ReadBookIdRouteImport } from './routes/read.$bookId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -42,11 +41,6 @@ const StatsRoute = StatsRouteImport.update({
   path: '/stats',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiTtsRoute = ApiTtsRouteImport.update({
-  id: '/api/tts',
-  path: '/api/tts',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ReadBookIdRoute = ReadBookIdRouteImport.update({
   id: '/read/$bookId',
   path: '/read/$bookId',
@@ -59,7 +53,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
-  '/api/tts': typeof ApiTtsRoute
   '/read/$bookId': typeof ReadBookIdRoute
 }
 export interface FileRoutesByTo {
@@ -68,7 +61,6 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
-  '/api/tts': typeof ApiTtsRoute
   '/read/$bookId': typeof ReadBookIdRoute
 }
 export interface FileRoutesById {
@@ -78,28 +70,14 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
-  '/api/tts': typeof ApiTtsRoute
   '/read/$bookId': typeof ReadBookIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/notes'
-    | '/settings'
-    | '/sitemap.xml'
-    | '/stats'
-    | '/api/tts'
-    | '/read/$bookId'
+    '/' | '/notes' | '/settings' | '/sitemap.xml' | '/stats' | '/read/$bookId'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/notes'
-    | '/settings'
-    | '/sitemap.xml'
-    | '/stats'
-    | '/api/tts'
-    | '/read/$bookId'
+  to: '/' | '/notes' | '/settings' | '/sitemap.xml' | '/stats' | '/read/$bookId'
   id:
     | '__root__'
     | '/'
@@ -107,7 +85,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sitemap.xml'
     | '/stats'
-    | '/api/tts'
     | '/read/$bookId'
   fileRoutesById: FileRoutesById
 }
@@ -117,7 +94,6 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
-  ApiTtsRoute: typeof ApiTtsRoute
   ReadBookIdRoute: typeof ReadBookIdRoute
 }
 
@@ -158,13 +134,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StatsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/tts': {
-      id: '/api/tts'
-      path: '/api/tts'
-      fullPath: '/api/tts'
-      preLoaderRoute: typeof ApiTtsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/read/$bookId': {
       id: '/read/$bookId'
       path: '/read/$bookId'
@@ -181,7 +150,6 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
-  ApiTtsRoute: ApiTtsRoute,
   ReadBookIdRoute: ReadBookIdRoute,
 }
 export const routeTree = rootRouteImport
