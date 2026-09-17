@@ -51,7 +51,7 @@ export function StarRating({
 
   return (
     <div
-      className={cn("flex items-center gap-0.5", className)}
+      className={cn("flex items-center", className)}
       onPointerLeave={() => setPreview(0)}
     >
       {[1, 2, 3, 4, 5].map((n) => (
@@ -70,7 +70,9 @@ export function StarRating({
           // Tapping the active rating clears it, matching the metadata editor.
           onClick={() => onChange(n === value ? 0 : n)}
           className={cn(
-            "flex min-h-9 items-center justify-center rounded-md px-0.5 text-gold transition-transform",
+            // 44px box per star: the icon alone is a ~20px target, which is a
+            // miss waiting to happen with a thumb.
+            "flex min-h-11 min-w-11 items-center justify-center rounded-md text-gold transition-transform",
             "hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50",
           )}
         >

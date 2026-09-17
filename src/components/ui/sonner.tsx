@@ -1,18 +1,35 @@
 import { Toaster as Sonner } from "sonner";
 
+import { useAppTheme } from "@/hooks/useAppTheme";
+
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  const appTheme = useAppTheme();
+
   return (
     <Sonner
       className="toaster group"
+      // Sonner paints from its own --normal-* variables, which beat utility
+      // classes on the toast, so the palette has to be handed to it directly —
+      // otherwise every toast is stark white, whatever the theme.
+      theme={appTheme === "dark" ? "dark" : "light"}
+      style={
+        {
+          "--normal-bg": "var(--card)",
+          "--normal-text": "var(--foreground)",
+          "--normal-border": "var(--border)",
+        } as React.CSSProperties
+      }
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+            "group toast group-[.toaster]:border group-[.toaster]:border-gold/25 group-[.toaster]:shadow-lux",
           description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          actionButton:
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+          cancelButton:
+            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
         },
       }}
       {...props}

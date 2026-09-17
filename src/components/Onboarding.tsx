@@ -51,7 +51,7 @@ export function Onboarding() {
       role="dialog"
       aria-modal="true"
       aria-label="Getting started with Aurum"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-background/85 p-4 pb-safe backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-scrim p-4 pb-safe backdrop-blur-sm sm:items-center"
     >
       <div className="w-full max-w-sm rounded-2xl border border-gold/25 bg-card p-6 shadow-lux">
         <div className="flex items-start justify-between">

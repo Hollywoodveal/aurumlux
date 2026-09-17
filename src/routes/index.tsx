@@ -544,8 +544,8 @@ function LibraryPage() {
           ) : null}
 
           <section className="mt-7">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
+              <h2 className="whitespace-nowrap text-xs uppercase tracking-[0.2em] text-gold/70">
                 {SHELVES.find((s) => s.key === shelf)?.label} · {filtered.length}
               </h2>
               <div className="flex items-center gap-2">

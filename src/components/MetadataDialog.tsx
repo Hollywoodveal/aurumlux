@@ -277,6 +277,7 @@ export function MetadataDialog({
             <StarRating
               value={draft.rating}
               size="lg"
+              className="-ml-2"
               onChange={(rating) => setDraft((d) => ({ ...d, rating }))}
             />
           </div>

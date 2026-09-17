@@ -745,7 +745,7 @@ function DayPanel({
         type="button"
         aria-label="Close day details"
         onClick={onClose}
-        className="absolute inset-0 bg-background/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim backdrop-blur-sm"
       />
       <div className="relative z-10 max-h-[80svh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-gold/25 bg-card px-safe pb-safe pt-5 shadow-lux">
         <div className="flex items-start justify-between gap-3">

@@ -88,7 +88,7 @@ export function BookDetails({
             <p className="mt-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
               {book.format.toUpperCase()} · {book.pageCount || "?"} pages · {fmtSize(book.fileSize)}
             </p>
-            <StarRating value={book.rating} onChange={setRating} className="mt-1 -ml-0.5" />
+            <StarRating value={book.rating} onChange={setRating} className="mt-1 -ml-3" />
           </div>
         </div>
 
