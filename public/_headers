@@ -1,0 +1,10 @@
+# The service worker must never be served from a long-lived cache, otherwise an
+# old sw.js pins installed users to a stale build and they stop receiving updates.
+/sw.js
+  cache-control: public, max-age=0, must-revalidate
+/workbox-*.js
+  cache-control: public, max-age=0, must-revalidate
+
+# The manifest changes rarely but should not be pinned for a year either.
+/manifest.webmanifest
+  cache-control: public, max-age=3600

@@ -6,7 +6,6 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
-import netlify from "@netlify/vite-plugin-tanstack-start";
 
 export default defineConfig({
   tanstackStart: {
@@ -16,24 +15,30 @@ export default defineConfig({
   },
   vite: {
     plugins: [
-      netlify(),
       VitePWA({
         strategies: "generateSW",
         registerType: "autoUpdate",
         injectRegister: null,
         filename: "sw.js",
-        outDir: "dist/client",
+        // Must match the client build's real outDir (nitro owns `.output/public`).
+        // Pointing this at `dist/client` produced a 0-entry precache manifest in a
+        // directory that never gets deployed, so the app had no offline support.
+        outDir: ".output/public",
         devOptions: { enabled: false },
         manifest: false,
         workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+          // `mjs` is required: pdf.js ships its worker as pdf.worker.min-*.mjs and the
+          // PDF reader cannot open a book offline without it.
+          globPatterns: ["**/*.{js,mjs,css,html,ico,png,svg,woff2}"],
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           // No precached index.html (the app is server-rendered), so navigations are
           // served by the NetworkFirst runtime cache below instead of a fallback shell.
           navigateFallback: null,
           cleanupOutdatedCaches: true,
           runtimeCaching: [
             {
-              urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
+              urlPattern: ({ request }: { request: Request }) =>
+                request.mode === "navigate",
               handler: "NetworkFirst",
               options: {
                 cacheName: "aurum-pages",
@@ -41,8 +46,15 @@ export default defineConfig({
               },
             },
             {
-              urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
-                sameOrigin && /\/assets\/|\.(?:woff2|png|svg|ico)$/.test(url.pathname),
+              urlPattern: ({
+                url,
+                sameOrigin,
+              }: {
+                url: URL;
+                sameOrigin: boolean;
+              }) =>
+                sameOrigin &&
+                /\/assets\/|\.(?:woff2|png|svg|ico)$/.test(url.pathname),
               handler: "CacheFirst",
               options: {
                 cacheName: "aurum-assets",
@@ -50,7 +62,8 @@ export default defineConfig({
               },
             },
             {
-              urlPattern: ({ url }: { url: URL }) => url.origin === "https://fonts.gstatic.com",
+              urlPattern: ({ url }: { url: URL }) =>
+                url.origin === "https://fonts.gstatic.com",
               handler: "CacheFirst",
               options: {
                 cacheName: "aurum-fonts",
