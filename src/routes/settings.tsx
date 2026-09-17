@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ImportFromUrl } from "@/components/ImportFromUrl";
+import { SettingsSection } from "@/components/settings/SettingsSection";
 
 import {
   ChevronLeft,
@@ -24,8 +25,6 @@ import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { clearLastRead, getResumeOnLaunch, setResumeOnLaunch } from "@/lib/resume";
 import { cn } from "@/lib/utils";
-
-
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -65,10 +64,6 @@ function SettingsPage() {
   useEffect(() => {
     void getResumeOnLaunch().then(setResume);
   }, []);
-
-
-
-
 
   async function exportSync() {
     setBusy(true);
@@ -117,7 +112,6 @@ function SettingsPage() {
     setIndexing(false);
     setIndexProgress(null);
   }
-
 
   const refreshStorage = useCallback(() => {
     void measureStorage().then(setReport);
@@ -182,17 +176,19 @@ function SettingsPage() {
         <h1 className="font-display text-3xl text-gradient-gold">Settings</h1>
       </header>
 
-      <section className="mt-6 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="font-display text-xl text-ivory">Import from a link</h2>
+      <SettingsSection
+        id="import-url"
+        title="Import from a link"
+        className="mt-6"
+      >
         <p className="mt-1 text-sm text-muted-foreground">
           Paste a direct EPUB, PDF, CBZ or TXT link, or an OPDS catalog feed, and Aurum will download
           it straight onto your device.
         </p>
         <ImportFromUrl />
-      </section>
+      </SettingsSection>
 
-      <section className="mt-4 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="font-display text-xl text-ivory">Resume reading</h2>
+      <SettingsSection id="resume" title="Resume reading" className="mt-4">
         <p className="mt-1 text-sm text-muted-foreground">
           When Aurum opens, go straight back into the book you were last reading, at the exact page
           you left off.
@@ -231,12 +227,9 @@ function SettingsPage() {
         >
           Forget saved spot
         </button>
-      </section>
+      </SettingsSection>
 
-
-
-      <section className="mt-4 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="font-display text-xl text-ivory">Backup</h2>
+      <SettingsSection id="backup" title="Backup" className="mt-4">
         <p className="mt-1 text-sm text-muted-foreground">
           Your library lives only on this device. Export a JSON copy of your metadata, progress,
           bookmarks and highlights.
@@ -263,12 +256,14 @@ function SettingsPage() {
             onChange={(e) => void importBackup(e.target.files?.[0])}
           />
         </div>
-      </section>
+      </SettingsSection>
 
-      <section className="mt-4 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="flex items-center gap-2 font-display text-xl text-ivory">
-          <Lock className="size-4 text-gold" /> Encrypted sync
-        </h2>
+      <SettingsSection
+        id="sync"
+        title="Encrypted sync"
+        icon={<Lock className="size-4 text-gold" aria-hidden />}
+        className="mt-4"
+      >
         <p className="mt-1 text-sm text-muted-foreground">
           Move reading positions, bookmarks and highlights between your devices with an encrypted
           file. Choose a passphrase — it never leaves this device, and without it the file cannot be
@@ -309,12 +304,14 @@ function SettingsPage() {
             onChange={(e) => void mergeSync(e.target.files?.[0])}
           />
         </div>
-      </section>
+      </SettingsSection>
 
-      <section className="mt-4 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="flex items-center gap-2 font-display text-xl text-ivory">
-          <SearchCheck className="size-4 text-gold" /> Full-text search
-        </h2>
+      <SettingsSection
+        id="search-index"
+        title="Full-text search"
+        icon={<SearchCheck className="size-4 text-gold" aria-hidden />}
+        className="mt-4"
+      >
         <p className="mt-1 text-sm text-muted-foreground">
           Build a private, on-device index so library search can look inside your books, not just
           titles and authors.
@@ -327,13 +324,14 @@ function SettingsPage() {
           <SearchCheck className="size-4" />
           {indexing ? (indexProgress ?? "Indexing…") : "Index my books"}
         </button>
-      </section>
+      </SettingsSection>
 
-
-      <section className="mt-4 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="flex items-center gap-2 font-display text-xl text-ivory">
-          <HardDrive className="size-4 text-gold" /> Storage
-        </h2>
+      <SettingsSection
+        id="storage"
+        title="Storage"
+        icon={<HardDrive className="size-4 text-gold" aria-hidden />}
+        className="mt-4"
+      >
 
         {report ? (
           <>
@@ -417,20 +415,18 @@ function SettingsPage() {
         ) : (
           <p className="mt-1 text-sm text-muted-foreground">Measuring on-device usage…</p>
         )}
-      </section>
+      </SettingsSection>
 
-      <section className="mt-4 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="font-display text-xl text-ivory">Privacy</h2>
+      <SettingsSection id="privacy" title="Privacy" className="mt-4">
         <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
           <li>· No account, no sign-in.</li>
           <li>· No ads, no tracking, no analytics.</li>
           <li>· Books, covers, notes and progress stored in on-device storage.</li>
           <li>· Cloud sync is off and stays off unless you ask for it.</li>
         </ul>
-      </section>
+      </SettingsSection>
 
-      <section className="mt-4 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="font-display text-xl text-ivory">Getting started</h2>
+      <SettingsSection id="onboarding" title="Getting started" className="mt-4">
         <p className="mt-1 text-sm text-muted-foreground">
           Replay the short walkthrough of the shelf, select mode and reader gestures.
         </p>
@@ -444,16 +440,14 @@ function SettingsPage() {
         >
           Replay the tour
         </Button>
-      </section>
+      </SettingsSection>
 
-
-      <section className="mt-4 rounded-xl border border-gold/20 bg-card p-4">
-        <h2 className="font-display text-xl text-ivory">Install Aurum</h2>
+      <SettingsSection id="install" title="Install Aurum" className="mt-4">
         <p className="mt-1 text-sm text-muted-foreground">
           Add Aurum to your home screen from your browser menu to read full screen and offline. Once
           installed, the app shell is cached so your library opens with no connection at all.
         </p>
-      </section>
+      </SettingsSection>
 
       <p className="mt-8 text-center text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
         Aurum · Where every page is treasured
