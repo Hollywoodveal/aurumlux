@@ -793,18 +793,23 @@ bun run dev      # http://localhost:8080
 
 ```sh
 bun run build    # production build into .output/
+bun run lint     # eslint
 npx tsc --noEmit # typecheck
 ```
 
 ## Deployment
 
 The app is deployed to Cloudflare Workers. The build emits a ready-to-use
-Wrangler config, so a deploy is:
+Wrangler config, which the `deploy` script points at:
 
 ```sh
 bun run build
-npx wrangler deploy -c .output/server/wrangler.json
+bun run deploy
 ```
+
+Wrangler is pinned as a devDependency, so both commands use the version in
+`bun.lock` rather than whatever `npx` happens to resolve. Wrangler itself needs
+Node.js 22 or newer.
 
 Pushes to `main` are built and deployed automatically by Cloudflare Workers
 Builds.
