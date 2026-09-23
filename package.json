@@ -8,9 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "deploy": "wrangler deploy -c .output/server/wrangler.json",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:pages": "vite build && bun scripts/pages-postbuild.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

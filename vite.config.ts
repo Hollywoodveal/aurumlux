@@ -1,7 +1,6 @@
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
-import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 import { VitePWA } from "vite-plugin-pwa";
@@ -9,8 +8,8 @@ import { VitePWA } from "vite-plugin-pwa";
 // This project previously used @lovable.dev/vite-tanstack-config, which bundled the
 // plugins below behind a single defineConfig. That wrapper is gone, so the plugin list
 // and resolve/css settings it injected are now spelled out here. Plugin order matters:
-// tailwind and path resolution first, then tanstackStart, then nitro, then react.
-export default defineConfig(({ command }) => ({
+// tailwind and path resolution first, then tanstackStart, then react.
+export default defineConfig({
   css: {
     // Matches the previous build output; lightningcss also minifies the Tailwind 4 output.
     transformer: "lightningcss",
@@ -42,37 +41,26 @@ export default defineConfig(({ command }) => ({
     tailwindcss(),
     tsConfigPaths({ projects: ["./tsconfig.json"] }),
     tanstackStart({
+      // SPA mode: the app is fully client-side (all data lives in IndexedDB;
+      // no server functions, loaders, or server routes). `vite build` emits a
+      // static `dist/` that deploys to Cloudflare Pages; client routing is
+      // handled by `public/_redirects`.
+      spa: { enabled: true },
       // Fail the build if client code pulls in a server-only module.
       importProtection: {
         behavior: "error",
         client: { files: ["**/server/**"], specifiers: ["server-only"] },
       },
-      // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error
-      // wrapper). nitro/vite builds from this.
-      server: { entry: "server" },
     }),
-    // nitro owns the production build; it emits the Cloudflare Worker and wrangler.json.
-    // Build-only, exactly as the previous wrapper did.
-    ...(command === "build"
-      ? [
-          nitro({
-            defaultPreset: "cloudflare-module",
-            // Without an explicit name nitro derives one from the git remote
-            // ("hollywoodveal-aurumlux"), which becomes the workers.dev hostname.
-            cloudflare: { deployConfig: true, wrangler: { name: "aurumlux" } },
-          }),
-        ]
-      : []),
     viteReact(),
     VitePWA({
       strategies: "generateSW",
       registerType: "autoUpdate",
       injectRegister: null,
       filename: "sw.js",
-      // Must match the client build's real outDir (nitro owns `.output/public`).
-      // Pointing this at `dist/client` produced a 0-entry precache manifest in a
-      // directory that never gets deployed, so the app had no offline support.
-      outDir: ".output/public",
+      // Must match the client build's real outDir (dist/client in SPA mode;
+      // tanstackStart splits output into dist/client + dist/server).
+      outDir: "dist/client",
       devOptions: { enabled: false },
       manifest: false,
       workbox: {
@@ -114,4 +102,4 @@ export default defineConfig(({ command }) => ({
       },
     }),
   ],
-}));
+});
