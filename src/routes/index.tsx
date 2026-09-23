@@ -80,11 +80,11 @@ type ShelfKey =
 const SHELVES: { key: ShelfKey; label: string }[] = [
   { key: "all", label: "All books" },
   { key: "reading", label: "Currently reading" },
-  { key: "finished", label: "Finished" },
-  { key: "want", label: "Want to read" },
-  { key: "favorites", label: "Favorites" },
-  { key: "year", label: "Finished this year" },
   { key: "stalled", label: "Stalled" },
+  { key: "want", label: "Want to read" },
+  { key: "finished", label: "Finished" },
+  { key: "year", label: "Finished this year" },
+  { key: "favorites", label: "Favorites" },
 ];
 
 const STALLED_AFTER_MS = 30 * 86400000;
