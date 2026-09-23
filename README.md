@@ -800,23 +800,22 @@ npx tsc --noEmit # typecheck
 
 ## Deployment
 
-The app is deployed to Cloudflare Workers. The build emits a ready-to-use
-Wrangler config, which the `deploy` script points at:
+The app is deployed to Cloudflare Pages at https://aurumlux.pages.dev
+(Pages project `aurumlux`). It builds as a static SPA — the app is fully
+client-side (all data lives in IndexedDB), so there is no server to run.
 
 ```sh
-bun run build
-bun run deploy
+bun run build:pages
 ```
 
-Wrangler is pinned as a devDependency, so both commands use the version in
-`bun.lock` rather than whatever `npx` happens to resolve. Wrangler itself needs
-Node.js 22 or newer.
+Then deploy the `dist/client` directory with the Cloudflare Pages direct-upload
+API (the `cloudflare-pages` skill's `pages_deploy.py` handles this; no
+Wrangler login needed). The old Workers URL
+(https://aurumlux.daiyveal.workers.dev) 301-redirects to the Pages site, so
+existing bookmarks and installed home-screen icons keep working.
 
-Deploys are manual: after merging to `main`, pull the latest and run
-`bun run deploy` from a machine with Wrangler authenticated. Pushing to
-`main` alone does not ship — the Cloudflare Workers Builds GitHub
-integration is connected but currently does not produce working
-production deploys, so treat it as informational only.
+Pushing to `main` alone does not ship — there is no working CI deploy, so
+treat the Workers Builds GitHub integration as informational only.
 
 Cache rules live in `public/_headers`: `sw.js` and the Workbox runtime are always
 revalidated so installed users pick up new builds, hashed files under `/assets/`
