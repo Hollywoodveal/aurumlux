@@ -27,7 +27,6 @@ import { useBookMutations } from "@/hooks/useLibrary";
 import {
   applyRemotePatch,
   recountPages,
-  refetchCover,
   searchMetadataCandidates,
   type RemoteCandidate,
 } from "@/lib/importer";
@@ -64,6 +63,7 @@ export function MetadataDialog({
   const [busy, setBusy] = useState<"meta" | "cover" | "pages" | null>(null);
   const [coverOpen, setCoverOpen] = useState(false);
   const [candidates, setCandidates] = useState<RemoteCandidate[] | null>(null);
+  const [coverOptions, setCoverOptions] = useState<RemoteCandidate[] | null>(null);
 
   /** Search providers and show a ranked pick-list instead of blindly taking the first hit. */
   async function findCandidates() {
@@ -107,23 +107,48 @@ export function MetadataDialog({
     }
   }
 
-  async function autoCover() {
-    if (draft.locked.includes("cover")) {
+  /** Search providers and show every cover found, instead of taking the first one. */
+  async function findCovers() {
+    if ((draft.locked ?? []).includes("cover")) {
       toast.info("Cover is locked");
       return;
     }
     setBusy("cover");
     try {
-      const ok = await refetchCover(draft, true);
-      if (!ok) {
-        toast.info("No cover found");
+      const list = await searchMetadataCandidates(draft);
+      const seen = new Set<string>();
+      const covers = list.filter((c) => {
+        if (!c.coverUrl || seen.has(c.coverUrl)) return false;
+        seen.add(c.coverUrl);
+        return true;
+      });
+      setCoverOptions(covers);
+      if (!covers.length) {
+        toast.info("No covers found — try refining the title or adding an ISBN");
+      }
+    } catch {
+      toast.error("Could not reach metadata providers");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function useCover(c: RemoteCandidate) {
+    if (!c.coverUrl || (draft.locked ?? []).includes("cover")) return;
+    setBusy("cover");
+    try {
+      const blob = await (await fetch(c.coverUrl)).blob();
+      if (blob.size <= 1000) {
+        toast.info("That cover couldn't be downloaded");
         return;
       }
-      await save.mutateAsync({ id: book.id, patch: { hasCover: true } });
+      await putCover(draft.id, blob);
+      await save.mutateAsync({ id: draft.id, patch: { hasCover: true } });
+      setDraft((d) => ({ ...d, hasCover: true }));
+      setCoverOptions(null);
       toast.success("Cover updated");
-      window.location.reload();
     } catch {
-      toast.error("Could not fetch cover");
+      toast.error("Could not download that cover");
     } finally {
       setBusy(null);
     }
@@ -154,6 +179,7 @@ export function MetadataDialog({
     if (open) {
       setDraft(book);
       setCandidates(null);
+      setCoverOptions(null);
     }
   }, [open, book]);
 
@@ -195,14 +221,14 @@ export function MetadataDialog({
             variant="outline"
             className="flex-1 border-gold/30 text-xs"
             disabled={busy !== null}
-            onClick={() => void autoCover()}
+            onClick={() => void findCovers()}
           >
             {busy === "cover" ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <RefreshCw className="size-4" />
             )}
-            Auto-fetch cover
+            Find covers online
           </Button>
         </div>
 
@@ -279,6 +305,36 @@ export function MetadataDialog({
                     Use this
                   </Button>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {coverOptions !== null && coverOptions.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+              Pick a cover — tap to use it
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {coverOptions.map((c, i) => (
+                <button
+                  key={`${c.provider}-${c.coverUrl}-${i}`}
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => void useCover(c)}
+                  className="group relative overflow-hidden rounded-lg border border-gold/20 transition-transform active:scale-95"
+                  title={`${c.title ?? "Unknown title"} — ${c.matchLabel} (${c.provider === "google" ? "Google Books" : "Open Library"})`}
+                >
+                  <img
+                    src={c.coverUrl}
+                    alt={c.title ?? "Book cover option"}
+                    loading="lazy"
+                    className="aspect-[2/3] w-full object-cover"
+                  />
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-1.5 pb-1 pt-4 text-left text-[10px] font-medium leading-tight text-white">
+                    {c.matchLabel}
+                  </span>
+                </button>
               ))}
             </div>
           </div>
