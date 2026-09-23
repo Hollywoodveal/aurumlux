@@ -91,8 +91,8 @@ export function MetadataDialog({
     setDraft((d) => ({ ...d, ...patch }));
     setCandidates(null);
     toast.success(`Updated ${keys.length} field${keys.length > 1 ? "s" : ""} — press Save to keep`);
-    // Pull the match's cover too when the book has none and the cover isn't locked.
-    if (c.coverUrl && !draft.hasCover && !(draft.locked ?? []).includes("cover")) {
+    // Take the match's cover too, unless the cover field is locked.
+    if (c.coverUrl && !(draft.locked ?? []).includes("cover")) {
       try {
         const blob = await (await fetch(c.coverUrl)).blob();
         if (blob.size > 1000) {
