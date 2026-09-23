@@ -79,14 +79,18 @@ export function BookSpine({
         }}
       />
 
-      {/* Thin gold foil rules, like a bound hardback. */}
+      {/* Thin gold foil rules, like a bound hardback. The spine stays dark in
+          every theme, so the foil uses a fixed gold instead of the theme-aware
+          token (which turns dark in light/sepia mode). */}
       <span
         aria-hidden
-        className="absolute inset-x-[3px] top-2.5 h-px bg-gold/45"
+        className="absolute inset-x-[3px] top-2.5 h-px"
+        style={{ background: "oklch(0.82 0.132 87 / 45%)" }}
       />
       <span
         aria-hidden
-        className="absolute inset-x-[3px] bottom-2.5 h-px bg-gold/35"
+        className="absolute inset-x-[3px] bottom-2.5 h-px"
+        style={{ background: "oklch(0.82 0.132 87 / 35%)" }}
       />
 
       <span className="absolute inset-0 flex items-center justify-center px-[2px] py-6">
@@ -96,10 +100,17 @@ export function BookSpine({
         >
           <span
             className={cn(
-              "font-display font-medium leading-none tracking-[0.06em] text-ivory/95",
+              "font-display font-medium leading-none tracking-[0.06em]",
               compact ? "text-[10.5px]" : "text-[12.5px]",
             )}
-            style={{ textShadow: "0 1px 3px oklch(0 0 0 / 90%)" }}
+            // The spine is always dark (cover art under black scrims), so the
+            // title stays near-white in every theme. The theme-aware `ivory`
+            // token inverts to dark in light/sepia mode and would disappear
+            // into the spine.
+            style={{
+              color: "oklch(0.96 0.015 88 / 96%)",
+              textShadow: "0 1px 3px oklch(0 0 0 / 90%)",
+            }}
           >
             {book.title}
           </span>
