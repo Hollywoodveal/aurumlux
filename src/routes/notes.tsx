@@ -1,13 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Bookmark, ChevronLeft, Highlighter, NotebookPen, Trash2 } from "lucide-react";
+import {
+  Bookmark,
+  ChevronLeft,
+  Highlighter,
+  NotebookPen,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { useAnnotations, useBooks } from "@/hooks/useLibrary";
 import { deleteAnnotation, type Annotation } from "@/lib/db";
+import { BrandMark } from "@/components/BrandMark";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
-
 
 export const Route = createFileRoute("/notes")({
   head: () => ({
@@ -18,14 +24,18 @@ export const Route = createFileRoute("/notes")({
         content:
           "Browse every highlight, bookmark and note you have saved across your Aurum library, and jump straight back to the page it came from.",
       },
-      { property: "og:title", content: "Highlights, bookmarks & notes — Aurum" },
+      {
+        property: "og:title",
+        content: "Highlights, bookmarks & notes — Aurum",
+      },
       {
         property: "og:description",
-        content: "One private hub for all of your reading annotations across every book.",
+        content:
+          "One private hub for all of your reading annotations across every book.",
       },
       { property: "og:type", content: "website" },
     ],
-    links: [{ rel: "canonical", href: "https://aurumlux.daiyveal.workers.dev/notes" }],
+    links: [{ rel: "canonical", href: "https://aurumlux.pages.dev/notes" }],
   }),
   component: NotesPage,
 });
@@ -64,7 +74,9 @@ function NotesPage() {
       .filter((a) => (bookFilter === "all" ? true : a.bookId === bookFilter))
       .filter((a) =>
         q
-          ? `${a.text} ${a.note} ${a.label} ${titles[a.bookId] ?? ""}`.toLowerCase().includes(q)
+          ? `${a.text} ${a.note} ${a.label} ${titles[a.bookId] ?? ""}`
+              .toLowerCase()
+              .includes(q)
           : true,
       )
       .sort((a, b) => b.createdAt - a.createdAt);
@@ -84,23 +96,23 @@ function NotesPage() {
     [books, annotations],
   );
 
-
-
-
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-4xl">
-      <header className="flex items-center gap-2">
-        <Link
-          to="/"
-          aria-label="Back to library"
-          className="rounded-full border border-gold/25 p-2 text-gold"
-        >
-          <ChevronLeft className="size-4" />
+    <main
+      id="main-content"
+      className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-4xl"
+    >
+      <header className="flex items-center gap-3">
+        <Link to="/" aria-label="Back to library" className="icon-btn">
+          <ChevronLeft className="size-[18px]" />
         </Link>
-        <h1 className="font-display text-3xl text-gradient-gold">Annotations</h1>
+        <BrandMark size={38} />
+        <h1 className="font-display text-3xl text-gradient-gold">
+          Annotations
+        </h1>
       </header>
-      <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-        {counts.highlight} highlights · {counts.bookmark} bookmarks · {counts.note} notes
+      <p className="eyebrow mt-3">
+        {counts.highlight} highlights · {counts.bookmark} bookmarks ·{" "}
+        {counts.note} notes
       </p>
 
       <input
@@ -128,9 +140,6 @@ function NotesPage() {
           </button>
         ))}
       </div>
-
-
-
 
       {booksWithNotes.length > 1 ? (
         <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
@@ -166,13 +175,16 @@ function NotesPage() {
 
       {rows.length === 0 ? (
         <p className="mt-10 text-center text-sm text-muted-foreground">
-          Nothing here yet. Highlights, bookmarks and notes you make while reading collect on this
-          page.
+          Nothing here yet. Highlights, bookmarks and notes you make while
+          reading collect on this page.
         </p>
       ) : (
         <ul className="mt-5 space-y-3">
           {rows.map((a) => (
-            <li key={a.id} className="rounded-xl border border-gold/20 bg-card p-3">
+            <li
+              key={a.id}
+              className="rounded-xl border border-gold/20 bg-card p-3"
+            >
               <div className="flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 <span className="flex items-center gap-1.5 text-gold/90">
                   <KindIcon type={a.type} />
@@ -190,14 +202,20 @@ function NotesPage() {
                 </p>
               ) : null}
               {a.note ? (
-                <p className="mt-2 text-sm italic leading-relaxed text-muted-foreground">{a.note}</p>
+                <p className="mt-2 text-sm italic leading-relaxed text-muted-foreground">
+                  {a.note}
+                </p>
               ) : null}
 
               <div className="mt-3 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-xs text-gold/90">{titles[a.bookId] ?? "Removed book"}</p>
+                  <p className="truncate text-xs text-gold/90">
+                    {titles[a.bookId] ?? "Removed book"}
+                  </p>
                   {a.label ? (
-                    <p className="truncate text-[11px] text-muted-foreground">{a.label}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {a.label}
+                    </p>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useHydrated } from "@/hooks/useHydrated";
+import { BrandMark } from "@/components/BrandMark";
 import { useAnnotations, useBooks } from "@/hooks/useLibrary";
 import { useDailyGoal, useStreakRecoveries } from "@/hooks/useSettings";
 import {
@@ -50,7 +51,20 @@ export const Route = createFileRoute("/stats")({
 
 const DAY = 86400000;
 const WEEKS = 26;
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const LEVEL_BG = [
   "oklch(0.26 0.008 60 / 85%)",
   "oklch(0.52 0.06 87 / 65%)",
@@ -75,11 +89,17 @@ function StatsPage() {
   const stats = useMemo(() => {
     const finished = books.filter((b) => b.status === "finished");
     const reading = books.filter((b) => b.status === "reading");
-    const pages = books.reduce((sum, b) => sum + (b.pageCount * b.progress) / 100, 0);
+    const pages = books.reduce(
+      (sum, b) => sum + (b.pageCount * b.progress) / 100,
+      0,
+    );
 
     const dayCounts = new Map<number, number>();
     const dayBooks = new Map<number, { book: BookMeta; minutes: number }[]>();
-    const daySessions = new Map<number, { book: BookMeta; session: ReadingSession }[]>();
+    const daySessions = new Map<
+      number,
+      { book: BookMeta; session: ReadingSession }[]
+    >();
     books.forEach((b) => {
       (b.sessions ?? []).forEach((session) => {
         const key = startOfDay(session.start);
@@ -88,7 +108,9 @@ function StatsPage() {
         daySessions.set(key, list);
       });
     });
-    daySessions.forEach((list) => list.sort((a, x) => a.session.start - x.session.start));
+    daySessions.forEach((list) =>
+      list.sort((a, x) => a.session.start - x.session.start),
+    );
     books.forEach((b) => {
       const days = [...new Set(b.readDays.map(startOfDay))];
       const perDay = days.length > 0 ? b.readingTime / days.length / 60000 : 0;
@@ -99,7 +121,6 @@ function StatsPage() {
         dayBooks.set(key, list);
       });
     });
-
 
     const genres = new Map<string, number>();
     books.forEach((b) =>
@@ -127,7 +148,9 @@ function StatsPage() {
       if (run > best) best = run;
     });
 
-    const genreList = [...genres.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+    const genreList = [...genres.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12);
     const genreTotal = genreList.reduce((s, [, n]) => s + n, 0) || 1;
 
     return {
@@ -149,7 +172,14 @@ function StatsPage() {
   }, [books]);
 
   const streak = useMemo(
-    () => computeStreak(books, stats.dayKeys, dailyGoal, Date.now(), recoveries.list),
+    () =>
+      computeStreak(
+        books,
+        stats.dayKeys,
+        dailyGoal,
+        Date.now(),
+        recoveries.list,
+      ),
     [books, stats.dayKeys, dailyGoal, recoveries.list],
   );
 
@@ -175,7 +205,13 @@ function StatsPage() {
           annotations: annotations.length,
         }),
       ),
-    [stats.finished.length, stats.pages, stats.minutes, streak, annotations.length],
+    [
+      stats.finished.length,
+      stats.pages,
+      stats.minutes,
+      streak,
+      annotations.length,
+    ],
   );
 
   const goals = useMemo(
@@ -189,7 +225,10 @@ function StatsPage() {
 
   const today = startOfDay(Date.now());
   const gridEnd = today + (6 - new Date(today).getDay()) * DAY;
-  const cells = Array.from({ length: WEEKS * 7 }, (_, i) => gridEnd - (WEEKS * 7 - 1 - i) * DAY);
+  const cells = Array.from(
+    { length: WEEKS * 7 },
+    (_, i) => gridEnd - (WEEKS * 7 - 1 - i) * DAY,
+  );
   const maxDay = Math.max(1, ...stats.dayCounts.values());
   const maxAuthor = stats.authors[0]?.[1] ?? 1;
 
@@ -197,7 +236,8 @@ function StatsPage() {
     const first = cells[w * 7] ?? today;
     const prev = w === 0 ? null : cells[(w - 1) * 7];
     const m = new Date(first).getMonth();
-    if (prev !== null && prev !== undefined && new Date(prev).getMonth() === m) return "";
+    if (prev !== null && prev !== undefined && new Date(prev).getMonth() === m)
+      return "";
     return MONTHS[m] ?? "";
   });
 
@@ -205,24 +245,33 @@ function StatsPage() {
   // be rendered after hydration without an SSR text mismatch.
   if (!hydrated) {
     return (
-      <main className="mx-auto min-h-dvh w-full max-w-3xl px-safe pt-safe lg:max-w-5xl">
-        <header className="flex items-center gap-2">
-          <Link to="/" aria-label="Back to library" className="rounded-full border border-gold/25 p-2 text-gold">
-            <ChevronLeft className="size-4" />
+      <main
+        id="main-content"
+        className="mx-auto min-h-dvh w-full max-w-3xl px-safe pt-safe lg:max-w-5xl"
+      >
+        <header className="flex items-center gap-3">
+          <Link to="/" aria-label="Back to library" className="icon-btn">
+            <ChevronLeft className="size-[18px]" />
           </Link>
-          <h1 className="font-display text-3xl text-gradient-gold">Statistics</h1>
+          <BrandMark size={38} />
+          <h1 className="font-display text-3xl text-gradient-gold">
+            Statistics
+          </h1>
         </header>
       </main>
     );
   }
 
   return (
-
-    <main className="mx-auto min-h-dvh w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-5xl">
-      <header className="flex items-center gap-2">
-        <Link to="/" aria-label="Back to library" className="rounded-full border border-gold/25 p-2 text-gold">
-          <ChevronLeft className="size-4" />
+    <main
+      id="main-content"
+      className="mx-auto min-h-dvh w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-5xl"
+    >
+      <header className="flex items-center gap-3">
+        <Link to="/" aria-label="Back to library" className="icon-btn">
+          <ChevronLeft className="size-[18px]" />
         </Link>
+        <BrandMark size={38} />
         <h1 className="font-display text-3xl text-gradient-gold">Statistics</h1>
       </header>
 
@@ -235,7 +284,10 @@ function StatsPage() {
           ["Minutes read", stats.minutes],
           ["Highlights & notes", annotations.length],
         ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-xl border border-gold/20 bg-card p-4">
+          <div
+            key={String(label)}
+            className="rounded-xl border border-gold/20 bg-card p-4"
+          >
             <p className="font-display text-3xl text-gold">{value}</p>
             <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               {label}
@@ -244,35 +296,53 @@ function StatsPage() {
         ))}
       </section>
 
-
       <section className="mt-8 rounded-2xl border border-gold/25 bg-card p-4 shadow-lux">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">Streak</h2>
+            <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">
+              Streak
+            </h2>
             <p className="mt-2 flex items-baseline gap-2">
               <Flame
-                className={streak.current > 0 ? "size-6 text-gold" : "size-6 text-muted-foreground"}
+                className={
+                  streak.current > 0
+                    ? "size-6 text-gold"
+                    : "size-6 text-muted-foreground"
+                }
               />
-              <span className="font-display text-4xl text-gradient-gold">{streak.current}</span>
+              <span className="font-display text-4xl text-gradient-gold">
+                {streak.current}
+              </span>
               <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
                 day{streak.current === 1 ? "" : "s"}
               </span>
             </p>
             <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-              Best {streak.best} · {streak.goalDays} goal day{streak.goalDays === 1 ? "" : "s"} in a row
+              Best {streak.best} · {streak.goalDays} goal day
+              {streak.goalDays === 1 ? "" : "s"} in a row
             </p>
           </div>
 
           <div className="w-32 shrink-0 text-right">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Today</p>
+            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              Today
+            </p>
             <p className="mt-1 font-display text-2xl text-gold">
               {streak.todayMinutes}
-              <span className="text-sm text-muted-foreground">/{dailyGoal}m</span>
+              <span className="text-sm text-muted-foreground">
+                /{dailyGoal}m
+              </span>
             </p>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
               <div
-                className={streak.todayHit ? "h-full bg-gradient-gold" : "h-full bg-gold/50"}
-                style={{ width: `${Math.min(100, (streak.todayMinutes / Math.max(1, dailyGoal)) * 100)}%` }}
+                className={
+                  streak.todayHit
+                    ? "h-full bg-gradient-gold"
+                    : "h-full bg-gold/50"
+                }
+                style={{
+                  width: `${Math.min(100, (streak.todayMinutes / Math.max(1, dailyGoal)) * 100)}%`,
+                }}
               />
             </div>
           </div>
@@ -323,16 +393,17 @@ function StatsPage() {
             </h3>
             {streak.recoveredInStreak > 0 ? (
               <span className="shrink-0 rounded-full border border-gold/40 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-gold">
-                {streak.recoveredInStreak} saved day{streak.recoveredInStreak === 1 ? "" : "s"}
+                {streak.recoveredInStreak} saved day
+                {streak.recoveredInStreak === 1 ? "" : "s"}
               </span>
             ) : null}
           </div>
 
           {recovery.missedDay === null ? (
             <p className="mt-2 text-xs text-muted-foreground">
-              Nothing to recover — no broken day in the last {RECOVERY_WINDOW_DAYS} days.
-              Miss a day and you can save the streak with a {RECOVERY_MIN_MINUTES}-minute break-day
-              session.
+              Nothing to recover — no broken day in the last{" "}
+              {RECOVERY_WINDOW_DAYS} days. Miss a day and you can save the
+              streak with a {RECOVERY_MIN_MINUTES}-minute break-day session.
             </p>
           ) : (
             <>
@@ -349,8 +420,16 @@ function StatsPage() {
               </p>
 
               <div className="mt-2 flex items-center justify-between gap-3 text-[11px]">
-                <span className="text-muted-foreground">Break-day session today</span>
-                <span className={recovery.minutesToday >= recovery.minutesNeeded ? "text-gold" : "text-muted-foreground"}>
+                <span className="text-muted-foreground">
+                  Break-day session today
+                </span>
+                <span
+                  className={
+                    recovery.minutesToday >= recovery.minutesNeeded
+                      ? "text-gold"
+                      : "text-muted-foreground"
+                  }
+                >
                   {recovery.minutesToday}/{recovery.minutesNeeded} min
                 </span>
               </div>
@@ -398,7 +477,10 @@ function StatsPage() {
           {recovery.used.length > 0 ? (
             <ul className="mt-3 space-y-1.5 border-t border-gold/10 pt-2.5">
               {recovery.used.slice(0, 4).map((r) => (
-                <li key={r.day} className="flex items-center justify-between gap-3 text-[11px]">
+                <li
+                  key={r.day}
+                  className="flex items-center justify-between gap-3 text-[11px]"
+                >
                   <span className="text-muted-foreground">
                     <span className="text-gold">Saved</span>{" "}
                     {new Date(r.day).toLocaleDateString(undefined, {
@@ -428,16 +510,24 @@ function StatsPage() {
         </h2>
         {goals.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            No book goals yet — open a book's details and set a finish date or daily target.
+            No book goals yet — open a book's details and set a finish date or
+            daily target.
           </p>
         ) : (
           <ul className="mt-3 space-y-3">
             {goals.map(({ book, goal }) => (
-              <li key={book.id} className="rounded-xl border border-gold/15 bg-card p-3">
+              <li
+                key={book.id}
+                className="rounded-xl border border-gold/15 bg-card p-3"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="line-clamp-1 font-display text-base text-ivory">{book.title}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">{book.author}</p>
+                    <p className="line-clamp-1 font-display text-base text-ivory">
+                      {book.title}
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {book.author}
+                    </p>
                   </div>
                   <span
                     className={
@@ -448,14 +538,24 @@ function StatsPage() {
                           : "shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
                     }
                   >
-                    {goal.overdue ? "Past due" : goal.onTrack ? "On track" : "Behind"}
+                    {goal.overdue
+                      ? "Past due"
+                      : goal.onTrack
+                        ? "On track"
+                        : "Behind"}
                   </span>
                 </div>
                 <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-secondary">
-                  <div className="h-full bg-gradient-gold" style={{ width: `${book.progress}%` }} />
+                  <div
+                    className="h-full bg-gradient-gold"
+                    style={{ width: `${book.progress}%` }}
+                  />
                 </div>
                 <p className="mt-1.5 text-[11px] text-muted-foreground">
-                  <span className="text-gold">{Math.round(book.progress)}%</span> read
+                  <span className="text-gold">
+                    {Math.round(book.progress)}%
+                  </span>{" "}
+                  read
                   {goal.daysLeft !== null
                     ? goal.daysLeft < 0
                       ? ` · ${Math.abs(goal.daysLeft)} days past due`
@@ -493,11 +593,15 @@ function StatsPage() {
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="text-xs text-ivory">{m.label}</span>
                   <span className="text-[11px] text-gold">
-                    {Math.floor(m.value).toLocaleString()} / {m.target.toLocaleString()}
+                    {Math.floor(m.value).toLocaleString()} /{" "}
+                    {m.target.toLocaleString()}
                   </span>
                 </div>
                 <div className="mt-1 h-1 overflow-hidden rounded-full bg-secondary">
-                  <div className="h-full bg-gradient-gold" style={{ width: `${m.pct}%` }} />
+                  <div
+                    className="h-full bg-gradient-gold"
+                    style={{ width: `${m.pct}%` }}
+                  />
                 </div>
               </li>
             ))}
@@ -507,7 +611,8 @@ function StatsPage() {
         <div className="mt-3 flex flex-wrap gap-2">
           {milestones.earned.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No badges yet — finish a book or start a streak to earn your first.
+              No badges yet — finish a book or start a streak to earn your
+              first.
             </p>
           ) : (
             milestones.earned.map((m) => (
@@ -538,11 +643,13 @@ function StatsPage() {
 
       <section className="mt-8">
         <div className="flex items-end justify-between gap-3">
-          <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">Calendar heat map</h2>
+          <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">
+            Calendar heat map
+          </h2>
           <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <Flame className="size-3.5 text-gold" />
-            <span className="text-gold">{stats.streak}</span> day streak · best {stats.best} ·{" "}
-            {stats.activeDays} active days
+            <span className="text-gold">{stats.streak}</span> day streak · best{" "}
+            {stats.best} · {stats.activeDays} active days
           </p>
         </div>
         <div className="no-scrollbar mt-3 overflow-x-auto rounded-xl border border-gold/15 bg-card p-3">
@@ -568,10 +675,16 @@ function StatsPage() {
               <div className="grid grid-flow-col grid-rows-7 gap-[3px]">
                 {cells.map((d) => {
                   const count = stats.dayCounts.get(d) ?? 0;
-                  const level = count === 0 ? 0 : Math.max(1, Math.round((count / maxDay) * 4));
+                  const level =
+                    count === 0
+                      ? 0
+                      : Math.max(1, Math.round((count / maxDay) * 4));
                   const future = d > today;
                   const saved = savedDays.has(d);
-                  const dayMinutes = (stats.dayBooks.get(d) ?? []).reduce((s, e) => s + e.minutes, 0);
+                  const dayMinutes = (stats.dayBooks.get(d) ?? []).reduce(
+                    (s, e) => s + e.minutes,
+                    0,
+                  );
                   const dateLabel = new Date(d).toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
@@ -608,13 +721,16 @@ function StatsPage() {
                     />
                   );
                 })}
-
               </div>
             </div>
             <div className="mt-3 flex items-center justify-end gap-1.5 text-[9px] uppercase tracking-wider text-muted-foreground">
               <span>Less</span>
               {LEVEL_BG.map((bg) => (
-                <span key={bg} className="size-[9px] rounded-[2px]" style={{ background: bg }} />
+                <span
+                  key={bg}
+                  className="size-[9px] rounded-[2px]"
+                  style={{ background: bg }}
+                />
               ))}
               <span>More</span>
             </div>
@@ -625,9 +741,10 @@ function StatsPage() {
         </p>
       </section>
 
-
       <section className="mt-8">
-        <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">Genre breakdown</h2>
+        <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">
+          Genre breakdown
+        </h2>
         {stats.genres.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">No genres yet.</p>
         ) : (
@@ -654,13 +771,19 @@ function StatsPage() {
                   >
                     <span
                       className="size-2.5 shrink-0 rounded-full"
-                      style={{ background: `oklch(${0.88 - i * 0.045} ${0.14 - i * 0.008} 87)` }}
+                      style={{
+                        background: `oklch(${0.88 - i * 0.045} ${0.14 - i * 0.008} 87)`,
+                      }}
                     />
-                    <span className="w-28 shrink-0 truncate text-xs text-ivory">{g}</span>
+                    <span className="w-28 shrink-0 truncate text-xs text-ivory">
+                      {g}
+                    </span>
                     <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
                       <span
                         className="block h-full bg-gradient-gold"
-                        style={{ width: `${(n / (stats.genres[0]?.[1] ?? 1)) * 100}%` }}
+                        style={{
+                          width: `${(n / (stats.genres[0]?.[1] ?? 1)) * 100}%`,
+                        }}
                       />
                     </span>
                     <span className="w-14 text-right text-[11px] text-gold">
@@ -678,7 +801,9 @@ function StatsPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">Author cloud</h2>
+        <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">
+          Author cloud
+        </h2>
         {stats.authors.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">No authors yet.</p>
         ) : (
@@ -720,7 +845,10 @@ function StatsPage() {
 }
 
 function fmtTime(ms: number) {
-  return new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return new Date(ms).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function DayPanel({
@@ -735,10 +863,14 @@ function DayPanel({
   onClose: () => void;
 }) {
   const sessionMinutes = sessions.reduce(
-    (s, e) => s + Math.max(1, Math.round((e.session.end - e.session.start) / 60000)),
+    (s, e) =>
+      s + Math.max(1, Math.round((e.session.end - e.session.start) / 60000)),
     0,
   );
-  const totalMinutes = sessions.length > 0 ? sessionMinutes : entries.reduce((s, e) => s + e.minutes, 0);
+  const totalMinutes =
+    sessions.length > 0
+      ? sessionMinutes
+      : entries.reduce((s, e) => s + e.minutes, 0);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <button
@@ -750,7 +882,9 @@ function DayPanel({
       <div className="relative z-10 max-h-[80svh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-gold/25 bg-card px-safe pb-safe pt-5 shadow-lux">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-gold/70">Reading day</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-gold/70">
+              Reading day
+            </p>
             <h3 className="mt-1 font-display text-2xl text-ivory">
               {new Date(day).toLocaleDateString(undefined, {
                 weekday: "long",
@@ -761,7 +895,8 @@ function DayPanel({
             </h3>
             <p className="mt-1 text-xs text-muted-foreground">
               {entries.length} book{entries.length === 1 ? "" : "s"} ·{" "}
-              <span className="text-gold">~{totalMinutes} min</span> reading time
+              <span className="text-gold">~{totalMinutes} min</span> reading
+              time
             </p>
           </div>
           <button
@@ -781,21 +916,31 @@ function DayPanel({
             </h4>
             <ol className="mt-3 space-y-3 border-l border-gold/20 pl-4">
               {sessions.map(({ book, session }, i) => {
-                const minutes = Math.max(1, Math.round((session.end - session.start) / 60000));
-                const gained = Math.max(0, session.progressEnd - session.progressStart);
+                const minutes = Math.max(
+                  1,
+                  Math.round((session.end - session.start) / 60000),
+                );
+                const gained = Math.max(
+                  0,
+                  session.progressEnd - session.progressStart,
+                );
                 return (
                   <li key={session.id} className="relative">
                     <span className="absolute -left-[21px] top-1.5 size-2.5 rounded-full bg-gradient-gold shadow-[0_0_6px_oklch(0.82_0.13_87/45%)]" />
                     <p className="text-[11px] tracking-wide text-gold">
                       {i + 1}. {fmtTime(session.start)} – {fmtTime(session.end)}
-                      <span className="text-muted-foreground"> · {minutes} min</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {minutes} min
+                      </span>
                     </p>
                     <p className="mt-0.5 line-clamp-1 font-display text-sm text-ivory">
                       {book.title}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
                       {session.chapter ? `${session.chapter} · ` : ""}
-                      {Math.round(session.progressStart)}% → {Math.round(session.progressEnd)}%
+                      {Math.round(session.progressStart)}% →{" "}
+                      {Math.round(session.progressEnd)}%
                       {gained >= 0.5 ? ` (+${Math.round(gained)}%)` : ""}
                     </p>
                   </li>
@@ -805,7 +950,8 @@ function DayPanel({
           </section>
         ) : (
           <p className="mt-5 text-[11px] text-muted-foreground">
-            No session timings recorded for this day — sessions are tracked from now on.
+            No session timings recorded for this day — sessions are tracked from
+            now on.
           </p>
         )}
 
@@ -819,9 +965,14 @@ function DayPanel({
                 <p className="line-clamp-2 font-display text-base leading-tight text-ivory">
                   {book.title}
                 </p>
-                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{book.author}</p>
+                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                  {book.author}
+                </p>
                 <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary">
-                  <div className="h-full bg-gradient-gold" style={{ width: `${book.progress}%` }} />
+                  <div
+                    className="h-full bg-gradient-gold"
+                    style={{ width: `${book.progress}%` }}
+                  />
                 </div>
                 <p className="mt-1 text-[10px] text-gold/70">
                   {Math.round(book.progress)}% · ~{minutes} min this day

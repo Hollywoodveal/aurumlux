@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ImportFromUrl } from "@/components/ImportFromUrl";
+import { BrandMark } from "@/components/BrandMark";
 import { SettingsSection } from "@/components/settings/SettingsSection";
+import { Switch } from "@/components/settings/Switch";
 import { ThemePicker } from "@/components/settings/ThemePicker";
 
 import {
@@ -16,18 +18,39 @@ import {
   TriangleAlert,
   Upload,
 } from "lucide-react";
-import { buildSyncBundle, decryptBundle, encryptBundle, mergeSyncBundle } from "@/lib/backup";
+import {
+  buildSyncBundle,
+  decryptBundle,
+  encryptBundle,
+  mergeSyncBundle,
+} from "@/lib/backup";
 import { indexLibrary } from "@/lib/textindex";
 import { toast } from "sonner";
 import { useBooks, useBookMutations } from "@/hooks/useLibrary";
-import { fmtBytes, measureStorage, requestPersistentStorage, type StorageReport } from "@/lib/storage";
-import { allAnnotations, putAnnotation, putBook, type Annotation, type BookMeta } from "@/lib/db";
+import {
+  fmtBytes,
+  measureStorage,
+  requestPersistentStorage,
+  type StorageReport,
+} from "@/lib/storage";
+import {
+  allAnnotations,
+  putAnnotation,
+  putBook,
+  type Annotation,
+  type BookMeta,
+} from "@/lib/db";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/hooks/useOnboarding";
-import { clearLastRead, getResumeOnLaunch, setResumeOnLaunch } from "@/lib/resume";
-import { getOnlineMetadataLookup, setOnlineMetadataLookup } from "@/lib/importer";
-import { cn } from "@/lib/utils";
+import {
+  clearLastRead,
+  getResumeOnLaunch,
+  setResumeOnLaunch,
+} from "@/lib/resume";
+import {
+  getOnlineMetadataLookup,
+  setOnlineMetadataLookup,
+} from "@/lib/importer";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -41,7 +64,8 @@ export const Route = createFileRoute("/settings")({
       { property: "og:title", content: "Settings & backup — Aurum" },
       {
         property: "og:description",
-        content: "Local-first backup and privacy settings for your Aurum library.",
+        content:
+          "Local-first backup and privacy settings for your Aurum library.",
       },
     ],
   }),
@@ -84,7 +108,7 @@ function SettingsPage() {
       a.download = `aurum-sync-${new Date().toISOString().slice(0, 10)}.aurum`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Encrypted sync file downloaded");
+      toast.success("Encrypted transfer file downloaded");
     } catch {
       toast.error("Could not create the encrypted file");
     }
@@ -112,8 +136,14 @@ function SettingsPage() {
     setIndexing(true);
     setIndexProgress("Indexing…");
     try {
-      const built = await indexLibrary((done, total) => setIndexProgress(`Indexing ${done}/${total}…`));
-      toast.success(built ? `Indexed ${built} book${built === 1 ? "" : "s"}` : "Everything is already indexed");
+      const built = await indexLibrary((done, total) =>
+        setIndexProgress(`Indexing ${done}/${total}…`),
+      );
+      toast.success(
+        built
+          ? `Indexed ${built} book${built === 1 ? "" : "s"}`
+          : "Everything is already indexed",
+      );
     } catch {
       toast.error("Indexing failed");
     }
@@ -132,7 +162,10 @@ function SettingsPage() {
     }
   }, [refreshStorage]);
 
-  const nearQuota = report?.percent !== null && report?.percent !== undefined && report.percent >= 80;
+  const nearQuota =
+    report?.percent !== null &&
+    report?.percent !== undefined &&
+    report.percent >= 80;
   const heaviest = report
     ? [...books]
         .map((b) => ({ book: b, bytes: report.perBook[b.id]?.total ?? 0 }))
@@ -147,7 +180,9 @@ function SettingsPage() {
       books,
       annotations: await allAnnotations(),
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -165,7 +200,8 @@ function SettingsPage() {
         books?: BookMeta[];
         annotations?: Annotation[];
       };
-      for (const b of data.books ?? []) await putBook({ ...b, hasCover: false });
+      for (const b of data.books ?? [])
+        await putBook({ ...b, hasCover: false });
       for (const a of data.annotations ?? []) await putAnnotation(a);
       qc.invalidateQueries();
       toast.success("Backup restored (book files must be re-imported)");
@@ -176,23 +212,29 @@ function SettingsPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-4xl">
-      <header className="flex items-center gap-2">
-        <Link to="/" aria-label="Back to library" className="rounded-full border border-gold/25 p-2 text-gold">
-          <ChevronLeft className="size-4" />
+    <main
+      id="main-content"
+      className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-4xl"
+    >
+      <header className="flex items-center gap-3">
+        <Link to="/" aria-label="Back to library" className="icon-btn">
+          <ChevronLeft className="size-[18px]" />
         </Link>
+        <BrandMark size={38} />
         <h1 className="font-display text-3xl text-gradient-gold">Settings</h1>
       </header>
+
+      <p className="eyebrow mt-8">Reading</p>
 
       <SettingsSection
         id="appearance"
         title="Appearance"
         icon={<Palette className="size-4 text-gold" aria-hidden />}
-        className="mt-6"
+        className="mt-3"
       >
         <p className="mt-1 text-sm text-muted-foreground">
-          Choose how Aurum looks. The reader follows this automatically unless you pick a page colour
-          of its own while reading.
+          Choose how Aurum looks. The reader follows this automatically unless
+          you pick a page colour of its own while reading.
         </p>
         <ThemePicker />
       </SettingsSection>
@@ -203,69 +245,58 @@ function SettingsPage() {
         className="mt-4"
       >
         <p className="mt-1 text-sm text-muted-foreground">
-          Paste a direct EPUB, PDF, CBZ or TXT link, or an OPDS catalog feed, and Aurum will download
-          it straight onto your device.
+          Paste a direct EPUB, PDF, CBZ or TXT link, or an OPDS catalog feed,
+          and Aurum will download it straight onto your device.
         </p>
         <ImportFromUrl />
       </SettingsSection>
 
       <SettingsSection id="resume" title="Resume reading" className="mt-4">
         <p className="mt-1 text-sm text-muted-foreground">
-          When Aurum opens, go straight back into the book you were last reading, at the exact page
-          you left off.
+          When Aurum opens, go straight back into the book you were last
+          reading, at the exact page you left off.
         </p>
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-sm text-ivory">Reopen my last book on launch</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={resume}
-            aria-label="Reopen my last book on launch"
-            onClick={() => {
-              const next = !resume;
+          <span className="text-sm text-ivory">
+            Reopen my last book on launch
+          </span>
+          <Switch
+            checked={resume}
+            label="Reopen my last book on launch"
+            onChange={(next) => {
               setResume(next);
               void setResumeOnLaunch(next);
             }}
-            className={cn(
-              "relative h-7 w-12 shrink-0 rounded-full border transition-colors",
-              resume ? "border-gold/60 bg-gold/30" : "border-gold/20 bg-muted",
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-0.5 size-5 rounded-full bg-gold transition-all",
-                resume ? "left-6" : "left-0.5 opacity-60",
-              )}
-            />
-          </button>
+          />
         </div>
         <button
           type="button"
           onClick={() => {
-            void clearLastRead().then(() => toast.success("Aurum will open to your library next time"));
+            void clearLastRead().then(() =>
+              toast.success("Aurum will open to your library next time"),
+            );
           }}
-          className="mt-3 rounded-full border border-gold/25 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gold/80"
+          className="btn btn-outline mt-4 text-xs uppercase tracking-[0.18em]"
         >
           Forget saved spot
         </button>
       </SettingsSection>
 
-      <SettingsSection id="backup" title="Backup" className="mt-4">
+      <p className="eyebrow mt-8">Your data</p>
+
+      <SettingsSection id="backup" title="Backup" className="mt-3">
         <p className="mt-1 text-sm text-muted-foreground">
-          Your library lives only on this device. Export a JSON copy of your metadata, progress,
-          bookmarks and highlights.
+          Your library lives only on this device. Export a JSON copy of your
+          metadata, progress, bookmarks and highlights.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            onClick={() => void exportLibrary()}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-4 py-2 text-sm text-primary-foreground"
-          >
+          <button onClick={() => void exportLibrary()} className="btn btn-gold">
             <Download className="size-4" /> Export library
           </button>
           <button
             onClick={() => fileRef.current?.click()}
             disabled={busy}
-            className="inline-flex items-center gap-2 rounded-full border border-gold/30 px-4 py-2 text-sm text-gold disabled:opacity-60"
+            className="btn btn-outline"
           >
             <Upload className="size-4" /> Restore backup
           </button>
@@ -281,16 +312,19 @@ function SettingsPage() {
 
       <SettingsSection
         id="sync"
-        title="Encrypted sync"
+        title="Encrypted transfer"
         icon={<Lock className="size-4 text-gold" aria-hidden />}
-        className="mt-4"
+        className="mt-3"
       >
         <p className="mt-1 text-sm text-muted-foreground">
-          Move reading positions, bookmarks and highlights between your devices with an encrypted
-          file. Choose a passphrase — it never leaves this device, and without it the file cannot be
-          opened.
+          Move reading positions, bookmarks and highlights between your devices
+          with an encrypted file. Choose a passphrase — it never leaves this
+          device, and without it the file cannot be opened.
         </p>
-        <label htmlFor="sync-pass" className="mt-3 block text-[11px] uppercase tracking-[0.16em] text-gold/70">
+        <label
+          htmlFor="sync-pass"
+          className="mt-3 block text-[11px] uppercase tracking-[0.16em] text-gold/70"
+        >
           Passphrase
         </label>
         <input
@@ -306,14 +340,14 @@ function SettingsPage() {
           <button
             onClick={() => void exportSync()}
             disabled={busy || passphrase.length < 8}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-gradient-gold px-4 py-2 text-sm text-primary-foreground disabled:opacity-40"
+            className="btn btn-gold"
           >
             <ShieldCheck className="size-4" /> Export encrypted
           </button>
           <button
             onClick={() => syncRef.current?.click()}
             disabled={busy || passphrase.length < 8}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-gold/30 px-4 py-2 text-sm text-gold disabled:opacity-40"
+            className="btn btn-outline"
           >
             <Upload className="size-4" /> Merge from device
           </button>
@@ -331,16 +365,16 @@ function SettingsPage() {
         id="search-index"
         title="Full-text search"
         icon={<SearchCheck className="size-4 text-gold" aria-hidden />}
-        className="mt-4"
+        className="mt-3"
       >
         <p className="mt-1 text-sm text-muted-foreground">
-          Build a private, on-device index so library search can look inside your books, not just
-          titles and authors.
+          Build a private, on-device index so library search can look inside
+          your books, not just titles and authors.
         </p>
         <button
           onClick={() => void buildIndex()}
           disabled={indexing || books.length === 0}
-          className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-gold/30 px-4 py-2 text-sm text-gold disabled:opacity-40"
+          className="btn btn-outline mt-4"
         >
           <SearchCheck className="size-4" />
           {indexing ? (indexProgress ?? "Indexing…") : "Index my books"}
@@ -351,9 +385,8 @@ function SettingsPage() {
         id="storage"
         title="Storage"
         icon={<HardDrive className="size-4 text-gold" aria-hidden />}
-        className="mt-4"
+        className="mt-3"
       >
-
         {report ? (
           <>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -366,12 +399,17 @@ function SettingsPage() {
               <div className="mt-3">
                 <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
                   <div
-                    className={nearQuota ? "h-full bg-destructive" : "h-full bg-gradient-gold"}
+                    className={
+                      nearQuota
+                        ? "h-full bg-destructive"
+                        : "h-full bg-gradient-gold"
+                    }
                     style={{ width: `${Math.max(1, report.percent)}%` }}
                   />
                 </div>
                 <p className="mt-1.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  {report.percent.toFixed(1)}% of device quota · books use {fmtBytes(report.booksBytes)}
+                  {report.percent.toFixed(1)}% of device quota · books use{" "}
+                  {fmtBytes(report.booksBytes)}
                 </p>
               </div>
             ) : null}
@@ -379,8 +417,9 @@ function SettingsPage() {
             {nearQuota ? (
               <p className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs leading-relaxed text-destructive">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-                You are close to this device's storage limit. Delete a few large books below before
-                importing more, or your browser may start evicting data.
+                You are close to this device's storage limit. Delete a few large
+                books below before importing more, or your browser may start
+                evicting data.
               </p>
             ) : null}
 
@@ -390,10 +429,12 @@ function SettingsPage() {
                   const ok = await requestPersistentStorage();
                   setPersisted(ok);
                   toast[ok ? "success" : "error"](
-                    ok ? "Your library is protected from eviction" : "Your browser declined persistent storage",
+                    ok
+                      ? "Your library is protected from eviction"
+                      : "Your browser declined persistent storage",
                   );
                 }}
-                className="mt-3 rounded-full border border-gold/30 px-4 py-2 text-xs uppercase tracking-[0.16em] text-gold"
+                className="btn btn-outline mt-4 text-xs uppercase tracking-[0.16em]"
               >
                 Protect from eviction
               </button>
@@ -407,7 +448,9 @@ function SettingsPage() {
               {heaviest.map(({ book, bytes }) => (
                 <li key={book.id} className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-ivory">{book.title || "Untitled"}</p>
+                    <p className="truncate text-sm text-ivory">
+                      {book.title || "Untitled"}
+                    </p>
                     <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                       {book.format.toUpperCase()} · {fmtBytes(bytes)}
                       {report.perBook[book.id]?.coverBytes
@@ -429,76 +472,81 @@ function SettingsPage() {
                 </li>
               ))}
               {heaviest.length === 0 ? (
-                <li className="text-sm text-muted-foreground">No books stored yet.</li>
+                <li className="text-sm text-muted-foreground">
+                  No books stored yet.
+                </li>
               ) : null}
             </ul>
           </>
         ) : (
-          <p className="mt-1 text-sm text-muted-foreground">Measuring on-device usage…</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Measuring on-device usage…
+          </p>
         )}
       </SettingsSection>
 
-      <SettingsSection id="privacy" title="Privacy" className="mt-4">
+      <p className="eyebrow mt-8">Privacy</p>
+
+      <SettingsSection id="privacy" title="Privacy" className="mt-3">
         <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
           <li>· No account, no sign-in.</li>
           <li>· No ads, no analytics.</li>
-          <li>· Books, covers, notes and progress stored in on-device storage.</li>
-          <li>· Cloud sync is off and stays off unless you ask for it.</li>
+          <li>
+            · Books, covers, notes and progress stored in on-device storage.
+          </li>
+          <li>
+            · No cloud sync — moving data between devices is a manual encrypted
+            file transfer you start yourself.
+          </li>
         </ul>
         <p className="mt-3 text-sm text-muted-foreground">
-          When importing a book with missing details, Aurum can ask Google Books and Open Library
-          to fill in the gaps. This is off by default — with it off, imports never touch the
-          network.
+          When importing a book with missing details, Aurum can ask Google Books
+          and Open Library to fill in the gaps. This is off by default — with it
+          off, imports never touch the network.
         </p>
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-sm text-ivory">Look up missing book info online</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={onlineLookup}
-            aria-label="Look up missing book info online"
-            onClick={() => {
-              const next = !onlineLookup;
+          <span className="text-sm text-ivory">
+            Look up missing book info online
+          </span>
+          <Switch
+            checked={onlineLookup}
+            label="Look up missing book info online"
+            onChange={(next) => {
               setOnlineLookup(next);
               void setOnlineMetadataLookup(next).then(() =>
-                toast.success(next ? "Online lookups enabled" : "Online lookups disabled"),
+                toast.success(
+                  next ? "Online lookups enabled" : "Online lookups disabled",
+                ),
               );
             }}
-            className={cn(
-              "relative h-7 w-12 shrink-0 rounded-full border transition-colors",
-              onlineLookup ? "border-gold/60 bg-gold/30" : "border-gold/20 bg-muted",
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-0.5 size-5 rounded-full bg-gold transition-all",
-                onlineLookup ? "left-6" : "left-0.5 opacity-60",
-              )}
-            />
-          </button>
+          />
         </div>
       </SettingsSection>
 
-      <SettingsSection id="onboarding" title="Getting started" className="mt-4">
+      <p className="eyebrow mt-8">App</p>
+
+      <SettingsSection id="onboarding" title="Getting started" className="mt-3">
         <p className="mt-1 text-sm text-muted-foreground">
-          Replay the short walkthrough of the shelf, select mode and reader gestures.
+          Replay the short walkthrough of the shelf, select mode and reader
+          gestures.
         </p>
-        <Button
-          variant="outline"
-          className="mt-3 border-gold/30 text-xs"
+        <button
+          type="button"
+          className="btn btn-outline mt-4 text-xs uppercase tracking-[0.16em]"
           onClick={() => {
             replay();
             toast.success("Tour will show on the library screen");
           }}
         >
           Replay the tour
-        </Button>
+        </button>
       </SettingsSection>
 
-      <SettingsSection id="install" title="Install Aurum" className="mt-4">
+      <SettingsSection id="install" title="Install Aurum" className="mt-3">
         <p className="mt-1 text-sm text-muted-foreground">
-          Add Aurum to your home screen from your browser menu to read full screen and offline. Once
-          installed, the app shell is cached so your library opens with no connection at all.
+          Add Aurum to your home screen from your browser menu to read full
+          screen and offline. Once installed, the app shell is cached so your
+          library opens with no connection at all.
         </p>
       </SettingsSection>
 

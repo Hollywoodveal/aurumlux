@@ -80,8 +80,17 @@
 
   --scrim: oklch(0 0 0 / 70%);
 
-  --gradient-gold: linear-gradient(135deg, oklch(0.9 0.09 92), oklch(0.72 0.13 84) 45%, oklch(0.55 0.08 80));
-  --gradient-shelf: linear-gradient(180deg, oklch(0.17 0.006 60), oklch(0.1 0.004 60));
+  --gradient-gold: linear-gradient(
+    135deg,
+    oklch(0.9 0.09 92),
+    oklch(0.72 0.13 84) 45%,
+    oklch(0.55 0.08 80)
+  );
+  --gradient-shelf: linear-gradient(
+    180deg,
+    oklch(0.17 0.006 60),
+    oklch(0.1 0.004 60)
+  );
   --shadow-lux: 0 18px 45px -18px oklch(0 0 0 / 85%);
   --shadow-gold: 0 0 24px -6px oklch(0.82 0.132 87 / 28%);
   --shadow-plank: 0 10px 24px -14px oklch(0 0 0 / 90%);
@@ -130,8 +139,17 @@
 
   --scrim: oklch(0.26 0.03 58 / 48%);
 
-  --gradient-gold: linear-gradient(135deg, oklch(0.6 0.11 88), oklch(0.5 0.12 78) 45%, oklch(0.4 0.09 72));
-  --gradient-shelf: linear-gradient(180deg, oklch(0.94 0.026 85), oklch(0.88 0.032 85));
+  --gradient-gold: linear-gradient(
+    135deg,
+    oklch(0.6 0.11 88),
+    oklch(0.5 0.12 78) 45%,
+    oklch(0.4 0.09 72)
+  );
+  --gradient-shelf: linear-gradient(
+    180deg,
+    oklch(0.94 0.026 85),
+    oklch(0.88 0.032 85)
+  );
   --shadow-lux: 0 18px 45px -20px oklch(0.35 0.04 60 / 28%);
   --shadow-gold: 0 0 24px -6px oklch(0.5 0.11 78 / 32%);
   --shadow-plank: 0 10px 24px -16px oklch(0.35 0.04 60 / 32%);
@@ -175,8 +193,17 @@
 
   --scrim: oklch(0.28 0.02 60 / 45%);
 
-  --gradient-gold: linear-gradient(135deg, oklch(0.62 0.11 90), oklch(0.52 0.12 80) 45%, oklch(0.42 0.09 74));
-  --gradient-shelf: linear-gradient(180deg, oklch(0.985 0.01 85), oklch(0.93 0.018 85));
+  --gradient-gold: linear-gradient(
+    135deg,
+    oklch(0.62 0.11 90),
+    oklch(0.52 0.12 80) 45%,
+    oklch(0.42 0.09 74)
+  );
+  --gradient-shelf: linear-gradient(
+    180deg,
+    oklch(0.985 0.01 85),
+    oklch(0.93 0.018 85)
+  );
   --shadow-lux: 0 18px 45px -20px oklch(0.35 0.03 60 / 22%);
   --shadow-gold: 0 0 24px -6px oklch(0.52 0.11 80 / 30%);
   --shadow-plank: 0 10px 24px -16px oklch(0.35 0.03 60 / 26%);
@@ -392,5 +419,227 @@
   .settings-collapsible[data-state="open"],
   .settings-collapsible[data-state="closed"] {
     animation: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Aurum design system                                                  */
+/* ------------------------------------------------------------------ */
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+}
+
+/* Respect users who ask for less motion — kill all animation globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Skip link: invisible until keyboard users tab to it. */
+  .skip-link {
+    position: fixed;
+    top: -100px;
+    left: 1rem;
+    z-index: 100;
+    border-radius: 9999px;
+    background: var(--gradient-gold);
+    color: oklch(0.16 0.01 70);
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: top 0.2s ease;
+  }
+  .skip-link:focus-visible {
+    top: 1rem;
+    outline-offset: 4px;
+  }
+
+  /* Buttons — one family, three weights. All hit the 44px touch target. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      opacity 0.2s ease,
+      transform 0.1s ease;
+  }
+  .btn:active {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .btn-gold {
+    background: var(--gradient-gold);
+    color: var(--color-primary-foreground);
+    box-shadow: var(--shadow-gold);
+  }
+  .btn-outline {
+    border: 1px solid color-mix(in oklab, var(--gold) 32%, transparent);
+    color: var(--color-gold);
+    background: transparent;
+  }
+  .btn-outline:hover {
+    background: color-mix(in oklab, var(--gold) 10%, transparent);
+  }
+  .btn-ghost {
+    color: var(--color-muted-foreground);
+    min-height: 2.75rem;
+    padding: 0.625rem 1rem;
+  }
+  .btn-ghost:hover {
+    color: var(--color-foreground);
+  }
+  .btn-danger-outline {
+    border: 1px solid color-mix(in oklab, var(--destructive) 55%, transparent);
+    color: var(--color-destructive);
+    background: color-mix(in oklab, var(--destructive) 12%, transparent);
+  }
+
+  /* Segmented control — one pill, mutually exclusive choices. */
+  .segmented {
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in oklab, var(--gold) 22%, transparent);
+    background: color-mix(in oklab, var(--card) 70%, transparent);
+  }
+  .segmented > button {
+    flex: 1 1 0;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    color: var(--color-muted-foreground);
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+  .segmented > button[aria-selected="true"] {
+    background: color-mix(in oklab, var(--gold) 16%, transparent);
+    color: var(--color-gold);
+    box-shadow: inset 0 0 0 1px
+      color-mix(in oklab, var(--gold) 35%, transparent);
+  }
+
+  /* Cards and section eyebrows. */
+  .card {
+    border-radius: 1rem;
+    border: 1px solid color-mix(in oklab, var(--gold) 18%, transparent);
+    background: var(--color-card);
+  }
+  .eyebrow {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: color-mix(in oklab, var(--gold) 72%, transparent);
+  }
+
+  /* Toggle switch — state comes from aria-checked. */
+  .switch {
+    position: relative;
+    height: 1.75rem;
+    width: 3rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .switch[aria-checked="true"] {
+    border-color: color-mix(in oklab, var(--gold) 60%, transparent);
+    background: color-mix(in oklab, var(--gold) 30%, transparent);
+  }
+  .switch[aria-checked="false"] {
+    border-color: color-mix(in oklab, var(--gold) 20%, transparent);
+    background: var(--color-muted);
+  }
+  .switch-thumb {
+    position: absolute;
+    top: 2px;
+    height: 1.25rem;
+    width: 1.25rem;
+    border-radius: 9999px;
+    background: var(--color-gold);
+    transition:
+      left 0.2s ease,
+      opacity 0.2s ease;
+  }
+  .switch[aria-checked="true"] .switch-thumb {
+    left: calc(100% - 1.25rem - 2px);
+  }
+  .switch[aria-checked="false"] .switch-thumb {
+    left: 2px;
+    opacity: 0.55;
+  }
+
+  /* Filter chips (tags, collections) — small, quiet, toggleable. */
+  .chip {
+    flex-shrink: 0;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--color-muted-foreground);
+    transition:
+      border-color 0.2s ease,
+      color 0.2s ease,
+      background-color 0.2s ease;
+  }
+  .chip[aria-pressed="true"] {
+    border-color: color-mix(in oklab, var(--gold) 60%, transparent);
+    background: color-mix(in oklab, var(--gold) 12%, transparent);
+    color: var(--color-gold);
+  }
+
+  /* Icon buttons in headers — always a 44px target. */
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in oklab, var(--gold) 25%, transparent);
+    color: color-mix(in oklab, var(--gold) 82%, transparent);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .icon-btn:hover {
+    background: color-mix(in oklab, var(--gold) 10%, transparent);
+  }
+  .icon-btn[aria-pressed="true"],
+  .icon-btn.is-active {
+    border-color: color-mix(in oklab, var(--gold) 60%, transparent);
+    background: color-mix(in oklab, var(--gold) 12%, transparent);
+    color: var(--color-gold);
   }
 }

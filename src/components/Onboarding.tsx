@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BookOpen, CheckCheck, Hand, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/components/BrandMark";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { cn } from "@/lib/utils";
 
@@ -8,7 +9,7 @@ const STEPS = [
   {
     icon: Sparkles,
     title: "Welcome to Aurum",
-    body: "Your private, offline library. Nothing leaves this device — no account, no ads, no tracking.",
+    body: "Your private, offline library. No account, no ads, no analytics — and online lookups stay off unless you turn them on.",
   },
   {
     icon: BookOpen,
@@ -23,7 +24,7 @@ const STEPS = [
   {
     icon: CheckCheck,
     title: "Select mode",
-    body: "Long-press Select to pick several books at once, then delete them or recalculate their page counts in one go.",
+    body: "Tap Select to pick several books at once, then delete them or recalculate their page counts in one go.",
   },
   {
     icon: BookOpen,
@@ -55,9 +56,13 @@ export function Onboarding() {
     >
       <div className="w-full max-w-sm rounded-2xl border border-gold/25 bg-card p-6 shadow-lux">
         <div className="flex items-start justify-between">
-          <span className="flex size-11 items-center justify-center rounded-full border border-gold/30 bg-gold/10 text-gold">
-            <Icon className="size-5" />
-          </span>
+          {step === 0 ? (
+            <BrandMark size={52} label="Aurum logo" />
+          ) : (
+            <span className="flex size-11 items-center justify-center rounded-full border border-gold/30 bg-gold/10 text-gold">
+              <Icon className="size-5" />
+            </span>
+          )}
           <button
             type="button"
             onClick={complete}
@@ -68,8 +73,12 @@ export function Onboarding() {
           </button>
         </div>
 
-        <h2 className="mt-4 font-display text-2xl text-gradient-gold">{current.title}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{current.body}</p>
+        <h2 className="mt-4 font-display text-2xl text-gradient-gold">
+          {current.title}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {current.body}
+        </p>
 
         <div className="mt-6 flex items-center gap-1.5" aria-hidden>
           {STEPS.map((s, i) => (

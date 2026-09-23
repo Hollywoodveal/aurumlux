@@ -1,14 +1,30 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpDown, BarChart3, CheckSquare, FolderPlus, Library, Layers, RefreshCw, Search, Settings, Sparkles, Tag, Trash2, X , NotebookPen} from "lucide-react";
+import {
+  ArrowUpDown,
+  BarChart3,
+  CheckSquare,
+  ChevronDown,
+  FolderPlus,
+  Layers,
+  RefreshCw,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  Sparkles,
+  Tag,
+  Trash2,
+  X,
+  NotebookPen,
+} from "lucide-react";
 import { toast } from "sonner";
 import { BookDetails } from "@/components/BookDetails";
+import { BrandMark } from "@/components/BrandMark";
 import { ImportButton } from "@/components/ImportButton";
 import { ImportFromUrl } from "@/components/ImportFromUrl";
 import { Onboarding } from "@/components/Onboarding";
 import { useFileHandler } from "@/hooks/useFileHandler";
-
 
 import {
   CompactShelf,
@@ -28,7 +44,9 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): { q?: string } =>
-    typeof search["q"] === "string" && search["q"] ? { q: search["q"] as string } : {},
+    typeof search["q"] === "string" && search["q"]
+      ? { q: search["q"] as string }
+      : {},
 
   head: () => ({
     meta: [
@@ -38,18 +56,22 @@ export const Route = createFileRoute("/")({
         content:
           "Aurum is an offline-first mobile e-reader for EPUB and PDF. Your books, covers, notes and progress stay on your device. Where every page is treasured.",
       },
-      { property: "og:title", content: "Aurum — Where every page is treasured" },
+      {
+        property: "og:title",
+        content: "Aurum — Where every page is treasured",
+      },
       {
         property: "og:description",
         content:
-          "A premium offline-first EPUB and PDF reader with a black & gold digital bookshelf. No account, no ads, no tracking.",
+          "A premium offline-first EPUB and PDF reader with a black & gold digital bookshelf. No account, no ads, no analytics — the network is only used for features you explicitly enable.",
       },
     ],
   }),
   component: LibraryPage,
 });
 
-type SortKey = "title" | "author" | "series" | "recent" | "progress" | "rating" | "pages";
+type SortKey =
+  "title" | "author" | "series" | "recent" | "progress" | "rating" | "pages";
 type ShelfKey = "all" | "reading" | "finished" | "want" | "favorites";
 
 const SHELVES: { key: ShelfKey; label: string }[] = [
@@ -71,7 +93,8 @@ const SORTS: { key: SortKey; label: string }[] = [
 ];
 
 const seriesName = (b: BookMeta) => (b.series ?? "").trim();
-const seriesNo = (b: BookMeta) => (Number(b.seriesIndex) > 0 ? Number(b.seriesIndex) : Infinity);
+const seriesNo = (b: BookMeta) =>
+  Number(b.seriesIndex) > 0 ? Number(b.seriesIndex) : Infinity;
 
 /** Series volumes read in order, and each series stays together in its first member's slot. */
 function groupSeries(list: BookMeta[]) {
@@ -88,12 +111,13 @@ function groupSeries(list: BookMeta[]) {
     out.push(
       ...list
         .filter((b) => seriesName(b).toLowerCase() === key)
-        .sort((a, b) => seriesNo(a) - seriesNo(b) || a.title.localeCompare(b.title)),
+        .sort(
+          (a, b) => seriesNo(a) - seriesNo(b) || a.title.localeCompare(b.title),
+        ),
     );
   }
   return out;
 }
-
 
 function LibraryPage() {
   const { q: initialQuery } = Route.useSearch();
@@ -109,7 +133,6 @@ function LibraryPage() {
     });
   }, [navigate]);
 
-
   const { data: annotations } = useAnnotations();
   const [view, setView] = useState<ViewMode>("spine");
   const [shelf, setShelf] = useState<ShelfKey>("all");
@@ -123,18 +146,23 @@ function LibraryPage() {
   const [recounting, setRecounting] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [collection, setCollection] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const { remove, save } = useBookMutations();
-
 
   const allTags = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const b of books) for (const t of b.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
-    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    for (const b of books)
+      for (const t of b.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
+    return [...counts.entries()].sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+    );
   }, [books]);
 
   const allCollections = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const b of books) for (const c of b.collections ?? []) counts.set(c, (counts.get(c) ?? 0) + 1);
+    for (const b of books)
+      for (const c of b.collections ?? [])
+        counts.set(c, (counts.get(c) ?? 0) + 1);
     return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [books]);
 
@@ -175,7 +203,12 @@ function LibraryPage() {
   const deleteChecked = async () => {
     const ids = [...checked];
     if (ids.length === 0) return;
-    if (!window.confirm(`Delete ${ids.length} book${ids.length === 1 ? "" : "s"} from Aurum?`)) return;
+    if (
+      !window.confirm(
+        `Delete ${ids.length} book${ids.length === 1 ? "" : "s"} from Aurum?`,
+      )
+    )
+      return;
     for (const id of ids) await remove.mutateAsync(id);
     toast.success(`Deleted ${ids.length} book${ids.length === 1 ? "" : "s"}`);
     exitSelect();
@@ -213,7 +246,6 @@ function LibraryPage() {
     );
   };
 
-
   const fetchChecked = async () => {
     const ids = [...checked];
     if (ids.length === 0 || fetching) return;
@@ -244,7 +276,9 @@ function LibraryPage() {
   const collectChecked = async () => {
     const ids = [...checked];
     if (ids.length === 0) return;
-    const name = window.prompt("Add the selected books to which collection?")?.trim();
+    const name = window
+      .prompt("Add the selected books to which collection?")
+      ?.trim();
     if (!name) return;
     for (const id of ids) {
       const book = books.find((b) => b.id === id);
@@ -252,11 +286,15 @@ function LibraryPage() {
       const next = [...new Set([...(book.collections ?? []), name])];
       await save.mutateAsync({ id, patch: { collections: next } });
     }
-    toast.success(`${ids.length} book${ids.length === 1 ? "" : "s"} added to “${name}”`);
+    toast.success(
+      `${ids.length} book${ids.length === 1 ? "" : "s"} added to “${name}”`,
+    );
     exitSelect();
   };
 
-  const current = selected ? (books.find((b) => b.id === selected.id) ?? null) : null;
+  const current = selected
+    ? (books.find((b) => b.id === selected.id) ?? null)
+    : null;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -275,7 +313,8 @@ function LibraryPage() {
     const textBookIds = new Set(textHits.map((h) => h.bookId));
     let list = books.filter((b) => {
       if (tag && !(b.tags ?? []).includes(tag)) return false;
-      if (collection && !(b.collections ?? []).includes(collection)) return false;
+      if (collection && !(b.collections ?? []).includes(collection))
+        return false;
       if (shelf === "favorites") return b.favorite;
       if (shelf !== "all") return b.status === shelf;
       return true;
@@ -295,7 +334,8 @@ function LibraryPage() {
     }
     const cmp: Record<SortKey, (a: BookMeta, b: BookMeta) => number> = {
       title: (a, b) => a.title.localeCompare(b.title),
-      author: (a, b) => a.author.localeCompare(b.author) || a.title.localeCompare(b.title),
+      author: (a, b) =>
+        a.author.localeCompare(b.author) || a.title.localeCompare(b.title),
       series: (a, b) =>
         (seriesName(a) || "\uffff").localeCompare(seriesName(b) || "\uffff") ||
         seriesNo(a) - seriesNo(b) ||
@@ -308,40 +348,40 @@ function LibraryPage() {
     return groupSeries([...list].sort(cmp[sort]));
   }, [books, annotations, shelf, sort, query, tag, collection, textHits]);
 
-  const reading = books.filter((b) => b.status === "reading").sort((a, b) => b.lastOpened - a.lastOpened);
+  const reading = books
+    .filter((b) => b.status === "reading")
+    .sort((a, b) => b.lastOpened - a.lastOpened);
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-3xl pb-24 px-safe pt-safe lg:max-w-6xl">
-      <header className="flex items-start justify-between">
-        <div>
-          <h1 className="font-display text-4xl leading-none text-gradient-gold">
-            Aurum <span className="sr-only">— private offline library</span>
-          </h1>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-            Where every page is treasured
-          </p>
+    <main
+      id="main-content"
+      className="mx-auto min-h-dvh w-full max-w-3xl pb-24 px-safe pt-safe lg:max-w-6xl"
+    >
+      <header className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <BrandMark size={46} />
+          <div>
+            <h1 className="font-display text-4xl leading-none text-gradient-gold">
+              Aurum <span className="sr-only">— private offline library</span>
+            </h1>
+            <p className="mt-1.5 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+              Where every page is treasured
+            </p>
+          </div>
         </div>
-        <nav className="flex items-center gap-1">
+        <nav aria-label="Primary" className="flex items-center gap-1.5">
           <Link
             to="/notes"
             aria-label="Highlights, bookmarks and notes"
-            className="rounded-full border border-gold/25 p-2 text-gold/80"
+            className="icon-btn"
           >
-            <NotebookPen className="size-4" />
+            <NotebookPen className="size-[18px]" />
           </Link>
-          <Link
-            to="/stats"
-            aria-label="Statistics"
-            className="rounded-full border border-gold/25 p-2 text-gold/80"
-          >
-            <BarChart3 className="size-4" />
+          <Link to="/stats" aria-label="Statistics" className="icon-btn">
+            <BarChart3 className="size-[18px]" />
           </Link>
-          <Link
-            to="/settings"
-            aria-label="Settings"
-            className="rounded-full border border-gold/25 p-2 text-gold/80"
-          >
-            <Settings className="size-4" />
+          <Link to="/settings" aria-label="Settings" className="icon-btn">
+            <Settings className="size-[18px]" />
           </Link>
         </nav>
       </header>
@@ -360,11 +400,12 @@ function LibraryPage() {
         <div className="relative">
           <button
             type="button"
-            aria-label="Sort books"
+            aria-label={`Sort books, currently ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
+            title={`Sort: ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
             onClick={() => setSortOpen((v) => !v)}
-            className="rounded-full border border-gold/25 p-2.5 text-gold/80"
+            className="icon-btn"
           >
-            <ArrowUpDown className="size-4" />
+            <ArrowUpDown className="size-[18px]" />
           </button>
           {sortOpen ? (
             <div className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-gold/25 bg-popover shadow-lux">
@@ -389,94 +430,127 @@ function LibraryPage() {
         </div>
       </div>
 
-      <div className="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4">
+      <div
+        className="segmented no-scrollbar mt-4 overflow-x-auto"
+        role="group"
+        aria-label="Shelves"
+      >
         {SHELVES.map((s) => (
           <button
             key={s.key}
             type="button"
+            aria-selected={shelf === s.key}
             onClick={() => setShelf(s.key)}
-            className={cn(
-              "shrink-0 rounded-full border px-3.5 py-1.5 text-xs tracking-wide transition-colors",
-              shelf === s.key
-                ? "border-gold/60 bg-gold/12 text-gold"
-                : "border-border text-muted-foreground",
-            )}
           >
             {s.label}
           </button>
         ))}
       </div>
 
-      {allTags.length > 0 ? (
-        <div className="no-scrollbar -mx-4 mt-2 flex items-center gap-2 overflow-x-auto px-4">
-          <Tag aria-hidden className="size-3.5 shrink-0 text-gold/60" />
-          {allTags.map(([name, count]) => (
-            <button
-              key={name}
-              type="button"
-              aria-pressed={tag === name}
-              onClick={() => setTag((prev) => (prev === name ? null : name))}
+      {allTags.length > 0 || allCollections.length > 0 ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen((v) => !v)}
+            className={cn(
+              "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-xs uppercase tracking-[0.14em] transition-colors",
+              filtersOpen || tag || collection
+                ? "border-gold/50 text-gold"
+                : "border-gold/25 text-gold/70",
+            )}
+          >
+            <SlidersHorizontal className="size-3.5" />
+            Filters
+            {(tag || collection) && (
+              <span className="flex size-5 items-center justify-center rounded-full bg-gold/20 text-[10px] text-gold">
+                {(tag ? 1 : 0) + (collection ? 1 : 0)}
+              </span>
+            )}
+            <ChevronDown
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1 text-[11px] tracking-wide transition-colors",
-                tag === name
-                  ? "border-gold/60 bg-gold/12 text-gold"
-                  : "border-border/70 text-muted-foreground",
+                "size-3.5 transition-transform",
+                filtersOpen && "rotate-180",
               )}
-            >
-              {name} <span className="text-gold/50">{count}</span>
-            </button>
-          ))}
-          {tag ? (
-            <button
-              type="button"
-              onClick={() => setTag(null)}
-              className="shrink-0 rounded-full border border-border/70 px-3 py-1 text-[11px] text-muted-foreground"
-            >
-              Clear tag
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {allCollections.length > 0 ? (
-        <div className="no-scrollbar -mx-4 mt-2 flex items-center gap-2 overflow-x-auto px-4">
-          <Layers aria-hidden className="size-3.5 shrink-0 text-gold/60" />
-          {allCollections.map(([name, count]) => (
-            <button
-              key={name}
-              type="button"
-              aria-pressed={collection === name}
-              onClick={() => setCollection((prev) => (prev === name ? null : name))}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1 text-[11px] tracking-wide transition-colors",
-                collection === name
-                  ? "border-gold/60 bg-gold/12 text-gold"
-                  : "border-border/70 text-muted-foreground",
-              )}
-            >
-              {name} <span className="text-gold/50">{count}</span>
-            </button>
-          ))}
-          {collection ? (
-            <button
-              type="button"
-              onClick={() => setCollection(null)}
-              className="shrink-0 rounded-full border border-border/70 px-3 py-1 text-[11px] text-muted-foreground"
-            >
-              Clear collection
-            </button>
+              aria-hidden
+            />
+          </button>
+          {filtersOpen ? (
+            <div className="card mt-2 p-4">
+              {allTags.length > 0 ? (
+                <div>
+                  <p className="eyebrow flex items-center gap-1.5">
+                    <Tag aria-hidden className="size-3" /> Tags
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {allTags.map(([name, count]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        aria-pressed={tag === name}
+                        onClick={() =>
+                          setTag((prev) => (prev === name ? null : name))
+                        }
+                        className="chip"
+                      >
+                        {name} <span className="text-gold/50">{count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {allCollections.length > 0 ? (
+                <div className={allTags.length > 0 ? "mt-4" : ""}>
+                  <p className="eyebrow flex items-center gap-1.5">
+                    <Layers aria-hidden className="size-3" /> Collections
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {allCollections.map(([name, count]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        aria-pressed={collection === name}
+                        onClick={() =>
+                          setCollection((prev) => (prev === name ? null : name))
+                        }
+                        className="chip"
+                      >
+                        {name} <span className="text-gold/50">{count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {tag || collection ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTag(null);
+                    setCollection(null);
+                  }}
+                  className="btn-ghost mt-3 px-0 text-xs uppercase tracking-[0.14em]"
+                >
+                  Clear all filters
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}
 
       {insideHits.length > 0 ? (
-        <section className="mt-5 rounded-xl border border-gold/20 bg-card/70 p-3">
-          <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">Inside your books</h2>
+        <section
+          className="card mt-5 p-4"
+          aria-label="Search results inside your books"
+        >
+          <h2 className="eyebrow">Inside your books</h2>
           <ul className="mt-2 divide-y divide-border/60">
             {insideHits.map(({ book, hits }) => (
               <li key={book.id} className="py-2.5">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate font-display text-sm text-ivory">{book.title}</p>
+                  <p className="truncate font-display text-sm text-ivory">
+                    {book.title}
+                  </p>
                   <Link
                     to="/read/$bookId"
                     params={{ bookId: book.id }}
@@ -486,7 +560,10 @@ function LibraryPage() {
                   </Link>
                 </div>
                 {hits.slice(0, 2).map((hit, i) => (
-                  <p key={`${hit.href}-${i}`} className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                  <p
+                    key={`${hit.href}-${i}`}
+                    className="mt-1 text-[11px] leading-relaxed text-muted-foreground"
+                  >
                     <span className="text-gold/60">{hit.label} · </span>
                     {hit.snippet}
                   </p>
@@ -497,46 +574,56 @@ function LibraryPage() {
         </section>
       ) : null}
 
-
-
       {books.length === 0 ? (
         <section className="mt-8 pb-24 text-center sm:mt-16">
-          <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-gold/30">
-            <Library className="size-7 text-gold" />
+          <div className="mx-auto w-fit">
+            <BrandMark size={84} label="Aurum logo" />
           </div>
-          <h2 className="mt-5 font-display text-2xl text-ivory">Your shelves are waiting</h2>
+          <h2 className="mt-5 font-display text-2xl text-ivory">
+            Your shelves are waiting
+          </h2>
           <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
-            Import EPUB, PDF, CBZ or TXT files from your device. Everything stays offline, on your phone.
+            Import EPUB, PDF, CBZ or TXT files from your device. Everything
+            stays offline, on your phone.
           </p>
           <div className="mt-6 flex justify-center">
             <ImportButton label="Import books" />
           </div>
           <div className="mx-auto mt-4 max-w-sm text-left">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-gold/70">Or import from a link</p>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-gold/70">
+              Or import from a link
+            </p>
             <ImportFromUrl />
           </div>
         </section>
       ) : (
         <>
           {reading.length > 0 && shelf === "all" && !query ? (
-            <section className="mt-6">
-              <h2 className="text-xs uppercase tracking-[0.2em] text-gold/70">Continue reading</h2>
-              <div className="no-scrollbar -mx-4 mt-3 flex gap-3 overflow-x-auto px-4">
+            <section className="mt-6" aria-label="Continue reading">
+              <h2 className="eyebrow">Continue reading</h2>
+              <div className="no-scrollbar -mx-4 mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
                 {reading.map((b) => (
                   <button
                     key={b.id}
                     type="button"
                     onClick={() => setSelected(b)}
-                    className="w-40 shrink-0 rounded-xl border border-gold/20 bg-card p-3 text-left shadow-lux"
+                    className="card w-40 shrink-0 p-3.5 text-left shadow-lux"
                   >
                     <p className="line-clamp-2 font-display text-base leading-tight text-ivory">
                       {b.title}
                     </p>
-                    <p className="mt-1 truncate text-[11px] text-muted-foreground">{b.author}</p>
+                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                      {b.author}
+                    </p>
                     <div className="mt-3 h-1 overflow-hidden rounded-full bg-secondary">
-                      <div className="h-full bg-gradient-gold" style={{ width: `${b.progress}%` }} />
+                      <div
+                        className="h-full bg-gradient-gold"
+                        style={{ width: `${b.progress}%` }}
+                      />
                     </div>
-                    <p className="mt-1 text-[10px] text-gold/70">{Math.round(b.progress)}%</p>
+                    <p className="mt-1 text-[10px] text-gold/70">
+                      {Math.round(b.progress)}%
+                    </p>
                   </button>
                 ))}
               </div>
@@ -545,35 +632,63 @@ function LibraryPage() {
 
           <section className="mt-7">
             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-              <h2 className="whitespace-nowrap text-xs uppercase tracking-[0.2em] text-gold/70">
-                {SHELVES.find((s) => s.key === shelf)?.label} · {filtered.length}
+              <h2 className="eyebrow whitespace-nowrap">
+                {SHELVES.find((s) => s.key === shelf)?.label} ·{" "}
+                {filtered.length}
               </h2>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+                  onClick={() =>
+                    selectMode ? exitSelect() : setSelectMode(true)
+                  }
                   aria-label={selectMode ? "Cancel selection" : "Select books"}
-                  className={cn(
-                    "rounded-full border p-2 transition-colors",
-                    selectMode ? "border-gold/60 bg-gold/12 text-gold" : "border-gold/25 text-gold/80",
-                  )}
+                  aria-pressed={selectMode}
+                  title={selectMode ? "Cancel selection" : "Select books"}
+                  className="icon-btn"
                 >
-                  {selectMode ? <X className="size-4" /> : <CheckSquare className="size-4" />}
+                  {selectMode ? (
+                    <X className="size-[18px]" />
+                  ) : (
+                    <CheckSquare className="size-[18px]" />
+                  )}
                 </button>
                 <ViewSwitcher value={view} onChange={setView} />
               </div>
             </div>
             <div className="mt-4">
               {filtered.length === 0 ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">No books here yet.</p>
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  No books here yet.
+                </p>
               ) : view === "spine" ? (
-                <SpineShelf books={filtered} onSelect={onBookTap} selectable={selectMode} selectedIds={checked} />
+                <SpineShelf
+                  books={filtered}
+                  onSelect={onBookTap}
+                  selectable={selectMode}
+                  selectedIds={checked}
+                />
               ) : view === "grid" ? (
-                <GridShelf books={filtered} onSelect={onBookTap} selectable={selectMode} selectedIds={checked} />
+                <GridShelf
+                  books={filtered}
+                  onSelect={onBookTap}
+                  selectable={selectMode}
+                  selectedIds={checked}
+                />
               ) : view === "list" ? (
-                <ListShelf books={filtered} onSelect={onBookTap} selectable={selectMode} selectedIds={checked} />
+                <ListShelf
+                  books={filtered}
+                  onSelect={onBookTap}
+                  selectable={selectMode}
+                  selectedIds={checked}
+                />
               ) : (
-                <CompactShelf books={filtered} onSelect={onBookTap} selectable={selectMode} selectedIds={checked} />
+                <CompactShelf
+                  books={filtered}
+                  onSelect={onBookTap}
+                  selectable={selectMode}
+                  selectedIds={checked}
+                />
               )}
             </div>
           </section>
@@ -589,7 +704,9 @@ function LibraryPage() {
             type="button"
             onClick={() =>
               setChecked((prev) =>
-                prev.size === filtered.length ? new Set() : new Set(filtered.map((b) => b.id)),
+                prev.size === filtered.length
+                  ? new Set()
+                  : new Set(filtered.map((b) => b.id)),
               )
             }
             className="ml-auto rounded-full border border-gold/30 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold/90"
@@ -603,7 +720,9 @@ function LibraryPage() {
             aria-label="Recalculate page count for selected books"
             className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold disabled:opacity-40"
           >
-            <RefreshCw className={cn("size-3.5", recounting && "animate-spin")} />
+            <RefreshCw
+              className={cn("size-3.5", recounting && "animate-spin")}
+            />
             Pages
           </button>
 
@@ -643,9 +762,10 @@ function LibraryPage() {
         </div>
       )}
 
-      {current ? <BookDetails book={current} onClose={() => setSelected(null)} /> : null}
+      {current ? (
+        <BookDetails book={current} onClose={() => setSelected(null)} />
+      ) : null}
       <Onboarding />
     </main>
-
   );
 }

@@ -1,13 +1,23 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { EpubReader, DEFAULT_PREFS, type ReaderPrefs } from "@/components/reader/EpubReader";
+import {
+  EpubReader,
+  DEFAULT_PREFS,
+  type ReaderPrefs,
+} from "@/components/reader/EpubReader";
 import { PdfReader } from "@/components/reader/PdfReader";
 import { CbzReader } from "@/components/reader/CbzReader";
 import { TxtReader } from "@/components/reader/TxtReader";
+import { BrandMark } from "@/components/BrandMark";
 import { ReaderGoalHud } from "@/components/reader/ReaderGoalHud";
 import { useDailyGoal } from "@/hooks/useSettings";
-import { computeStreak, minutesOnDay, startOfDay, type StreakRecovery } from "@/lib/goals";
+import {
+  computeStreak,
+  minutesOnDay,
+  startOfDay,
+  type StreakRecovery,
+} from "@/lib/goals";
 import { clearLastRead, rememberLastRead } from "@/lib/resume";
 import {
   getBook,
@@ -24,9 +34,15 @@ export const Route = createFileRoute("/read/$bookId")({
   head: () => ({
     meta: [
       { title: "Reading — Aurum" },
-      { name: "description", content: "A calm, offline reading view for your EPUB and PDF books." },
+      {
+        name: "description",
+        content: "A calm, offline reading view for your EPUB and PDF books.",
+      },
       { property: "og:title", content: "Reading — Aurum" },
-      { property: "og:description", content: "A calm, offline reading view in Aurum." },
+      {
+        property: "og:description",
+        content: "A calm, offline reading view in Aurum.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -49,9 +65,15 @@ function ReaderPage() {
     savesStreakToday: false,
   });
   const openedAt = useRef(Date.now());
-  const sessionId = useRef(Math.random().toString(36).slice(2) + Date.now().toString(36));
+  const sessionId = useRef(
+    Math.random().toString(36).slice(2) + Date.now().toString(36),
+  );
   const sessionStartProgress = useRef<number | null>(null);
-  const latest = useRef<{ progress: number; location: string; chapter: string } | null>(null);
+  const latest = useRef<{
+    progress: number;
+    location: string;
+    chapter: string;
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -75,7 +97,6 @@ function ReaderPage() {
     })();
   }, [bookId]);
 
-
   // Snapshot today's totals before this session so the in-reader indicator can
   // add live minutes without re-reading the database on every tick.
   useEffect(() => {
@@ -83,8 +104,17 @@ function ReaderPage() {
       const all = await listBooks();
       const today = startOfDay(Date.now());
       const dayKeys = new Set(all.flatMap((b) => b.readDays.map(startOfDay)));
-      const recoveries = await getSetting<StreakRecovery[]>("streakRecoveries", []);
-      const before = computeStreak(all, dayKeys, dailyGoal, Date.now(), recoveries);
+      const recoveries = await getSetting<StreakRecovery[]>(
+        "streakRecoveries",
+        [],
+      );
+      const before = computeStreak(
+        all,
+        dayKeys,
+        dailyGoal,
+        Date.now(),
+        recoveries,
+      );
       const baseMinutesToday = minutesOnDay(all, today);
       setDayContext({
         baseMinutesToday,
@@ -93,7 +123,6 @@ function ReaderPage() {
       });
     })();
   }, [bookId, dailyGoal]);
-
 
   const refreshAnnotations = useCallback(() => {
     void listAnnotations(bookId).then(setAnnotations);
@@ -116,9 +145,12 @@ function ReaderPage() {
     if (!book) return;
     const elapsed = Date.now() - openedAt.current;
     const today = new Date().setHours(0, 0, 0, 0);
-    const days = book.readDays.includes(today) ? book.readDays : [...book.readDays, today];
+    const days = book.readDays.includes(today)
+      ? book.readDays
+      : [...book.readDays, today];
     const p = latest.current;
-    if (sessionStartProgress.current === null) sessionStartProgress.current = book.progress ?? 0;
+    if (sessionStartProgress.current === null)
+      sessionStartProgress.current = book.progress ?? 0;
     const session = {
       id: sessionId.current,
       start: openedAt.current,
@@ -138,7 +170,10 @@ function ReaderPage() {
             location: p.location,
             chapter: p.chapter,
             ...(p.progress >= 98
-              ? { status: "finished" as const, finishedAt: book.finishedAt ?? Date.now() }
+              ? {
+                  status: "finished" as const,
+                  finishedAt: book.finishedAt ?? Date.now(),
+                }
               : {}),
           }
         : {}),
@@ -159,7 +194,6 @@ function ReaderPage() {
     };
   }, [persist]);
 
-
   const back = () => {
     // Leaving on purpose means the next launch should open the library, not this book.
     void persist()
@@ -169,7 +203,8 @@ function ReaderPage() {
 
   if (!loaded) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
+        <BrandMark size={64} label="Aurum logo" />
         <p className="font-display text-2xl text-gradient-gold">Aurum</p>
       </div>
     );
@@ -178,8 +213,13 @@ function ReaderPage() {
   if (!book) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-        <p className="text-sm text-muted-foreground">This book is no longer in your library.</p>
-        <button onClick={() => void navigate({ to: "/" })} className="text-gold underline">
+        <p className="text-sm text-muted-foreground">
+          This book is no longer in your library.
+        </p>
+        <button
+          onClick={() => void navigate({ to: "/" })}
+          className="text-gold underline"
+        >
           Back to library
         </button>
       </div>
