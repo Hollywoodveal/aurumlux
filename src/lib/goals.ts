@@ -290,6 +290,45 @@ export function bookGoalStatus(book: BookMeta, now = Date.now()): BookGoalStatus
   };
 }
 
+/**
+ * Estimated minutes of reading left in this book, derived from the reader's
+ * own recent pace: minutes per percent gained across sessions from the last
+ * 30 days. Returns null when there isn't enough session data to trust.
+ */
+export function estimateMinutesLeft(
+  book: BookMeta,
+  now = Date.now(),
+): number | null {
+  const remaining = Math.max(0, 100 - book.progress);
+  if (remaining <= 0) return 0;
+  let minutes = 0;
+  let gained = 0;
+  for (const s of book.sessions ?? []) {
+    if (s.start < now - 30 * DAY_MS) continue;
+    const pct = s.progressEnd - s.progressStart;
+    const min = (s.end - s.start) / 60000;
+    if (pct > 0 && min > 0) {
+      minutes += min;
+      gained += pct;
+    }
+  }
+  // Require a meaningful sample: at least 5 minutes covering 1% of the book.
+  if (gained < 1 || minutes < 5) return null;
+  const minPerPct = minutes / gained;
+  // Sanity cap: slower than 10h per percent is almost certainly bad data.
+  if (minPerPct <= 0 || minPerPct > 600) return null;
+  return Math.round(remaining * minPerPct);
+}
+
+/** Compact "3h 20m" / "45m" formatting for a minutes estimate. */
+export function formatMinutesLeft(totalMinutes: number): string {
+  const m = Math.max(0, Math.round(totalMinutes));
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  return rest === 0 ? `${h}h` : `${h}h ${rest}m`;
+}
+
 export function toDateInput(ms: number | null | undefined) {
   if (!ms) return "";
   const d = new Date(ms);

@@ -24,7 +24,9 @@ import { BrandMark } from "@/components/BrandMark";
 import { ImportButton } from "@/components/ImportButton";
 import { ImportFromUrl } from "@/components/ImportFromUrl";
 import { Onboarding } from "@/components/Onboarding";
+import { StreakPill } from "@/components/StreakPill";
 import { useFileHandler } from "@/hooks/useFileHandler";
+import { useDailyGoal, useStreakRecoveries } from "@/hooks/useSettings";
 
 import {
   CompactShelf,
@@ -72,7 +74,8 @@ export const Route = createFileRoute("/")({
 
 type SortKey =
   "title" | "author" | "series" | "recent" | "progress" | "rating" | "pages";
-type ShelfKey = "all" | "reading" | "finished" | "want" | "favorites";
+type ShelfKey =
+  "all" | "reading" | "finished" | "want" | "favorites" | "year" | "stalled";
 
 const SHELVES: { key: ShelfKey; label: string }[] = [
   { key: "all", label: "All books" },
@@ -80,7 +83,35 @@ const SHELVES: { key: ShelfKey; label: string }[] = [
   { key: "finished", label: "Finished" },
   { key: "want", label: "Want to read" },
   { key: "favorites", label: "Favorites" },
+  { key: "year", label: "Finished this year" },
+  { key: "stalled", label: "Stalled" },
 ];
+
+const STALLED_AFTER_MS = 30 * 86400000;
+
+/** Smart-shelf predicates; plain shelves just match reading status. */
+function shelfMatches(shelf: ShelfKey, b: BookMeta, now = Date.now()): boolean {
+  switch (shelf) {
+    case "all":
+      return true;
+    case "favorites":
+      return b.favorite;
+    case "year":
+      return (
+        b.status === "finished" &&
+        b.finishedAt !== null &&
+        new Date(b.finishedAt).getFullYear() === new Date(now).getFullYear()
+      );
+    case "stalled":
+      return (
+        b.status === "reading" &&
+        b.progress > 0 &&
+        now - b.lastOpened > STALLED_AFTER_MS
+      );
+    default:
+      return b.status === shelf;
+  }
+}
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "title", label: "Title A–Z" },
@@ -148,6 +179,8 @@ function LibraryPage() {
   const [collection, setCollection] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { remove, save } = useBookMutations();
+  const { minutes: dailyGoal } = useDailyGoal();
+  const recoveries = useStreakRecoveries();
 
   const allTags = useMemo(() => {
     const counts = new Map<string, number>();
@@ -315,9 +348,7 @@ function LibraryPage() {
       if (tag && !(b.tags ?? []).includes(tag)) return false;
       if (collection && !(b.collections ?? []).includes(collection))
         return false;
-      if (shelf === "favorites") return b.favorite;
-      if (shelf !== "all") return b.status === shelf;
-      return true;
+      return shelfMatches(shelf, b);
     });
     if (q) {
       list = list.filter(
@@ -385,6 +416,8 @@ function LibraryPage() {
           </Link>
         </nav>
       </header>
+
+      <StreakPill books={books} dailyGoal={dailyGoal} recoveries={recoveries.list} />
 
       <div className="mt-5 flex items-center gap-2">
         <div className="relative flex-1">

@@ -8,7 +8,13 @@ import { StarRating } from "@/components/StarRating";
 import { Button } from "@/components/ui/button";
 import { useBookMutations } from "@/hooks/useLibrary";
 import type { BookMeta, ReadingStatus } from "@/lib/db";
-import { bookGoalStatus, fromDateInput, toDateInput } from "@/lib/goals";
+import {
+  bookGoalStatus,
+  estimateMinutesLeft,
+  formatMinutesLeft,
+  fromDateInput,
+  toDateInput,
+} from "@/lib/goals";
 import { DYSLEXIC_FONT, READER_FONTS } from "@/lib/reader-prefs";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +42,13 @@ export function BookDetails({
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const goal = bookGoalStatus(book);
+  const minutesLeft = estimateMinutesLeft(book);
+  const timeLeftText =
+    minutesLeft === null
+      ? goal.projectedDays
+        ? ` · about ${goal.projectedDays} day${goal.projectedDays === 1 ? "" : "s"} to finish`
+        : ""
+      : ` · ≈ ${formatMinutesLeft(minutesLeft)} left at your pace`;
 
   const setRating = (rating: number) => {
     save.mutate({ id: book.id, patch: { rating } });
@@ -242,10 +255,8 @@ export function BookDetails({
                         goal.daysLeft < 0
                           ? `${Math.abs(goal.daysLeft)} days past due`
                           : `${goal.daysLeft} day${goal.daysLeft === 1 ? "" : "s"} left`
-                      } · need ~${(goal.requiredPerDay ?? 0).toFixed(1)}%/day, reading ~${goal.pacePerDay.toFixed(1)}%/day`
-                    : `${goal.remaining.toFixed(0)}% left · reading ~${goal.pacePerDay.toFixed(1)}%/day${
-                        goal.projectedDays ? ` · about ${goal.projectedDays} days to finish` : ""
-                      }`}
+                      } · need ~${(goal.requiredPerDay ?? 0).toFixed(1)}%/day, reading ~${goal.pacePerDay.toFixed(1)}%/day${timeLeftText}`
+                    : `${goal.remaining.toFixed(0)}% left · reading ~${goal.pacePerDay.toFixed(1)}%/day${timeLeftText}`}
               </p>
             </>
           ) : (
