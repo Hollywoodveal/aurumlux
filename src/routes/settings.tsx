@@ -26,6 +26,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { clearLastRead, getResumeOnLaunch, setResumeOnLaunch } from "@/lib/resume";
+import { getOnlineMetadataLookup, setOnlineMetadataLookup } from "@/lib/importer";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
@@ -62,9 +63,14 @@ function SettingsPage() {
   const [indexing, setIndexing] = useState(false);
   const [indexProgress, setIndexProgress] = useState<string | null>(null);
   const [resume, setResume] = useState(true);
+  const [onlineLookup, setOnlineLookup] = useState(false);
 
   useEffect(() => {
     void getResumeOnLaunch().then(setResume);
+  }, []);
+
+  useEffect(() => {
+    void getOnlineMetadataLookup().then(setOnlineLookup);
   }, []);
 
   async function exportSync() {
@@ -435,10 +441,42 @@ function SettingsPage() {
       <SettingsSection id="privacy" title="Privacy" className="mt-4">
         <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
           <li>· No account, no sign-in.</li>
-          <li>· No ads, no tracking, no analytics.</li>
+          <li>· No ads, no analytics.</li>
           <li>· Books, covers, notes and progress stored in on-device storage.</li>
           <li>· Cloud sync is off and stays off unless you ask for it.</li>
         </ul>
+        <p className="mt-3 text-sm text-muted-foreground">
+          When importing a book with missing details, Aurum can ask Google Books and Open Library
+          to fill in the gaps. This is off by default — with it off, imports never touch the
+          network.
+        </p>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="text-sm text-ivory">Look up missing book info online</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={onlineLookup}
+            aria-label="Look up missing book info online"
+            onClick={() => {
+              const next = !onlineLookup;
+              setOnlineLookup(next);
+              void setOnlineMetadataLookup(next).then(() =>
+                toast.success(next ? "Online lookups enabled" : "Online lookups disabled"),
+              );
+            }}
+            className={cn(
+              "relative h-7 w-12 shrink-0 rounded-full border transition-colors",
+              onlineLookup ? "border-gold/60 bg-gold/30" : "border-gold/20 bg-muted",
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 size-5 rounded-full bg-gold transition-all",
+                onlineLookup ? "left-6" : "left-0.5 opacity-60",
+              )}
+            />
+          </button>
+        </div>
       </SettingsSection>
 
       <SettingsSection id="onboarding" title="Getting started" className="mt-4">

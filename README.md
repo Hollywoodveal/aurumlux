@@ -24,8 +24,6 @@ No account required
 
 No ads
 
-No tracking
-
 No analytics
 
 Local-first storage
@@ -732,13 +730,16 @@ Require no account
 
 Store data locally
 
-Avoid tracking
-
 Avoid analytics
 
 Avoid advertisements
 
 Respect user ownership
+
+Network use is limited to features the reader explicitly enables or taps: optional
+online metadata lookups at import (off by default; queries Google Books and Open
+Library), manual metadata refresh, word definitions, and importing a book from a
+web link. There is no background tracking and no analytics.
 
 ---
 

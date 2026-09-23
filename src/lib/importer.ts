@@ -1,10 +1,12 @@
 import JSZip from "jszip";
 import {
   getFile,
+  getSetting,
   listBooks,
   putBook,
   putCover,
   putFile,
+  setSetting,
   uid,
   type BookFormat,
   type BookMeta,
@@ -372,6 +374,23 @@ export async function fetchRemote(book: BookMeta): Promise<Remote> {
 
 
 
+/**
+ * Whether importing a book may query online metadata providers (Google Books,
+ * Open Library) for missing fields and covers. Off by default: with it off,
+ * imports use only what is embedded in the file and make zero network calls.
+ * Manual "refresh metadata" from a book's details is always an explicit user
+ * action and is not gated by this setting.
+ */
+const ONLINE_METADATA_KEY = "onlineMetadataLookup";
+
+export function getOnlineMetadataLookup(): Promise<boolean> {
+  return getSetting<boolean>(ONLINE_METADATA_KEY, false);
+}
+
+export function setOnlineMetadataLookup(enabled: boolean): Promise<void> {
+  return setSetting(ONLINE_METADATA_KEY, enabled);
+}
+
 export function detectFormat(name: string): BookFormat | null {
   const ext = name.toLowerCase().split(".").pop() ?? "";
   if (["epub", "pdf", "cbz", "cbr", "mobi", "azw3", "txt"].includes(ext)) return ext as BookFormat;
@@ -395,8 +414,9 @@ export async function importFile(file: File, fileHash?: string): Promise<BookMet
   else if (format === "txt") await parseTxt(file, book);
   else book.pageCount = Math.round(file.size / 2200);
 
-  // metadata provider fallback for missing (never locked at import) fields
-  if (!book.description || !book.genre || !book.hasCover) {
+  // metadata provider fallback for missing (never locked at import) fields.
+  // Only when the reader has opted in: otherwise imports stay fully offline.
+  if ((!book.description || !book.genre || !book.hasCover) && (await getOnlineMetadataLookup())) {
     const remote = await fetchRemote(book);
     if (!book.description && remote.description) book.description = remote.description;
     if (!book.genre && remote.genre) book.genre = remote.genre;
