@@ -291,85 +291,226 @@ function normaliseGenre(values: string[]): string | undefined {
   return [...seen].map((t) => t.replace(/\b\w/g, (c) => c.toUpperCase())).join(", ");
 }
 
-async function googleLookup(q: string): Promise<Remote> {
+export type RemoteCandidate = Remote & {
+  provider: "google" | "openlibrary";
+  /** Higher is a better match: 100+ = exact ISBN, 75+ = strong, 40+ = likely. */
+  score: number;
+  matchLabel: string;
+};
+
+type MatchWant = { title: string; author: string; isbn: string };
+
+/** Lowercase alphanumeric tokens for fuzzy comparison. */
+function normText(s: string | undefined): string {
+  return (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function cleanIsbn(s: string | undefined): string {
+  return (s ?? "").replace(/[-\s]/g, "");
+}
+
+/**
+ * Score one provider result against the book we are looking for. An exact
+ * ISBN wins outright; otherwise title similarity matters most, author second.
+ */
+function scoreRemote(r: Remote, isbns: string[], want: MatchWant): number {
+  let s = 0;
+  if (want.isbn && isbns.some((i) => cleanIsbn(i) === want.isbn)) s += 100;
+  const t = normText(r.title);
+  const wt = normText(want.title);
+  if (t && wt) {
+    if (t === wt) s += 50;
+    else if (t.includes(wt) || wt.includes(t)) s += 25;
+  }
+  const a = normText(r.author);
+  const wa = normText(want.author);
+  if (a && wa) {
+    if (a === wa) s += 30;
+    else {
+      const last = (x: string) => x.split(" ").filter(Boolean).pop() ?? "";
+      const al = last(a);
+      const wl = last(wa);
+      if (al.length > 2 && al === wl) s += 15;
+    }
+  }
+  if (r.coverUrl) s += 8;
+  if (r.description) s += 4;
+  return s;
+}
+
+function labelFor(score: number): string {
+  if (score >= 100) return "Exact ISBN match";
+  if (score >= 75) return "Strong match";
+  if (score >= 40) return "Likely match";
+  return "Possible match";
+}
+
+function googleVolumeToRemote(v: any): { remote: Remote; isbns: string[] } {
+  const ids: any[] = Array.isArray(v?.industryIdentifiers) ? v.industryIdentifiers : [];
+  return {
+    remote: {
+      title: v?.title,
+      subtitle: v?.subtitle,
+      author: Array.isArray(v?.authors) ? v.authors.join(", ") : undefined,
+      description: v?.description,
+      genre: normaliseGenre(
+        (Array.isArray(v?.categories) ? v.categories : []).flatMap((c: string) =>
+          String(c).split("/"),
+        ),
+      ),
+      publisher: v?.publisher,
+      publishedDate: v?.publishedDate,
+      coverUrl: v?.imageLinks?.thumbnail
+        ?.replace("http://", "https://")
+        ?.replace("zoom=1", "zoom=3"),
+    },
+    isbns: ids.map((i) => String(i?.identifier ?? "")),
+  };
+}
+
+async function googleCandidates(q: string, want: MatchWant): Promise<RemoteCandidate[]> {
   try {
     const res = await fetch(
       `https://www.googleapis.com/books/v1/volumes?maxResults=5&q=${encodeURIComponent(q)}`,
     );
     const json = await res.json();
     const items: any[] = Array.isArray(json?.items) ? json.items : [];
-    const v = items[0]?.volumeInfo;
-    if (!v) return {};
-    // categories are sparse — take them from the first result that has any
-    const cats = items.map((i) => i?.volumeInfo?.categories).find((c) => Array.isArray(c) && c.length);
-    return {
-      title: v.title,
-      subtitle: v.subtitle,
-      author: Array.isArray(v.authors) ? v.authors.join(", ") : undefined,
-      description: v.description,
-      genre: normaliseGenre(cats ?? []),
-      publisher: v.publisher,
-      publishedDate: v.publishedDate,
-      coverUrl: v.imageLinks?.thumbnail?.replace("http://", "https://")?.replace("zoom=1", "zoom=3"),
-    };
+    return items.map((item) => {
+      const { remote, isbns } = googleVolumeToRemote(item?.volumeInfo);
+      const score = scoreRemote(remote, isbns, want);
+      return { ...remote, provider: "google" as const, score, matchLabel: labelFor(score) };
+    });
   } catch {
-    return {};
+    return [];
   }
 }
 
-async function openLibraryLookup(q: string): Promise<Remote> {
+function openLibraryDocToRemote(d: any): Remote {
+  const subjects = Array.isArray(d?.subject) ? d.subject : [];
+  return {
+    title: d?.title,
+    subtitle: d?.subtitle,
+    author: Array.isArray(d?.author_name) ? d.author_name.join(", ") : undefined,
+    genre: normaliseGenre(subjects),
+    publisher: Array.isArray(d?.publisher) ? d.publisher[0] : undefined,
+    publishedDate: d?.first_publish_year ? String(d.first_publish_year) : undefined,
+    coverUrl: d?.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : undefined,
+  };
+}
+
+async function openLibraryCandidates(q: string, want: MatchWant): Promise<RemoteCandidate[]> {
   try {
     const res = await fetch(
-      `https://openlibrary.org/search.json?limit=3&fields=title,subtitle,author_name,subject,publisher,first_publish_year,cover_i&q=${encodeURIComponent(q)}`,
+      `https://openlibrary.org/search.json?limit=5&fields=title,subtitle,author_name,subject,publisher,first_publish_year,cover_i,isbn&q=${encodeURIComponent(q)}`,
     );
     const json = await res.json();
     const docs: any[] = Array.isArray(json?.docs) ? json.docs : [];
-    const d = docs[0];
-    if (!d) return {};
-    const subjects = docs.map((x) => x?.subject).find((s) => Array.isArray(s) && s.length);
-    return {
-      title: d.title,
-      subtitle: d.subtitle,
-      author: Array.isArray(d.author_name) ? d.author_name.join(", ") : undefined,
-      genre: normaliseGenre(subjects ?? []),
-      publisher: Array.isArray(d.publisher) ? d.publisher[0] : undefined,
-      publishedDate: d.first_publish_year ? String(d.first_publish_year) : undefined,
-      coverUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : undefined,
-    };
+    return docs.map((d) => {
+      const remote = openLibraryDocToRemote(d);
+      const isbns: string[] = Array.isArray(d?.isbn) ? d.isbn.map(String) : [];
+      const score = scoreRemote(remote, isbns, want);
+      return { ...remote, provider: "openlibrary" as const, score, matchLabel: labelFor(score) };
+    });
   } catch {
-    return {};
+    return [];
   }
 }
 
-async function queryProviders(q: string): Promise<Remote> {
-  const google = await googleLookup(q);
-  if (Object.values(google).some(Boolean) && google.genre) return google;
-  const ol = await openLibraryLookup(q);
-  if (Object.values(google).some(Boolean)) {
-    // keep Google's richer fields, borrow the genre (and anything missing) from Open Library
-    return { ...ol, ...Object.fromEntries(Object.entries(google).filter(([, v]) => Boolean(v))) };
+/**
+ * Deterministic exact-edition lookup: Open Library resolves an ISBN straight
+ * to its edition record, no fuzzy search involved.
+ */
+async function openLibraryIsbnCandidate(
+  isbn: string,
+  want: MatchWant,
+): Promise<RemoteCandidate | null> {
+  try {
+    const res = await fetch(`https://openlibrary.org/isbn/${isbn}.json`);
+    if (!res.ok) return null;
+    const ed: any = await res.json();
+    const covers: number[] = Array.isArray(ed?.covers) ? ed.covers : [];
+    const remote: Remote = {
+      title: ed?.title,
+      subtitle: ed?.subtitle,
+      publisher: Array.isArray(ed?.publishers) ? ed.publishers[0] : undefined,
+      publishedDate: ed?.publish_date ? String(ed.publish_date) : undefined,
+      coverUrl: covers[0] ? `https://covers.openlibrary.org/b/id/${covers[0]}-L.jpg` : undefined,
+    };
+    const score = scoreRemote(remote, [isbn], want);
+    return { ...remote, provider: "openlibrary", score, matchLabel: labelFor(score) };
+  } catch {
+    return null;
   }
-  return ol;
 }
 
-export async function fetchRemote(book: BookMeta): Promise<Remote> {
+function stripCandidate(c: RemoteCandidate): Remote {
+  const { provider: _p, score: _s, matchLabel: _m, ...remote } = c;
+  return remote;
+}
+
+/**
+ * Ranked metadata candidates from every provider, best match first. Used by
+ * the manual pick-a-match UI; the automatic paths take the top candidate.
+ */
+export async function searchMetadataCandidates(book: BookMeta): Promise<RemoteCandidate[]> {
   const title = cleanTitle(book.title ?? "");
   const author = (book.author ?? "").trim();
-  const isbn = (book.isbn ?? "").replace(/[-\s]/g, "");
+  const isbn = cleanIsbn(book.isbn ?? "");
+  const want: MatchWant = { title, author, isbn };
   const queries = [
     isbn ? `isbn:${isbn}` : "",
     title && author ? `${title} ${author}` : "",
     title,
   ].filter(Boolean);
-  let best: Remote = {};
-  for (const q of queries) {
-    const remote = await queryProviders(q);
-    if (Object.values(remote).some(Boolean)) {
-      best = { ...remote, ...Object.fromEntries(Object.entries(best).filter(([, v]) => Boolean(v))) };
-      if (best.genre) return best;
-    }
+
+  const all: RemoteCandidate[] = [];
+  if (isbn) {
+    const exact = await openLibraryIsbnCandidate(isbn, want);
+    if (exact) all.push(exact);
   }
-  return best;
+  for (const q of queries) {
+    const [g, o] = await Promise.all([
+      googleCandidates(q, want),
+      openLibraryCandidates(q, want),
+    ]);
+    all.push(...g, ...o);
+  }
+
+  const seen = new Set<string>();
+  return all
+    .filter((c) => {
+      if (c.score <= 0) return false;
+      const key = `${c.provider}|${normText(c.title)}|${normText(c.author)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+}
+
+/**
+ * Best single remote match for automatic use (import-time fill, cover fetch).
+ * Returns {} unless a candidate actually resembles the book — a wrong book's
+ * metadata is worse than none.
+ */
+export async function fetchRemote(book: BookMeta): Promise<Remote> {
+  const cands = await searchMetadataCandidates(book);
+  const best = cands[0];
+  if (!best || best.score < 40) return {};
+  const out = stripCandidate(best);
+  if (!out.genre) {
+    // Borrow the genre from the best Open Library candidate for the same
+    // book — its subject tags are richer than Google's categories.
+    const ol = cands.find((c) => c.provider === "openlibrary" && c.genre && c.score >= 40);
+    if (ol?.genre) out.genre = ol.genre;
+  }
+  return out;
 }
 
 
@@ -440,9 +581,11 @@ export async function importFile(file: File, fileHash?: string): Promise<BookMet
   return book;
 }
 
-/** Re-query metadata providers for one book. Overwrites unlocked fields, never locked ones. */
-export async function refetchMetadata(book: BookMeta): Promise<Partial<BookMeta>> {
-  const remote = await fetchRemote(book);
+/**
+ * Build a metadata patch from a remote match. Overwrites unlocked fields,
+ * never locked ones, and skips values identical to what the book already has.
+ */
+export function applyRemotePatch(book: BookMeta, remote: Remote): Partial<BookMeta> {
   const locked = new Set(book.locked ?? []);
   const patch: Partial<BookMeta> = {};
   const set = <K extends keyof BookMeta>(key: K, value: BookMeta[K] | undefined) => {
@@ -459,6 +602,11 @@ export async function refetchMetadata(book: BookMeta): Promise<Partial<BookMeta>
   set("publisher", remote.publisher);
   set("publishedDate", remote.publishedDate);
   return patch;
+}
+
+/** Re-query metadata providers for one book. Overwrites unlocked fields, never locked ones. */
+export async function refetchMetadata(book: BookMeta): Promise<Partial<BookMeta>> {
+  return applyRemotePatch(book, await fetchRemote(book));
 }
 
 /** Fetch and store a cover from metadata providers. Returns true when a cover was saved. */

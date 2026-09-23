@@ -6,7 +6,7 @@ import {
   Lock,
   LockOpen,
   RefreshCw,
-  Sparkles,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -22,9 +22,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { CoverEditor } from "@/components/CoverEditor";
 import { StarRating } from "@/components/StarRating";
-import { type BookMeta } from "@/lib/db";
+import { type BookMeta, putCover } from "@/lib/db";
 import { useBookMutations } from "@/hooks/useLibrary";
-import { recountPages, refetchCover, refetchMetadata } from "@/lib/importer";
+import {
+  applyRemotePatch,
+  recountPages,
+  refetchCover,
+  searchMetadataCandidates,
+  type RemoteCandidate,
+} from "@/lib/importer";
 import { cn } from "@/lib/utils";
 
 
@@ -57,23 +63,47 @@ export function MetadataDialog({
   const [draft, setDraft] = useState(book);
   const [busy, setBusy] = useState<"meta" | "cover" | "pages" | null>(null);
   const [coverOpen, setCoverOpen] = useState(false);
+  const [candidates, setCandidates] = useState<RemoteCandidate[] | null>(null);
 
-
-  async function autoMetadata() {
+  /** Search providers and show a ranked pick-list instead of blindly taking the first hit. */
+  async function findCandidates() {
     setBusy("meta");
     try {
-      const patch = await refetchMetadata(draft);
-      const keys = Object.keys(patch);
-      if (!keys.length) {
-        toast.info("No match found — try refining the title or adding an ISBN");
-        return;
+      const list = await searchMetadataCandidates(draft);
+      setCandidates(list);
+      if (!list.length) {
+        toast.info("No matches found — try refining the title or adding an ISBN");
       }
-      setDraft((d) => ({ ...d, ...patch }));
-      toast.success(`Updated ${keys.length} field${keys.length > 1 ? "s" : ""} — press Save to keep`);
     } catch {
       toast.error("Could not reach metadata providers");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function useCandidate(c: RemoteCandidate) {
+    const patch = applyRemotePatch(draft, c);
+    const keys = Object.keys(patch);
+    if (!keys.length) {
+      toast.info("Nothing new — this match adds no unlocked fields");
+      return;
+    }
+    setDraft((d) => ({ ...d, ...patch }));
+    setCandidates(null);
+    toast.success(`Updated ${keys.length} field${keys.length > 1 ? "s" : ""} — press Save to keep`);
+    // Pull the match's cover too when the book has none and the cover isn't locked.
+    if (c.coverUrl && !draft.hasCover && !(draft.locked ?? []).includes("cover")) {
+      try {
+        const blob = await (await fetch(c.coverUrl)).blob();
+        if (blob.size > 1000) {
+          await putCover(draft.id, blob);
+          await save.mutateAsync({ id: draft.id, patch: { hasCover: true } });
+          setDraft((d) => ({ ...d, hasCover: true }));
+          toast.success("Cover saved too");
+        }
+      } catch {
+        /* cover is a bonus — metadata already applied */
+      }
     }
   }
 
@@ -121,7 +151,10 @@ export function MetadataDialog({
   }
 
   useEffect(() => {
-    if (open) setDraft(book);
+    if (open) {
+      setDraft(book);
+      setCandidates(null);
+    }
   }, [open, book]);
 
   const isLocked = (key: string) => draft.locked.includes(key);
@@ -149,14 +182,14 @@ export function MetadataDialog({
             variant="outline"
             className="flex-1 border-gold/30 text-xs"
             disabled={busy !== null}
-            onClick={() => void autoMetadata()}
+            onClick={() => void findCandidates()}
           >
             {busy === "meta" ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Sparkles className="size-4" />
+              <Search className="size-4" />
             )}
-            Auto-fetch metadata
+            Find matches online
           </Button>
           <Button
             variant="outline"
@@ -186,6 +219,70 @@ export function MetadataDialog({
           )}
           Recalculate page count
         </Button>
+
+        {candidates !== null && candidates.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+              Pick the right match
+            </p>
+            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+              {candidates.map((c, i) => (
+                <div
+                  key={`${c.provider}-${c.title}-${c.author}-${i}`}
+                  className="flex items-center gap-3 rounded-xl border border-gold/20 bg-background/60 p-2"
+                >
+                  {c.coverUrl ? (
+                    <img
+                      src={c.coverUrl}
+                      alt=""
+                      loading="lazy"
+                      className="h-16 w-11 shrink-0 rounded object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-11 shrink-0 items-center justify-center rounded bg-gold/10 text-[10px] text-muted-foreground">
+                      No cover
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{c.title ?? "Unknown title"}</p>
+                    {c.author && (
+                      <p className="truncate text-xs text-muted-foreground">{c.author}</p>
+                    )}
+                    {(c.publisher || c.publishedDate) && (
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {[c.publisher, c.publishedDate].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-widest",
+                          c.score >= 75
+                            ? "bg-gold/15 text-gold"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {c.matchLabel}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        {c.provider === "google" ? "Google Books" : "Open Library"}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 border-gold/30 text-xs"
+                    disabled={busy !== null}
+                    onClick={() => void useCandidate(c)}
+                  >
+                    Use this
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {FIELDS.map((f) => (
