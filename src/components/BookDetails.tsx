@@ -6,13 +6,16 @@ import { CoverImage } from "@/components/CoverImage";
 import { MetadataDialog } from "@/components/MetadataDialog";
 import { StarRating } from "@/components/StarRating";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useBookMutations } from "@/hooks/useLibrary";
 import type { BookMeta, ReadingStatus } from "@/lib/db";
 import {
   bookGoalStatus,
+  buildExternalSessionPatch,
   estimateMinutesLeft,
   formatMinutesLeft,
   fromDateInput,
+  startOfDay,
   toDateInput,
 } from "@/lib/goals";
 import { DYSLEXIC_FONT, READER_FONTS } from "@/lib/reader-prefs";
@@ -41,6 +44,10 @@ export function BookDetails({
   const { save, remove } = useBookMutations();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
+  const [logPages, setLogPages] = useState("");
+  const [logMinutes, setLogMinutes] = useState("");
+  const [logDate, setLogDate] = useState(toDateInput(Date.now()));
   const goal = bookGoalStatus(book);
   const minutesLeft = estimateMinutesLeft(book);
   const timeLeftText =
@@ -65,6 +72,39 @@ export function BookDetails({
           : {}),
       },
     });
+
+  /** Log reading done on another device (e.g. a Kindle) so streaks, goals, and pace stay current. */
+  const logSession = async () => {
+    const amount = logPages === "" ? NaN : Number(logPages);
+    const minutes = Number(logMinutes);
+    const day = fromDateInput(logDate) ?? startOfDay(Date.now());
+    const progressGiven =
+      book.pageCount > 0 ? amount > 0 : amount > 0 && amount <= 100;
+    if (!progressGiven && !(minutes > 0)) {
+      toast.info(
+        book.pageCount > 0
+          ? "Enter pages read, or minutes, or both"
+          : "Enter progress %, or minutes, or both",
+      );
+      return;
+    }
+    const patch = buildExternalSessionPatch(book, {
+      pages: book.pageCount > 0 && amount > 0 ? amount : undefined,
+      progressTo: book.pageCount <= 0 && amount > 0 && amount <= 100 ? amount : undefined,
+      minutes: minutes > 0 ? minutes : 0,
+      day,
+    });
+    await save.mutateAsync({ id: book.id, patch });
+    setLogPages("");
+    setLogMinutes("");
+    setLogDate(toDateInput(Date.now()));
+    setLogOpen(false);
+    toast.success(
+      patch.status === "finished"
+        ? "Logged — and that's a finish!"
+        : `Logged · now ${Math.round(patch.progress ?? book.progress)}% through`,
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -164,6 +204,70 @@ export function BookDetails({
           </div>
         ) : null}
 
+        <section className="mt-4 rounded-xl border border-gold/20 bg-secondary/30 p-3">
+          <button
+            type="button"
+            onClick={() => setLogOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 text-left"
+          >
+            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-gold/70">
+              <BookOpen className="size-3.5" /> Read on your Kindle?
+            </span>
+            <span className="text-xs text-muted-foreground">{logOpen ? "Hide" : "Log it"}</span>
+          </button>
+          {logOpen && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Log a session from another device and your streak, daily goal, and pace stay
+                current.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-1">
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                    {book.pageCount > 0 ? "Pages read" : "Progress now (%)"}
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    placeholder={book.pageCount > 0 ? "e.g. 40" : "e.g. 65"}
+                    value={logPages}
+                    onChange={(e) => setLogPages(e.target.value)}
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                    Minutes (optional)
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    placeholder="e.g. 30"
+                    value={logMinutes}
+                    onChange={(e) => setLogMinutes(e.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="block space-y-1">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Day
+                </span>
+                <Input
+                  type="date"
+                  value={logDate}
+                  onChange={(e) => setLogDate(e.target.value)}
+                />
+              </label>
+              <Button
+                className="w-full bg-gradient-gold text-xs text-primary-foreground"
+                onClick={() => void logSession()}
+              >
+                Log session
+              </Button>
+            </div>
+          )}
+        </section>
 
         <section className="mt-5 rounded-xl border border-gold/20 bg-secondary/30 p-3">
           <div className="flex items-center justify-between gap-2">

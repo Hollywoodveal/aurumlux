@@ -1,4 +1,4 @@
-import type { BookMeta } from "@/lib/db";
+import { uid, type BookMeta, type ReadingSession } from "@/lib/db";
 
 export const DAY_MS = 86400000;
 export const DEFAULT_DAILY_GOAL = 20;
@@ -341,4 +341,64 @@ export function fromDateInput(value: string): number | null {
   const [y, m, d] = value.split("-").map(Number);
   if (!y || !m || !d) return null;
   return new Date(y, m - 1, d, 23, 59, 59).getTime();
+}
+
+export type ExternalSessionInput = {
+  /** Pages read on the other device. Ignored when the book has no page count. */
+  pages?: number | undefined;
+  /** Progress percent reached (0-100), used when the book has no page count. */
+  progressTo?: number | undefined;
+  /** Minutes spent reading; 0 when unknown. */
+  minutes?: number | undefined;
+  /** Any timestamp on the day the session happened; normalised to start-of-day. */
+  day: number;
+};
+
+/**
+ * Build the book patch for a session read on another device (e.g. a Kindle),
+ * in exactly the shape the in-app reader writes: a real session plus readDays,
+ * reading time, and forward-only progress. That is what lets streaks, daily
+ * goals, pace, and time-left all count it without any special-casing.
+ */
+export function buildExternalSessionPatch(
+  book: BookMeta,
+  input: ExternalSessionInput,
+): Partial<BookMeta> {
+  const minutes = Math.max(0, Math.round(input.minutes ?? 0));
+  const day = startOfDay(input.day);
+  const isToday = day === startOfDay(Date.now());
+  const end = isToday ? Date.now() : day + 12 * 3600 * 1000 + minutes * 60000;
+  const start = Math.max(day, end - minutes * 60000);
+
+  let progressEnd = book.progress;
+  if (book.pageCount > 0 && input.pages !== undefined) {
+    const currentPages = (book.progress / 100) * book.pageCount;
+    progressEnd = Math.min(100, ((currentPages + input.pages) / book.pageCount) * 100);
+  } else if (input.progressTo !== undefined) {
+    progressEnd = Math.min(100, Math.max(0, input.progressTo));
+  }
+  progressEnd = Math.max(book.progress, progressEnd);
+
+  const session: ReadingSession = {
+    id: uid(),
+    start,
+    end,
+    progressStart: book.progress,
+    progressEnd,
+    chapter: "",
+  };
+  const readDays = book.readDays.includes(day) ? book.readDays : [...book.readDays, day];
+  const patch: Partial<BookMeta> = {
+    progress: progressEnd,
+    readingTime: book.readingTime + minutes * 60000,
+    readDays,
+    sessions: [...(book.sessions ?? []), session].slice(-400),
+    lastOpened: Math.max(book.lastOpened, end),
+  };
+  if (book.status === "want" && progressEnd > 0) patch.status = "reading";
+  if (progressEnd >= 100) {
+    patch.status = "finished";
+    patch.finishedAt = book.finishedAt ?? end;
+  }
+  return patch;
 }
