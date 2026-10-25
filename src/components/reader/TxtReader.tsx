@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, ChevronLeft, Palette, X } from "lucide-react";
+import { BookA, Bookmark, ChevronLeft, Palette, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { getFile, putAnnotation, uid, type Annotation, type BookMeta } from "@/lib/db";
 import { ReaderSettings, type ReaderPrefs } from "./EpubReader";
 import { ReadAloudBar } from "./ReadAloudBar";
+import { DictionarySheet } from "./DictionarySheet";
+import { NoteComposer } from "./NoteComposer";
 import { THEME_COLORS, resolveFont, resolveReaderTheme, withPrefDefaults } from "@/lib/reader-prefs";
 import { useAppTheme } from "@/hooks/useAppTheme";
 
@@ -44,8 +46,13 @@ export function TxtReader({
   goalHud?: React.ReactNode;
 }) {
   const [text, setText] = useState<string | null>(null);
-  const [panel, setPanel] = useState<null | "settings" | "notes">(null);
+  const [panel, setPanel] = useState<null | "settings" | "notes" | "search">(null);
   const [percent, setPercent] = useState(book.progress);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<{ at: number; excerpt: string }[]>([]);
+  const [lookup, setLookup] = useState<string | null>(null);
+  /** Last non-empty selection inside the text, kept because tapping a button can collapse it. */
+  const selectionRef = useRef("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const paraRef = useRef<HTMLParagraphElement>(null);
   const restored = useRef(false);
@@ -180,6 +187,40 @@ export function TxtReader({
     el.scrollTop = ratio * max;
   }
 
+  function runSearch(term: string) {
+    const full = textRef.current;
+    if (!full || term.trim().length < 3) {
+      setResults([]);
+      return;
+    }
+    const needle = term.toLowerCase();
+    const hay = full.toLowerCase();
+    const found: { at: number; excerpt: string }[] = [];
+    let at = hay.indexOf(needle);
+    while (at >= 0 && found.length < 50) {
+      const excerpt = full
+        .slice(Math.max(0, at - 40), at + needle.length + 80)
+        .replace(/\s+/g, " ")
+        .trim();
+      found.push({ at, excerpt });
+      at = hay.indexOf(needle, at + needle.length);
+    }
+    setResults(found);
+  }
+
+  useEffect(() => {
+    const onSel = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) return;
+      const node = sel.anchorNode;
+      if (paraRef.current && node && paraRef.current.contains(node)) {
+        selectionRef.current = sel.toString().trim();
+      }
+    };
+    document.addEventListener("selectionchange", onSel);
+    return () => document.removeEventListener("selectionchange", onSel);
+  }, []);
+
   return (
     <div className="fixed inset-0 flex h-dvh flex-col" style={{ background: theme.bg }}>
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
@@ -196,6 +237,9 @@ export function TxtReader({
         <div className="flex items-center gap-1 text-gold">
           <button onClick={() => void addBookmark()} aria-label="Add bookmark" className="flex size-11 items-center justify-center">
             <Bookmark className="size-[18px]" />
+          </button>
+          <button onClick={() => setPanel("search")} aria-label="Search in this book" className="flex size-11 items-center justify-center">
+            <Search className="size-[18px]" />
           </button>
           <button onClick={() => setPanel("settings")} aria-label="Reading settings" className="flex size-11 items-center justify-center">
             <Palette className="size-[18px]" />
@@ -235,6 +279,20 @@ export function TxtReader({
           >
             Notes ({annotations.length})
           </button>
+          <button
+            aria-label="Define selected word"
+            onClick={() => {
+              const text = selectionRef.current;
+              if (!text) {
+                toast.info("Select a word first, then tap Define");
+                return;
+              }
+              setLookup(text.split(/\s+/).slice(0, 2).join(" "));
+            }}
+            className="rounded-full border border-gold/25 px-3 py-1 text-[11px] uppercase tracking-widest text-gold/80"
+          >
+            <BookA className="mr-1 inline size-3" /> Define
+          </button>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2">
           <ReadAloudBar
@@ -254,6 +312,50 @@ export function TxtReader({
         <ReaderSettings prefs={prefs} onChange={onPrefs} onClose={() => setPanel(null)} />
       ) : null}
 
+      {panel === "search" ? (
+        <div className="fixed inset-0 z-50 flex">
+          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-scrim" />
+          <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-xl text-gold">Search</h3>
+              <button onClick={() => setPanel(null)} aria-label="Close">
+                <X className="size-5 text-muted-foreground" />
+              </button>
+            </div>
+            <form
+              className="mt-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                runSearch(query);
+              }}
+            >
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search in this book"
+                placeholder="Search in this book"
+                className="w-full rounded-full border border-gold/25 bg-secondary/60 px-4 py-2 text-sm outline-none"
+              />
+            </form>
+            <ul className="mt-3 space-y-2">
+              {results.map((r) => (
+                <li key={r.at}>
+                  <button
+                    onClick={() => {
+                      revealRange(r.at, r.at + query.trim().length);
+                      setPanel(null);
+                    }}
+                    className="w-full rounded-lg border border-border/60 p-2.5 text-left text-xs text-muted-foreground"
+                  >
+                    {r.excerpt}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+
       {panel === "notes" ? (
         <div className="fixed inset-0 z-50 flex">
           <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-scrim" />
@@ -264,9 +366,16 @@ export function TxtReader({
                 <X className="size-5 text-muted-foreground" />
               </button>
             </div>
-            <ul className="mt-4 space-y-2">
+            <div className="mt-4 space-y-2">
+              <NoteComposer
+                bookId={book.id}
+                location={(percent / 100).toFixed(4)}
+                label={`${percent}%`}
+                onAdded={onAnnotationsChanged}
+              />
+              <ul className="space-y-2">
               {annotations.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No bookmarks yet.</p>
+                <p className="text-sm text-muted-foreground">No bookmarks or notes yet.</p>
               ) : null}
               {annotations.map((a) => (
                 <li key={a.id}>
@@ -279,12 +388,19 @@ export function TxtReader({
                     style={{ borderColor: a.color }}
                   >
                     <p className="text-[10px] uppercase tracking-widest text-gold/70">{a.label}</p>
+                    {a.text ? <p className="mt-1 text-sm">{a.text}</p> : null}
+                    {a.note ? <p className="mt-1 text-sm italic text-muted-foreground">{a.note}</p> : null}
                   </button>
                 </li>
               ))}
-            </ul>
+              </ul>
+            </div>
           </div>
         </div>
+      ) : null}
+
+      {lookup !== null ? (
+        <DictionarySheet word={lookup} onClose={() => setLookup(null)} />
       ) : null}
     </div>
   );

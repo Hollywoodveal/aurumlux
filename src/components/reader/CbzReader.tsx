@@ -5,6 +5,7 @@ import { Bookmark, ChevronLeft, ChevronRight, Maximize2, Minimize2, X } from "lu
 import { toast } from "sonner";
 import { getFile, putAnnotation, uid, type Annotation, type BookMeta } from "@/lib/db";
 import { ReaderSettings, type ReaderPrefs } from "./EpubReader";
+import { NoteComposer } from "./NoteComposer";
 import { THEME_COLORS, resolveReaderTheme, withPrefDefaults } from "@/lib/reader-prefs";
 import { useAppTheme } from "@/hooks/useAppTheme";
 
@@ -261,9 +262,16 @@ export function CbzReader({
                 <X className="size-5 text-muted-foreground" />
               </button>
             </div>
-            <ul className="mt-4 space-y-2">
+            <div className="mt-4 space-y-2">
+              <NoteComposer
+                bookId={book.id}
+                location={String(page)}
+                label={`Page ${page}`}
+                onAdded={onAnnotationsChanged}
+              />
+              <ul className="space-y-2">
               {annotations.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No bookmarks yet.</p>
+                <p className="text-sm text-muted-foreground">No bookmarks or notes yet.</p>
               ) : null}
               {annotations.map((a) => (
                 <li key={a.id}>
@@ -276,10 +284,13 @@ export function CbzReader({
                     style={{ borderColor: a.color }}
                   >
                     <p className="text-[10px] uppercase tracking-widest text-gold/70">{a.label}</p>
+                    {a.text ? <p className="mt-1 text-sm">{a.text}</p> : null}
+                    {a.note ? <p className="mt-1 text-sm italic text-muted-foreground">{a.note}</p> : null}
                   </button>
                 </li>
               ))}
-            </ul>
+              </ul>
+            </div>
           </div>
         </div>
       ) : null}

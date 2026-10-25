@@ -539,6 +539,14 @@ export function detectFormat(name: string): BookFormat | null {
 }
 
 export async function importFile(file: File, fileHash?: string): Promise<BookMeta> {
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+  // MOBI/AZW3 have no reader in Aurum: refuse them here rather than letting
+  // them land in the library and open to a blank screen.
+  if (ext === "mobi" || ext === "azw3") {
+    throw new Error(
+      "Kindle MOBI/AZW3 files can't be read in Aurum — it reads EPUB, PDF, CBZ, CBR and TXT. A DRM-free EPUB copy of the same book will work.",
+    );
+  }
   const format = detectFormat(file.name) ?? "epub";
   const book = emptyBook();
   book.format = format;
@@ -766,7 +774,15 @@ export async function importFromUrl(
 
   const blob = await response.blob();
   const name = nameFromResponse(url, response);
-  if (!detectFormat(name)) throw new Error("That link is not an EPUB, PDF, CBZ or TXT file");
+  const fmt = detectFormat(name);
+  if (fmt === "mobi" || fmt === "azw3") {
+    throw new Error(
+      "Kindle MOBI/AZW3 files can't be read in Aurum — it reads EPUB, PDF, CBZ, CBR and TXT.",
+    );
+  }
+  if (!fmt || !["epub", "pdf", "cbz", "cbr", "txt"].includes(fmt)) {
+    throw new Error("That link is not an EPUB, PDF, CBZ or TXT file");
+  }
   const file = new File([blob], name, { type: blob.type });
   const { hash, existing } = await findDuplicate(file);
   if (existing) return { added: [], duplicates: [existing] };

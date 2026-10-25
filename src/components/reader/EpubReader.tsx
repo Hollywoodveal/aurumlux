@@ -20,6 +20,7 @@ import {
 import { useAppTheme } from "@/hooks/useAppTheme";
 import { ReadAloudBar, speechSupported, type ReadAloudControls } from "@/components/reader/ReadAloudBar";
 import { DictionarySheet } from "@/components/reader/DictionarySheet";
+import { NoteComposer } from "@/components/reader/NoteComposer";
 import { SpokenHighlighter } from "@/lib/spoken-highlight";
 
 
@@ -1047,9 +1048,16 @@ export function EpubReader({
             ) : null}
 
             {panel === "notes" ? (
-              <ul className="mt-4 space-y-2">
+              <div className="mt-4 space-y-2">
+                <NoteComposer
+                  bookId={book.id}
+                  location={renditionRef.current?.currentLocation()?.start?.cfi ?? ""}
+                  label={chapter || `${percent}%`}
+                  onAdded={onAnnotationsChanged}
+                />
+                <ul className="space-y-2">
                 {annotations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No bookmarks or highlights yet.</p>
+                  <p className="text-sm text-muted-foreground">No bookmarks, highlights or notes yet.</p>
                 ) : null}
                 {annotations.map((a) => (
                   <li key={a.id}>
@@ -1065,10 +1073,12 @@ export function EpubReader({
                         {a.type} · {a.label}
                       </p>
                       {a.text ? <p className="mt-1 text-sm text-foreground">{a.text}</p> : null}
+                      {a.note ? <p className="mt-1 text-sm italic text-muted-foreground">{a.note}</p> : null}
                     </button>
                   </li>
                 ))}
-              </ul>
+                </ul>
+              </div>
             ) : null}
           </div>
         </div>
