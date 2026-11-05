@@ -15,7 +15,21 @@ export function useOnboarding() {
 
   const set = useMutation({
     mutationFn: (seen: boolean) => setSetting(KEY, seen),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["setting", KEY] }),
+    onSuccess: (_data, seen) => {
+      // Mirror for components outside the query tree (the install banner
+      // holds off until the tour is done) and notify any live listeners.
+      try {
+        if (seen) {
+          localStorage.setItem("aurum:onboarding-seen", "1");
+          window.dispatchEvent(new Event("aurum:onboarding-complete"));
+        } else {
+          localStorage.removeItem("aurum:onboarding-seen");
+        }
+      } catch {
+        /* storage unavailable */
+      }
+      qc.invalidateQueries({ queryKey: ["setting", KEY] });
+    },
   });
 
   return {

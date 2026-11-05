@@ -6,9 +6,15 @@ import { indexLibrary } from "@/lib/textindex";
 import { useBookMutations } from "@/hooks/useLibrary";
 import { cn } from "@/lib/utils";
 
-const SUPPORTED = ["epub", "pdf", "cbz", "cbr", "txt"] as const;
+const SUPPORTED = ["epub", "pdf", "cbz", "txt"] as const;
 
-export function ImportButton({ className, label = "Add books" }: { className?: string; label?: string }) {
+export function ImportButton({
+  className,
+  label = "Add books",
+}: {
+  className?: string;
+  label?: string;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const { invalidate } = useBookMutations();
@@ -20,6 +26,12 @@ export function ImportButton({ className, label = "Add books" }: { className?: s
     let duplicates = 0;
     for (const file of Array.from(files)) {
       const format = detectFormat(file.name);
+      if (format === "cbr") {
+        toast.error(
+          `${file.name}: CBR is a RAR archive and can't be opened in the browser. Convert it to CBZ, then import the CBZ.`,
+        );
+        continue;
+      }
       if (!SUPPORTED.includes(format as (typeof SUPPORTED)[number])) {
         toast.error(`${file.name}: EPUB, PDF, CBZ and TXT are supported`);
         continue;
@@ -36,7 +48,13 @@ export function ImportButton({ className, label = "Add books" }: { className?: s
         ok += 1;
       } catch (error) {
         console.error(error);
-        toast.error(`Could not import ${file.name}`);
+        // importFile throws plain-language reasons (unsupported Kindle/CBR
+        // formats, storage full) — show those, not a generic failure.
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : `Could not import ${file.name}`,
+        );
       }
     }
     setBusy(false);
@@ -52,14 +70,13 @@ export function ImportButton({ className, label = "Add books" }: { className?: s
     }
   }
 
-
   return (
     <>
       <input
         ref={inputRef}
         type="file"
         multiple
-        accept=".epub,.pdf,.cbz,.cbr,.txt,application/epub+zip,application/pdf,text/plain"
+        accept=".epub,.pdf,.cbz,.txt,application/epub+zip,application/pdf,text/plain"
         className="hidden"
         onChange={(e) => void handleFiles(e.target.files)}
       />
@@ -72,7 +89,11 @@ export function ImportButton({ className, label = "Add books" }: { className?: s
           className,
         )}
       >
-        {busy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+        {busy ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Plus className="size-4" />
+        )}
         {busy ? "Importing…" : label}
       </button>
     </>

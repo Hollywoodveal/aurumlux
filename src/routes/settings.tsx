@@ -22,6 +22,8 @@ import {
   buildSyncBundle,
   decryptBundle,
   encryptBundle,
+  exportFullBackup,
+  importFullBackup,
   mergeSyncBundle,
 } from "@/lib/backup";
 import { indexLibrary } from "@/lib/textindex";
@@ -192,23 +194,56 @@ function SettingsPage() {
     toast.success("Backup downloaded");
   }
 
+  async function exportFull() {
+    setBusy(true);
+    try {
+      const blob = await exportFullBackup();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `aurum-full-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Full backup downloaded — it includes your book files");
+    } catch {
+      toast.error("Full backup failed — your device may be low on storage");
+    }
+    setBusy(false);
+  }
+
   async function importBackup(file: File | undefined) {
     if (!file) return;
     setBusy(true);
     try {
-      const data = JSON.parse(await file.text()) as {
-        books?: BookMeta[];
-        annotations?: Annotation[];
-      };
-      for (const b of data.books ?? [])
-        await putBook({ ...b, hasCover: false });
-      for (const a of data.annotations ?? []) await putAnnotation(a);
-      qc.invalidateQueries();
-      toast.success("Backup restored (book files must be re-imported)");
-    } catch {
-      toast.error("That file isn't a valid Aurum backup");
+      if (/\.zip$/i.test(file.name)) {
+        const report = await importFullBackup(file);
+        qc.invalidateQueries();
+        toast.success(
+          `Full backup restored — ${report.books} book${report.books === 1 ? "" : "s"} back with their files, ${report.covers} cover${report.covers === 1 ? "" : "s"}`,
+        );
+      } else {
+        const data = JSON.parse(await file.text()) as {
+          books?: BookMeta[];
+          annotations?: Annotation[];
+        };
+        for (const b of data.books ?? [])
+          await putBook({ ...b, hasCover: false });
+        for (const a of data.annotations ?? []) await putAnnotation(a);
+        qc.invalidateQueries();
+        toast.success(
+          "Library list restored. Note: a light JSON backup holds no book files — re-import each book file to read it, or restore a full (.zip) backup instead.",
+          { duration: 8000 },
+        );
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message !== "not-aurum"
+          ? error.message
+          : "That file isn't a valid Aurum backup",
+      );
     }
     setBusy(false);
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   return (
@@ -286,12 +321,25 @@ function SettingsPage() {
 
       <SettingsSection id="backup" title="Backup" className="mt-3">
         <p className="mt-1 text-sm text-muted-foreground">
-          Your library lives only on this device. Export a JSON copy of your
-          metadata, progress, bookmarks and highlights.
+          Your library lives only on this device. A <strong>full backup</strong>{" "}
+          (.zip) includes the book files and covers themselves — carry it
+          through Files or your own cloud folder to move your whole library to
+          another device. The light JSON export holds only metadata, progress,
+          bookmarks and highlights, without the books.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button onClick={() => void exportLibrary()} className="btn btn-gold">
-            <Download className="size-4" /> Export library
+          <button
+            onClick={() => void exportFull()}
+            disabled={busy}
+            className="btn btn-gold"
+          >
+            <Download className="size-4" /> Full backup (.zip)
+          </button>
+          <button
+            onClick={() => void exportLibrary()}
+            className="btn btn-outline"
+          >
+            <Download className="size-4" /> Light export (JSON)
           </button>
           <button
             onClick={() => fileRef.current?.click()}
@@ -303,7 +351,7 @@ function SettingsPage() {
           <input
             ref={fileRef}
             type="file"
-            accept="application/json,.json"
+            accept="application/json,.json,application/zip,.zip"
             className="hidden"
             onChange={(e) => void importBackup(e.target.files?.[0])}
           />

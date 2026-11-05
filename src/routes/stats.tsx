@@ -223,6 +223,46 @@ function StatsPage() {
     [books],
   );
 
+  const yearRecap = useMemo(() => {
+    const year = new Date().getFullYear();
+    const inYear = (ms: number) => new Date(ms).getFullYear() === year;
+    const finishedThisYear = books.filter(
+      (b) => b.finishedAt !== null && inYear(b.finishedAt),
+    );
+    let minutes = 0;
+    const monthMinutes = new Array(12).fill(0) as number[];
+    books.forEach((b) => {
+      (b.sessions ?? []).forEach((s) => {
+        if (!inYear(s.start)) return;
+        const m = Math.max(1, Math.round((s.end - s.start) / 60000));
+        minutes += m;
+        const month = new Date(s.start).getMonth();
+        monthMinutes[month] = (monthMinutes[month] ?? 0) + m;
+      });
+    });
+    const activeDays = [...stats.dayKeys].filter(inYear).length;
+    const topOf = (pick: (b: BookMeta) => string | undefined) => {
+      const counts = new Map<string, number>();
+      finishedThisYear.forEach((b) => {
+        const key = pick(b)?.trim();
+        if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+      });
+      return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    };
+    const bestMonthIndex = monthMinutes.indexOf(Math.max(...monthMinutes));
+    return {
+      year,
+      finished: finishedThisYear.length,
+      pages: finishedThisYear.reduce((s, b) => s + (b.pageCount || 0), 0),
+      minutes,
+      activeDays,
+      topGenre: topOf((b) => b.genre.split(",")[0]),
+      topAuthor: topOf((b) => b.author.split(",")[0]),
+      bestMonth: minutes > 0 ? (MONTHS[bestMonthIndex] ?? null) : null,
+      hasData: finishedThisYear.length > 0 || minutes > 0 || activeDays > 0,
+    };
+  }, [books, stats.dayKeys]);
+
   const today = startOfDay(Date.now());
   const gridEnd = today + (6 - new Date(today).getDay()) * DAY;
   const cells = Array.from(
@@ -502,6 +542,67 @@ function StatsPage() {
             </ul>
           ) : null}
         </div>
+      </section>
+
+      <section className="mt-8 rounded-2xl border border-gold/25 bg-card p-4 shadow-lux">
+        <h2 className="flex items-center gap-1.5 text-xs uppercase tracking-[0.2em] text-gold/70">
+          <Award className="size-3.5" /> Your {yearRecap.year} in reading
+        </h2>
+        {!yearRecap.hasData ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Nothing logged yet this year — your recap fills in as you read.
+          </p>
+        ) : (
+          <>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: "Books finished", value: String(yearRecap.finished) },
+                {
+                  label: "Pages finished",
+                  value: yearRecap.pages.toLocaleString(),
+                },
+                {
+                  label: "Time reading",
+                  value:
+                    yearRecap.minutes >= 600
+                      ? `${Math.round(yearRecap.minutes / 60)}h`
+                      : `${yearRecap.minutes}m`,
+                },
+                { label: "Active days", value: String(yearRecap.activeDays) },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="rounded-xl border border-gold/15 bg-background/40 p-3"
+                >
+                  <p className="font-display text-2xl text-gold">{s.value}</p>
+                  <p className="mt-0.5 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {s.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <ul className="mt-4 space-y-1.5 text-sm text-muted-foreground">
+              {yearRecap.topGenre ? (
+                <li>
+                  Top genre:{" "}
+                  <span className="text-ivory">{yearRecap.topGenre}</span>
+                </li>
+              ) : null}
+              {yearRecap.topAuthor ? (
+                <li>
+                  Most finished author:{" "}
+                  <span className="text-ivory">{yearRecap.topAuthor}</span>
+                </li>
+              ) : null}
+              {yearRecap.bestMonth ? (
+                <li>
+                  Biggest reading month:{" "}
+                  <span className="text-ivory">{yearRecap.bestMonth}</span>
+                </li>
+              ) : null}
+            </ul>
+          </>
+        )}
       </section>
 
       <section className="mt-8">

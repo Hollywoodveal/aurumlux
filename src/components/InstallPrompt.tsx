@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Download, Share, X } from "lucide-react";
+import { getSetting } from "@/lib/db";
 
-type PromptEvent = Event & { prompt: () => Promise<void>; userChoice?: Promise<unknown> };
+type PromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice?: Promise<unknown>;
+};
 
 const DISMISS_KEY = "aurum:install-dismissed";
 
@@ -17,8 +21,29 @@ export function InstallPrompt() {
   const [deferred, setDeferred] = useState<PromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [iosHint, setIosHint] = useState(false);
+  // Held back until the welcome tour is finished (or was finished on an
+  // earlier visit), so first launch never stacks two popups at once.
+  const [armed, setArmed] = useState(false);
 
   useEffect(() => {
+    if (localStorage.getItem("aurum:onboarding-seen") === "1") {
+      setArmed(true);
+      return;
+    }
+    let live = true;
+    void getSetting<boolean>("onboardingSeen", false).then((seen) => {
+      if (live && seen) setArmed(true);
+    });
+    const onDone = () => setArmed(true);
+    window.addEventListener("aurum:onboarding-complete", onDone);
+    return () => {
+      live = false;
+      window.removeEventListener("aurum:onboarding-complete", onDone);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!armed) return;
     if (isStandalone() || localStorage.getItem(DISMISS_KEY) === "1") return;
 
     const onPrompt = (e: Event) => {
@@ -45,7 +70,7 @@ export function InstallPrompt() {
       window.removeEventListener("appinstalled", onInstalled);
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [armed]);
 
   if (!show) return null;
 
@@ -58,10 +83,16 @@ export function InstallPrompt() {
     <div className="fixed inset-x-3 z-40 bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] mx-auto max-w-md rounded-2xl border border-gold/30 bg-card/95 p-4 shadow-lux backdrop-blur">
       <div className="flex items-start gap-3">
         <div className="rounded-full border border-gold/30 p-2 text-gold">
-          {iosHint ? <Share className="size-4" /> : <Download className="size-4" />}
+          {iosHint ? (
+            <Share className="size-4" />
+          ) : (
+            <Download className="size-4" />
+          )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-lg leading-tight text-ivory">Install Aurum</p>
+          <p className="font-display text-lg leading-tight text-ivory">
+            Install Aurum
+          </p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {iosHint
               ? "Tap Share, then “Add to Home Screen” to read full screen and offline."
@@ -81,7 +112,11 @@ export function InstallPrompt() {
             </button>
           ) : null}
         </div>
-        <button type="button" onClick={dismiss} aria-label="Dismiss install prompt">
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Dismiss install prompt"
+        >
           <X className="size-4 text-muted-foreground" />
         </button>
       </div>

@@ -9,7 +9,7 @@
 //    Worker build used.
 //
 // Run: `bun run build:pages` (or `bun run build && bun scripts/pages-postbuild.mjs`)
-import { cpSync, rmSync } from "node:fs";
+import { appendFileSync, cpSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateSW } from "workbox-build";
@@ -61,5 +61,13 @@ const { count, size } = await generateSW({
     },
   ],
 });
+
+// New workers must NOT skipWaiting on their own: the app shows a
+// "new version, tap to refresh" prompt and only then posts SKIP_WAITING.
+// Workbox's generateSW has no hook for custom code, so append the listener.
+appendFileSync(
+  join(clientDir, "sw.js"),
+  `\nself.addEventListener("message", (event) => {\n  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();\n});\n`,
+);
 
 console.log(`Service worker generated: ${count} precached files (${size} bytes)`);

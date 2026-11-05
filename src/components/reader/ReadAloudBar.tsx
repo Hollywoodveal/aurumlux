@@ -2,6 +2,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Moon, Pause, Play, Settings2, Square } from "lucide-react";
 
+import { announce } from "@/lib/announce";
 import { cn } from "@/lib/utils";
 import { VoicePickerSheet } from "@/components/reader/VoicePickerSheet";
 import {
@@ -17,7 +18,8 @@ export type ReadAloudControls = {
   startFrom: (offsetChars: number) => void;
 };
 
-export const speechSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+export const speechSupported =
+  typeof window !== "undefined" && "speechSynthesis" in window;
 
 /** Split plain text into speakable sentence chunks. */
 function toSentences(text: string): string[] {
@@ -63,7 +65,10 @@ export function ReadAloudBar({
   const [paused, setPaused] = useState(false);
   const [picker, setPicker] = useState(false);
   const [deviceVoices, setDeviceVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [settings, setSettings] = useState<TtsSettings>({ ...DEFAULT_TTS_SETTINGS, rate });
+  const [settings, setSettings] = useState<TtsSettings>({
+    ...DEFAULT_TTS_SETTINGS,
+    rate,
+  });
   const [notice, setNotice] = useState<string | null>(null);
 
   /** Sleep timer: minutes chosen (0 = off) and seconds left before narration stops. */
@@ -91,7 +96,8 @@ export function ReadAloudBar({
     const load = () => setDeviceVoices(window.speechSynthesis.getVoices());
     load();
     window.speechSynthesis.addEventListener("voiceschanged", load);
-    return () => window.speechSynthesis.removeEventListener("voiceschanged", load);
+    return () =>
+      window.speechSynthesis.removeEventListener("voiceschanged", load);
   }, []);
 
   const applySettings = useCallback((next: TtsSettings) => {
@@ -175,7 +181,8 @@ export function ReadAloudBar({
       if (!onWordRef.current || e.name === "sentence") return;
       const rest = sentence.slice(e.charIndex);
       const len = e.charLength || (rest.match(/^\S+/)?.[0].length ?? 0);
-      if (len > 0) onWordRef.current({ start: e.charIndex, end: e.charIndex + len });
+      if (len > 0)
+        onWordRef.current({ start: e.charIndex, end: e.charIndex + len });
     };
     utter.onend = () => {
       if (activeRef.current) speakNext();
@@ -229,12 +236,27 @@ export function ReadAloudBar({
     }
   }, [paused]);
 
+  // Announce narration state for screen-reader users, who can't see the bar.
+  const prevSpeech = useRef<{ speaking: boolean; paused: boolean } | null>(
+    null,
+  );
+  useEffect(() => {
+    const prev = prevSpeech.current;
+    prevSpeech.current = { speaking, paused };
+    if (!prev) return;
+    if (speaking && !prev.speaking) announce("Read aloud started");
+    else if (!speaking && prev.speaking) announce("Read aloud stopped");
+    else if (speaking && paused && !prev.paused) announce("Read aloud paused");
+    else if (speaking && !paused && prev.paused) announce("Read aloud resumed");
+  }, [speaking, paused]);
+
   /**
    * Lock-screen / notification controls, so listening continues (and stays
    * controllable) while Aurum is in the background or the phone is asleep.
    */
   useEffect(() => {
-    const ms = typeof navigator !== "undefined" ? navigator.mediaSession : undefined;
+    const ms =
+      typeof navigator !== "undefined" ? navigator.mediaSession : undefined;
     if (!ms) return;
     if (!speaking) {
       ms.playbackState = "none";
@@ -265,7 +287,8 @@ export function ReadAloudBar({
     });
     safe("stop", stop);
     return () => {
-      for (const a of ["play", "pause", "stop"] as MediaSessionAction[]) safe(a, () => {});
+      for (const a of ["play", "pause", "stop"] as MediaSessionAction[])
+        safe(a, () => {});
     };
   }, [speaking, paused, togglePause, stop, mediaTitle, mediaArtist]);
 
@@ -310,7 +333,11 @@ export function ReadAloudBar({
             aria-label={paused ? "Resume read-aloud" : "Pause read-aloud"}
             className="flex size-11 items-center justify-center rounded-full border border-gold/30 text-gold"
           >
-            {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+            {paused ? (
+              <Play className="size-4" />
+            ) : (
+              <Pause className="size-4" />
+            )}
           </button>
           <button
             onClick={stop}
@@ -328,15 +355,21 @@ export function ReadAloudBar({
         <button
           onClick={() => setSleepOpen((v) => !v)}
           aria-label={
-            sleepMinutes ? `Sleep timer, ${Math.ceil(sleepLeft / 60)} minutes left` : "Set sleep timer"
+            sleepMinutes
+              ? `Sleep timer, ${Math.ceil(sleepLeft / 60)} minutes left`
+              : "Set sleep timer"
           }
           className={cn(
             "flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-[10px] uppercase tracking-widest",
-            sleepMinutes ? "border-gold/60 bg-gold/12 text-gold" : "border-gold/25 text-gold/70",
+            sleepMinutes
+              ? "border-gold/60 bg-gold/12 text-gold"
+              : "border-gold/25 text-gold/70",
           )}
         >
           <Moon className="size-3" />
-          {sleepMinutes && sleepLeft > 0 ? `${Math.ceil(sleepLeft / 60)}m` : "Sleep"}
+          {sleepMinutes && sleepLeft > 0
+            ? `${Math.ceil(sleepLeft / 60)}m`
+            : "Sleep"}
         </button>
         {sleepOpen ? (
           <div className="absolute bottom-12 right-0 z-50 w-40 overflow-hidden rounded-xl border border-gold/25 bg-popover shadow-lux">
@@ -346,7 +379,9 @@ export function ReadAloudBar({
                 onClick={() => setSleep(m)}
                 className={cn(
                   "block w-full px-4 py-2.5 text-left text-sm",
-                  sleepMinutes === m ? "bg-gold/10 text-gold" : "text-foreground",
+                  sleepMinutes === m
+                    ? "bg-gold/10 text-gold"
+                    : "text-foreground",
                 )}
               >
                 {m === 0 ? "Off" : `${m} minutes`}
@@ -357,7 +392,10 @@ export function ReadAloudBar({
       </div>
 
       {notice ? (
-        <span role="status" className="max-w-[150px] text-[10px] leading-tight text-muted-foreground">
+        <span
+          role="status"
+          className="max-w-[150px] text-[10px] leading-tight text-muted-foreground"
+        >
           {notice}
         </span>
       ) : null}

@@ -12,6 +12,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { LiveAnnouncer } from "@/components/LiveAnnouncer";
+import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { registerServiceWorker } from "@/lib/pwa";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
@@ -168,6 +170,8 @@ function RootComponent() {
       </a>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <LiveAnnouncer />
+      <UpdatePrompt />
       <InstallPrompt />
       <Toaster position="top-center" />
     </QueryClientProvider>

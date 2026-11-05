@@ -18,6 +18,7 @@ import {
   startOfDay,
   type StreakRecovery,
 } from "@/lib/goals";
+import { announce } from "@/lib/announce";
 import { clearLastRead, rememberLastRead } from "@/lib/resume";
 import {
   getBook,
@@ -133,10 +134,33 @@ function ReaderPage() {
     void setSetting("readerPrefs", next);
   }, []);
 
+  const announcedChapter = useRef("");
+  const announcedPercent = useRef(-1);
+  const announceTimer = useRef<number | null>(null);
   const onProgress = useCallback(
     (p: { progress: number; location: string; chapter: string }) => {
       latest.current = p;
       setLiveProgress(p.progress);
+      // Mirror page turns into the live region for screen-reader users:
+      // chapter changes announce at once; plain page turns are debounced so
+      // flipping quickly collapses into a single announcement of the landing
+      // spot instead of a stream of percentages.
+      const percent = Math.round(p.progress);
+      if (p.chapter && p.chapter !== announcedChapter.current) {
+        announcedChapter.current = p.chapter;
+        announcedPercent.current = percent;
+        announce(`${p.chapter} · ${percent}% through the book`);
+      } else if (percent !== announcedPercent.current) {
+        announcedPercent.current = percent;
+        if (announceTimer.current) window.clearTimeout(announceTimer.current);
+        announceTimer.current = window.setTimeout(() => {
+          announce(
+            p.chapter
+              ? `${p.chapter} · ${percent}% through the book`
+              : `${percent}% through the book`,
+          );
+        }, 900);
+      }
     },
     [],
   );

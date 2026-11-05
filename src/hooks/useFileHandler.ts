@@ -4,10 +4,12 @@ import { detectFormat, importFile } from "@/lib/importer";
 import { indexLibrary } from "@/lib/textindex";
 import { useBookMutations } from "@/hooks/useLibrary";
 
-const SUPPORTED = ["epub", "pdf", "cbz", "cbr", "txt"];
+const SUPPORTED = ["epub", "pdf", "cbz", "txt"];
 
 type LaunchParams = { files?: FileSystemFileHandle[] };
-type LaunchQueue = { setConsumer: (fn: (params: LaunchParams) => void) => void };
+type LaunchQueue = {
+  setConsumer: (fn: (params: LaunchParams) => void) => void;
+};
 
 /**
  * Handles books opened from the operating system ("Open with Aurum") once the
@@ -17,7 +19,8 @@ export function useFileHandler() {
   const { invalidate } = useBookMutations();
 
   useEffect(() => {
-    const queue = (window as unknown as { launchQueue?: LaunchQueue }).launchQueue;
+    const queue = (window as unknown as { launchQueue?: LaunchQueue })
+      .launchQueue;
     if (!queue) return;
 
     queue.setConsumer((params) => {
@@ -28,6 +31,12 @@ export function useFileHandler() {
         for (const handle of handles) {
           try {
             const file = await handle.getFile();
+            if (detectFormat(file.name) === "cbr") {
+              toast.error(
+                `${file.name}: CBR is a RAR archive and can't be opened in the browser. Convert it to CBZ, then import the CBZ.`,
+              );
+              continue;
+            }
             if (!SUPPORTED.includes(detectFormat(file.name) ?? "")) {
               toast.error(`${file.name}: EPUB, PDF, CBZ and TXT are supported`);
               continue;
@@ -36,7 +45,11 @@ export function useFileHandler() {
             ok += 1;
           } catch (error) {
             console.error(error);
-            toast.error("Could not open that file");
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Could not open that file",
+            );
           }
         }
         invalidate();
