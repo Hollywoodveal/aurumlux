@@ -68,6 +68,32 @@ jobs:
           path: e2e-screenshots
           retention-days: 7
 
+  covers:
+    name: TEMP cover check
+    needs: check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@v5
+        with:
+          name: site
+          path: dist/client
+      - run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y > /dev/null
+          npm install --no-fund playwright@1
+          npx playwright install --with-deps chromium webkit
+      - run: node tests/e2e/covers.mjs dist/client /tmp/pw/node_modules/playwright "$PWD/node_modules/jszip" chromium
+      - run: node tests/e2e/covers.mjs dist/client /tmp/pw/node_modules/playwright "$PWD/node_modules/jszip" webkit
+        if: success() || failure()
+      - if: always()
+        run: for f in cover-shots/*.png; do echo "SHOT $(basename "$f") $(base64 -w0 "$f")"; done
+
   deploy:
     name: Deploy to Cloudflare Pages
     needs: [check, e2e]
