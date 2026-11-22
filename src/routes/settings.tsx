@@ -5,6 +5,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { Switch } from "@/components/settings/Switch";
 import { SyncSettings } from "@/components/settings/SyncSettings";
+import { CoverRescanButton } from "@/components/CoverRescan";
 import { ThemePicker } from "@/components/settings/ThemePicker";
 
 import {
@@ -13,6 +14,7 @@ import {
   HardDrive,
   Lock,
   SearchCheck,
+  ImageIcon,
   Palette,
   RefreshCw,
   ShieldCheck,
@@ -361,6 +363,20 @@ function SettingsPage() {
             </p>
             <ImportFromUrl />
           </SettingsSection>
+          <SettingsSection
+            id="covers"
+            title="Book covers"
+            icon={<ImageIcon className="size-4 text-gold" aria-hidden />}
+            className="mt-3"
+          >
+            <p className="mt-1 text-sm text-muted-foreground">
+              Some books were imported without the cover their file contains.
+              Aurum can look inside those files again. Nothing leaves your
+              device.
+            </p>
+            <CoverRescanButton />
+          </SettingsSection>
+
           <SettingsSection
             id="search-index"
             title="Full-text search"

@@ -36,6 +36,7 @@ import {
 } from "@/components/LibraryViews";
 import { MissingFilesContext } from "@/components/BookBadge";
 import { ContinueReading } from "@/components/ContinueReading";
+import { AutoCoverRescan } from "@/components/CoverRescan";
 import { EmptyArt } from "@/components/EmptyArt";
 import { StorageSafetyCard } from "@/components/StorageSafetyCard";
 import { SyncDot } from "@/components/SyncDot";
@@ -806,6 +807,7 @@ function LibraryPage() {
           <BookDetails book={current} onClose={() => setSelected(null)} />
         ) : null}
         <Onboarding />
+        <AutoCoverRescan enabled={books.some((b) => !b.hasCover)} />
       </main>
     </MissingFilesContext.Provider>
   );

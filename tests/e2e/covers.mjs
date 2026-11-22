@@ -65,14 +65,38 @@ async function epub(title, kind, color) {
     "META-INF/container.xml",
     `<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`,
   );
-  const meta = kind === "epub2" ? `<meta name="cover" content="cimg"/>` : "";
+  // Where the image lives and how the OPF points at it, per variant.
+  const img = {
+    epub2: ["images/cover.png", "OEBPS/images/cover.png"],
+    epub3: ["images/cover.png", "OEBPS/images/cover.png"],
+    subdir: ["../Images/front.png", "Images/front.png"],
+    metahref: ["images/img001.png", "OEBPS/images/img001.png"],
+    guide: ["images/img002.png", "OEBPS/images/img002.png"],
+    titlepage: ["images/pic.png", "OEBPS/images/pic.png"],
+  }[kind];
+  const meta =
+    {
+      epub2: `<meta name="cover" content="cimg"/>`,
+      subdir: `<meta name="cover" content="cimg"/>`,
+      metahref: `<meta name="cover" content="images/img001.png"/>`,
+    }[kind] ?? "";
   const props = kind === "epub3" ? ` properties="cover-image"` : "";
-  const href = kind === "subdir" ? "../Images/front.png" : "images/cover.png";
-  const path =
-    kind === "subdir" ? "Images/front.png" : "OEBPS/images/cover.png";
+  const guide =
+    kind === "guide"
+      ? `<guide><reference type="cover" title="Cover" href="Text/cover.xhtml"/></guide>`
+      : "";
+  const firstPage = kind === "titlepage" ? `<itemref idref="tp"/>` : "";
   zip.file(
     "OEBPS/content.opf",
-    `<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="id">urn:c:${title}</dc:identifier><dc:title>${title}</dc:title><dc:creator>Cover Tester</dc:creator><dc:language>en</dc:language>${kind === "subdir" ? `<meta name="cover" content="cimg"/>` : meta}</metadata><manifest><item id="cimg" href="${href}" media-type="image/png"${props}/><item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/></manifest><spine><itemref idref="c1"/></spine></package>`,
+    `<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="id">urn:c:${title}</dc:identifier><dc:title>${title}</dc:title><dc:creator>Cover Tester</dc:creator><dc:language>en</dc:language>${meta}</metadata><manifest><item id="cimg" href="${img[0]}" media-type="image/png"${props}/><item id="tp" href="Text/title.xhtml" media-type="application/xhtml+xml"/><item id="cv" href="Text/cover.xhtml" media-type="application/xhtml+xml"/><item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/></manifest><spine>${firstPage}<itemref idref="c1"/></spine>${guide}</package>`,
+  );
+  zip.file(
+    "OEBPS/Text/cover.xhtml",
+    `<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:xlink="http://www.w3.org/1999/xlink"><head><title>Cover</title></head><body><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450"><image xlink:href="../${img[0]}" width="300" height="450"/></svg></body></html>`,
+  );
+  zip.file(
+    "OEBPS/Text/title.xhtml",
+    `<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>T</title></head><body><div><img src="../${img[0]}" alt=""/></div></body></html>`,
   );
   zip.file(
     "OEBPS/nav.xhtml",
@@ -82,11 +106,12 @@ async function epub(title, kind, color) {
     "OEBPS/c1.xhtml",
     `<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>One</title></head><body><p>Hello.</p></body></html>`,
   );
-  zip.file(path, png(300, 450, color));
+  zip.file(img[1], png(300, 450, color));
   return zip.generateAsync({ type: "nodebuffer" });
 }
 async function cbz(title, color) {
   const zip = new JSZip();
+  zip.file("__MACOSX/._001.png", Buffer.from("not an image"));
   zip.file("001.png", png(300, 450, color));
   zip.file("002.png", png(300, 450, [20, 20, 20]));
   return zip.generateAsync({ type: "nodebuffer" });
@@ -101,7 +126,7 @@ const palette = [
   [20, 100, 110],
 ];
 const files = [];
-const kinds = ["epub2", "epub3", "subdir"];
+const kinds = ["epub2", "epub3", "subdir", "metahref", "guide", "titlepage"];
 for (let i = 0; i < 66; i++) {
   const kind = kinds[i % 3];
   const title = `Cover ${String(i + 1).padStart(2, "0")} ${kind}`;
@@ -180,8 +205,8 @@ page.on("console", (m) => {
 });
 page.on("pageerror", (e) => logs.push(`pageerror: ${e.message}`));
 
-await page.goto(BASE);
-await page.waitForLoadState("networkidle");
+await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 60000 });
+await page.locator("h1").first().waitFor({ timeout: 60000 });
 await page.evaluate(
   () =>
     new Promise((resolve) => {
@@ -196,8 +221,8 @@ await page.evaluate(
       };
     }),
 );
-await page.reload();
-await page.waitForLoadState("networkidle");
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.locator("h1").first().waitFor();
 await page
   .locator('input[type="file"][accept*=".epub"]')
   .first()
@@ -282,8 +307,8 @@ async function spines(label) {
 
 for (const pass of ["fresh", "after reload"]) {
   if (pass === "after reload") {
-    await page.reload();
-    await page.waitForLoadState("networkidle");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.locator("h1").first().waitFor();
   }
   await page.evaluate(() => window.scrollTo(0, 0));
   await spines(`${pass} shelf`);
