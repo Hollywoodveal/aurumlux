@@ -800,3 +800,12 @@
     animation: none !important;
   }
 }
+
+/* Cormorant's old-style figures make "1" read like a Roman "I"; prefer
+   lining figures wherever the display face shows numbers. */
+.font-display,
+h1,
+h2,
+h3 {
+  font-variant-numeric: lining-nums proportional-nums;
+}

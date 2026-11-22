@@ -16,6 +16,11 @@ export type YearRecap = {
 
 export type StoryCard = { eyebrow: string; big: string; line: string };
 
+/**
+ * Cormorant's old-style "1" reads like a Roman "I", so figures use Jost.
+ */
+export const isFigure = (text: string) => /^\d/.test(text);
+
 function hours(minutes: number) {
   return minutes >= 120
     ? `${Math.round(minutes / 60)} hours`
@@ -37,7 +42,7 @@ export function storyCards(r: YearRecap): StoryCard[] {
       big: String(r.finished),
       line:
         r.pages > 0
-          ? `${r.pages.toLocaleString()} pages turned`
+          ? `${r.pages.toLocaleString()} page${r.pages === 1 ? "" : "s"} turned`
           : r.finished === 1
             ? "One more on the shelf"
             : "Every one on the shelf",
@@ -95,6 +100,7 @@ async function renderCard(card: StoryCard): Promise<Blob> {
   await Promise.all([
     document.fonts.load('600 160px "Cormorant Garamond"'),
     document.fonts.load('400 40px "Jost"'),
+    document.fonts.load('300 160px "Jost"'),
   ]).catch(() => undefined);
 
   ctx.fillStyle = "#0b0b0a";
@@ -125,12 +131,15 @@ async function renderCard(card: StoryCard): Promise<Blob> {
   ctx.font = '400 40px "Jost", sans-serif';
   ctx.fillText(card.eyebrow.toUpperCase().split("").join(" "), W / 2, H * 0.3);
 
+  const face = isFigure(card.big)
+    ? '300 {size}px "Jost", sans-serif'
+    : '600 {size}px "Cormorant Garamond", serif';
   let size = 220;
-  ctx.font = `600 ${size}px "Cormorant Garamond", serif`;
+  ctx.font = face.replace("{size}", String(size));
   let lines = wrap(ctx, card.big, W - 220);
   while ((lines.length > 3 || size * lines.length > 700) && size > 90) {
     size -= 10;
-    ctx.font = `600 ${size}px "Cormorant Garamond", serif`;
+    ctx.font = face.replace("{size}", String(size));
     lines = wrap(ctx, card.big, W - 220);
   }
   ctx.fillStyle = gold;
@@ -259,7 +268,10 @@ export function YearStory({
             </p>
             <p
               className={cn(
-                "relative mt-4 font-display leading-none text-gradient-gold",
+                "relative mt-4 leading-none text-gradient-gold",
+                isFigure(card.big)
+                  ? "font-sans font-light tracking-tight"
+                  : "font-display",
                 card.big.length > 14 ? "text-5xl" : "text-7xl",
               )}
             >

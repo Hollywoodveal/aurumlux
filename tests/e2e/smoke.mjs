@@ -471,6 +471,10 @@ await step("tab bar navigates; the year-in-review story plays", async () => {
   const tabs = page.getByRole("navigation", { name: "Main" });
   await tabs.getByRole("link", { name: "Stats" }).click();
   await page.waitForURL(/\/stats$/);
+  await page
+    .getByRole("button", { name: "Play your year" })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${shots}/stats.png` });
   await page.getByRole("button", { name: "Play your year" }).click();
   const story = page.getByRole("dialog", { name: /in reading/ });
   await story.getByText("Your year in reading").waitFor();

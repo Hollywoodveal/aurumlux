@@ -57,6 +57,11 @@ describe("storyCards", () => {
       "Where every page is treasured",
     ]);
     expect(cards[1]?.big).toBe("45 minutes");
+  });
+  test("singular page", () => {
+    expect(storyCards({ ...full, finished: 1, pages: 1 })[1]?.line).toBe(
+      "1 page turned",
+    );
     expect(cards[1]?.line).toBe("across 1 reading day");
   });
 });
