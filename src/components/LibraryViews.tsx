@@ -237,12 +237,17 @@ export function ViewSwitcher({
  * more whenever the sentinel scrolls near the viewport. Keeps big libraries
  * fast on older phones without a virtualization library.
  */
-export function useIncremental<T>(items: T[], step = 60) {
+export function useIncremental<T extends { id: string }>(
+  items: T[],
+  step = 60,
+) {
   const [count, setCount] = useState(step);
   const sentinel = useRef<HTMLDivElement | null>(null);
 
-  // Start over when the list itself changes (new shelf, search, sort).
-  useEffect(() => setCount(step), [items, step]);
+  // Start over only when the list really changes (another shelf, search or
+  // sort), not merely when an equal list is rebuilt during a re-render.
+  const signature = `${items.length}:${items[0]?.id ?? ""}:${items[items.length - 1]?.id ?? ""}`;
+  useEffect(() => setCount(step), [signature, step]);
 
   useEffect(() => {
     const el = sentinel.current;
