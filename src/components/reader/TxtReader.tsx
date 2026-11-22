@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BookA, Bookmark, ChevronLeft, Palette, Search, X } from "lucide-react";

@@ -89,7 +89,7 @@ export function MetadataDialog({
     }
   }
 
-  async function useCandidate(c: RemoteCandidate) {
+  async function applyCandidate(c: RemoteCandidate) {
     const patch = applyRemotePatch(draft, c);
     const keys = Object.keys(patch);
     if (!keys.length) {
@@ -145,7 +145,7 @@ export function MetadataDialog({
     }
   }
 
-  async function useCover(c: RemoteCandidate) {
+  async function applyCover(c: RemoteCandidate) {
     if (!c.coverUrl || (draft.locked ?? []).includes("cover")) return;
     setBusy("cover");
     try {
@@ -321,7 +321,7 @@ export function MetadataDialog({
                     variant="outline"
                     className="shrink-0 border-gold/30 text-xs"
                     disabled={busy !== null}
-                    onClick={() => void useCandidate(c)}
+                    onClick={() => void applyCandidate(c)}
                   >
                     Use this
                   </Button>
@@ -342,7 +342,7 @@ export function MetadataDialog({
                   key={`${c.provider}-${c.coverUrl}-${i}`}
                   type="button"
                   disabled={busy !== null}
-                  onClick={() => void useCover(c)}
+                  onClick={() => void applyCover(c)}
                   className="group relative overflow-hidden rounded-lg border border-gold/20 transition-transform active:scale-95"
                   title={`${c.title ?? "Unknown title"} — ${c.matchLabel} (${c.provider === "google" ? "Google Books" : "Open Library"})`}
                 >

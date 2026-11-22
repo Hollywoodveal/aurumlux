@@ -338,7 +338,7 @@ function cleanTitle(raw: string) {
 function normaliseGenre(values: string[]): string | undefined {
   const seen = new Set<string>();
   for (const raw of values) {
-    for (const part of String(raw).split(/[\/>|;]+/)) {
+    for (const part of String(raw).split(/[/>|;]+/)) {
       const t = part.replace(/\s+/g, " ").trim();
       if (t.length < 2 || t.length > 40) continue;
       const key = t.toLowerCase();
@@ -412,8 +412,12 @@ function labelFor(score: number): string {
   return "Possible match";
 }
 
-function googleVolumeToRemote(v: any): { remote: Remote; isbns: string[] } {
-  const ids: any[] = Array.isArray(v?.industryIdentifiers)
+/** Untyped JSON from Google Books / Open Library; every field is checked before use. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiJson = any;
+
+function googleVolumeToRemote(v: ApiJson): { remote: Remote; isbns: string[] } {
+  const ids: ApiJson[] = Array.isArray(v?.industryIdentifiers)
     ? v.industryIdentifiers
     : [];
   return {
@@ -446,7 +450,7 @@ async function googleCandidates(
       `https://www.googleapis.com/books/v1/volumes?maxResults=5&q=${encodeURIComponent(q)}`,
     );
     const json = await res.json();
-    const items: any[] = Array.isArray(json?.items) ? json.items : [];
+    const items: ApiJson[] = Array.isArray(json?.items) ? json.items : [];
     return items.map((item) => {
       const { remote, isbns } = googleVolumeToRemote(item?.volumeInfo);
       const score = scoreRemote(remote, isbns, want);
@@ -462,7 +466,7 @@ async function googleCandidates(
   }
 }
 
-function openLibraryDocToRemote(d: any): Remote {
+function openLibraryDocToRemote(d: ApiJson): Remote {
   const subjects = Array.isArray(d?.subject) ? d.subject : [];
   return {
     title: d?.title,
@@ -490,7 +494,7 @@ async function openLibraryCandidates(
       `https://openlibrary.org/search.json?limit=5&fields=title,subtitle,author_name,subject,publisher,first_publish_year,cover_i,isbn&q=${encodeURIComponent(q)}`,
     );
     const json = await res.json();
-    const docs: any[] = Array.isArray(json?.docs) ? json.docs : [];
+    const docs: ApiJson[] = Array.isArray(json?.docs) ? json.docs : [];
     return docs.map((d) => {
       const remote = openLibraryDocToRemote(d);
       const isbns: string[] = Array.isArray(d?.isbn) ? d.isbn.map(String) : [];
@@ -518,7 +522,7 @@ async function openLibraryIsbnCandidate(
   try {
     const res = await fetch(`https://openlibrary.org/isbn/${isbn}.json`);
     if (!res.ok) return null;
-    const ed: any = await res.json();
+    const ed: ApiJson = await res.json();
     const covers: number[] = Array.isArray(ed?.covers) ? ed.covers : [];
     const remote: Remote = {
       title: ed?.title,
