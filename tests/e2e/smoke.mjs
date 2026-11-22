@@ -360,7 +360,7 @@ await step(
       "hero card doesn't show the book being read",
     );
     await page.screenshot({ path: `${shots}/library.png` });
-    await hero.getByRole("button", { name: /Details for Script Test/ }).click();
+    await hero.getByRole("button", { name: /Script Test.*details/ }).click();
     const sheet = page.getByRole("dialog", { name: /Details for Script Test/ });
     await sheet
       .getByRole("button", { name: /Continue|Read/ })
@@ -459,7 +459,7 @@ await step("finishing a book celebrates", async () => {
   await page.goto(BASE);
   await page.waitForLoadState("networkidle");
   const hero = page.getByRole("region", { name: "Continue reading" });
-  await hero.getByRole("button", { name: /Details for Script Test/ }).click();
+  await hero.getByRole("button", { name: /Script Test.*details/ }).click();
   const sheet = page.getByRole("dialog", { name: /Details for Script Test/ });
   await sheet.getByRole("button", { name: "Finished", exact: true }).click();
   await page.getByText("Book finished").first().waitFor();

@@ -425,6 +425,12 @@ function LibraryPage() {
               </p>
             </div>
           </div>
+          {books.length > 0 ? (
+            <ImportButton
+              label="Add"
+              className="shrink-0 px-4 py-2 text-xs uppercase tracking-[0.14em]"
+            />
+          ) : null}
         </header>
 
         <div className="flex items-center gap-2">
@@ -493,7 +499,7 @@ function LibraryPage() {
             <button
               key={s.key}
               type="button"
-              aria-selected={shelf === s.key}
+              aria-pressed={shelf === s.key}
               onClick={() => setShelf(s.key)}
             >
               {s.label}
@@ -794,11 +800,7 @@ function LibraryPage() {
               Delete
             </button>
           </div>
-        ) : (
-          <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 -translate-x-1/2">
-            <ImportButton />
-          </div>
-        )}
+        ) : null}
 
         {current ? (
           <BookDetails book={current} onClose={() => setSelected(null)} />

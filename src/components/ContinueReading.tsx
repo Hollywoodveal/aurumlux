@@ -61,7 +61,7 @@ export function ContinueReading({
             ref={coverRef}
             type="button"
             onClick={() => onOpenDetails(hero)}
-            aria-label={`Details for ${hero.title}`}
+            aria-label={`${hero.title} ${hero.author} — details`}
             className="h-[150px] w-[100px] shrink-0 overflow-hidden rounded-md hairline-gold shadow-lux"
           >
             <CoverImage book={hero} />

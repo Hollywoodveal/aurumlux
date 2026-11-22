@@ -212,12 +212,13 @@ for (const theme of ["dark", "light"]) {
   await page.mouse.wheel(0, 900);
   await shot(`${theme}-library-scrolled`);
   await page
-    .getByRole("button", { name: /Pride and Prejudice/ })
+    .getByRole("button", { name: /^Pride and Prejudice by/ })
     .first()
     .click();
   await shot(`${theme}-details`);
   await axe(`${theme} details sheet`);
   await page
+    .getByRole("dialog", { name: /Details for Pride/ })
     .getByRole("button", { name: /^(Read|Continue)/ })
     .first()
     .click();

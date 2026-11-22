@@ -243,7 +243,8 @@ export function BookDetails({
               </p>
             ) : null}
             <p className="mt-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
-              {book.format.toUpperCase()} · {book.pageCount || "?"} pages ·{" "}
+              {book.format.toUpperCase()} · {book.pageCount || "?"}{" "}
+              {book.pageCount === 1 ? "page" : "pages"} ·{" "}
               {fmtSize(book.fileSize)}
             </p>
             <StarRating

@@ -1,4 +1,4 @@
-import JSZip from "jszip";
+import type JSZip from "jszip";
 import {
   DELETED_ANNOTATIONS_KEY,
   DELETED_BOOKS_KEY,
@@ -19,6 +19,9 @@ import {
   type BookMeta,
 } from "./db";
 import { planMerge } from "./sync-merge";
+
+/** JSZip loads on first use, so it isn't part of the library's first download. */
+const loadJSZip = () => import("jszip").then((m) => m.default);
 
 export type SyncBundle = {
   app: "aurum";
@@ -139,7 +142,7 @@ function isQuota(error: unknown): boolean {
  * formats, so the zip stores rather than re-compresses them.
  */
 export async function exportFullBackup(): Promise<Blob> {
-  const zip = new JSZip();
+  const zip = new (await loadJSZip())();
   const books = await listBooks();
   const coverTypes: Record<string, string> = {};
   for (const book of books) {
@@ -176,7 +179,7 @@ export async function exportFullBackup(): Promise<Blob> {
 export async function importFullBackup(file: File): Promise<FullBackupReport> {
   let zip: JSZip;
   try {
-    zip = await JSZip.loadAsync(file);
+    zip = await (await loadJSZip()).loadAsync(file);
   } catch {
     throw new Error("not-aurum");
   }

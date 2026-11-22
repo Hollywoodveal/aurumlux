@@ -770,7 +770,12 @@ function StatsPage() {
             {stats.best} · {stats.activeDays} active days
           </p>
         </div>
-        <div className="no-scrollbar mt-3 overflow-x-auto rounded-xl border border-gold/15 bg-card p-3">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Reading activity heat map (scrolls sideways)"
+          className="no-scrollbar mt-3 overflow-x-auto rounded-xl border border-gold/15 bg-card p-3 focus-visible:outline-2 focus-visible:outline-gold"
+        >
           <div className="min-w-max">
             <div className="mb-1 flex gap-[3px] pl-[22px]">
               {monthLabels.map((m, i) => (

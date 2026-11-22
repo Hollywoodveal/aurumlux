@@ -571,6 +571,8 @@ export function EpubReader({
 
       // Taps inside the book document: used to jump to the spoken word.
       rendition.on("rendered", (_section: unknown, view: any) => {
+        // Name the book frame for screen readers.
+        view?.iframe?.setAttribute?.("title", `${book.title} — book text`);
         const doc: Document | undefined =
           view?.document ?? view?.contents?.document;
         doc?.addEventListener(

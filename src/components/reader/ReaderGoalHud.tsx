@@ -67,7 +67,6 @@ export function ReaderGoalHud({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Reading goal progress"
         aria-expanded={open}
         className="flex min-h-11 items-center rounded-full border border-gold/25 bg-secondary/50 px-3 text-left"
       >
@@ -83,6 +82,7 @@ export function ReaderGoalHud({
                 {minutesToday}
               </span>
               /{dailyGoal}m
+              <span className="sr-only"> minutes today — reading goal</span>
             </p>
             <div className="mt-1 h-[3px] w-full overflow-hidden rounded-full bg-secondary">
               <div

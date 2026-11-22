@@ -1,5 +1,5 @@
 import { fetchExternal, friendlyHttpError } from "./net";
-import JSZip from "jszip";
+import type JSZip from "jszip";
 import {
   getFile,
   getSetting,
@@ -14,6 +14,9 @@ import {
   type BookMeta,
 } from "./db";
 import { requestPersistentStorage } from "./storage";
+
+/** JSZip loads on first use, so it isn't part of the library's first download. */
+const loadJSZip = () => import("jszip").then((m) => m.default);
 
 /** True when a write failed because the device is out of storage. */
 export function isQuotaError(error: unknown): boolean {
@@ -149,7 +152,7 @@ function allOf(doc: Document, tag: string) {
 }
 
 async function parseEpub(file: File, book: BookMeta) {
-  const zip = await JSZip.loadAsync(file);
+  const zip = await (await loadJSZip()).loadAsync(file);
   const containerFile = zip.file("META-INF/container.xml");
   if (!containerFile) return;
   const container = new DOMParser().parseFromString(
@@ -321,7 +324,7 @@ async function parsePdf(file: File, book: BookMeta) {
 
 async function parseComicArchive(file: File, book: BookMeta) {
   try {
-    const zip = await JSZip.loadAsync(file);
+    const zip = await (await loadJSZip()).loadAsync(file);
     const entries = Object.values(zip.files)
       .filter((f) => !f.dir && /\.(jpe?g|png|gif|webp)$/i.test(f.name))
       .sort((a, b) =>
@@ -808,7 +811,7 @@ export async function refetchCover(
 
 /** Count pages for an EPUB zip: publisher metadata first, else real text length. */
 async function countEpubPages(file: File): Promise<number> {
-  const zip = await JSZip.loadAsync(file);
+  const zip = await (await loadJSZip()).loadAsync(file);
   const containerFile = zip.file("META-INF/container.xml");
   if (!containerFile) return 0;
   const container = new DOMParser().parseFromString(
@@ -902,7 +905,7 @@ export async function recountPages(book: BookMeta): Promise<number | null> {
     pages = doc.numPages;
   } else if (book.format === "cbz" || book.format === "cbr") {
     try {
-      const zip = await JSZip.loadAsync(file);
+      const zip = await (await loadJSZip()).loadAsync(file);
       pages = Object.values(zip.files).filter(
         (f) => !f.dir && /\.(jpe?g|png|gif|webp)$/i.test(f.name),
       ).length;
