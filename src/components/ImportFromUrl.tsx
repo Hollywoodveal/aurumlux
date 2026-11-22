@@ -25,7 +25,9 @@ export function ImportFromUrl() {
       if (added.length > 0) {
         toast.success(
           `${added.length} book${added.length === 1 ? "" : "s"} added` +
-            (duplicates.length ? ` · ${duplicates.length} already on your shelf` : ""),
+            (duplicates.length
+              ? ` · ${duplicates.length} already on your shelf`
+              : ""),
         );
         setUrl("");
         void indexLibrary().then(() => invalidate());
@@ -35,7 +37,11 @@ export function ImportFromUrl() {
         toast.error("Nothing could be imported from that link");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "That link could not be reached");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "That link could not be reached",
+      );
     } finally {
       setBusy(false);
     }
@@ -59,7 +65,11 @@ export function ImportFromUrl() {
         disabled={busy || !url.trim()}
         className="shrink-0 bg-gradient-gold text-primary-foreground"
       >
-        {busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
+        {busy ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Link2 className="size-4" />
+        )}
         Fetch
       </Button>
     </div>

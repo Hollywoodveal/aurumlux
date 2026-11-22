@@ -73,9 +73,21 @@ export const Route = createFileRoute("/")({
 });
 
 type SortKey =
-  "title" | "author" | "series" | "recent" | "progress" | "rating" | "pages";
+  | "title"
+  | "author"
+  | "series"
+  | "recent"
+  | "progress"
+  | "rating"
+  | "pages";
 type ShelfKey =
-  "all" | "reading" | "finished" | "want" | "favorites" | "year" | "stalled";
+  | "all"
+  | "reading"
+  | "finished"
+  | "want"
+  | "favorites"
+  | "year"
+  | "stalled";
 
 const SHELVES: { key: ShelfKey; label: string }[] = [
   { key: "all", label: "All books" },
@@ -417,7 +429,11 @@ function LibraryPage() {
         </nav>
       </header>
 
-      <StreakPill books={books} dailyGoal={dailyGoal} recoveries={recoveries.list} />
+      <StreakPill
+        books={books}
+        dailyGoal={dailyGoal}
+        recoveries={recoveries.list}
+      />
 
       <div className="mt-5 flex items-center gap-2">
         <div className="relative flex-1">

@@ -15,7 +15,13 @@ type Entry = {
  * Looks a selected word up in the free dictionary API and offers a translation
  * link. Read-only, no key, and it fails softly when offline.
  */
-export function DictionarySheet({ word, onClose }: { word: string; onClose: () => void }) {
+export function DictionarySheet({
+  word,
+  onClose,
+}: {
+  word: string;
+  onClose: () => void;
+}) {
   const [entry, setEntry] = useState<Entry | null>(null);
   const [error, setError] = useState<string | null>(null);
   const term = word.trim().replace(/^[^\p{L}]+|[^\p{L}]+$/gu, "");
@@ -57,13 +63,21 @@ export function DictionarySheet({ word, onClose }: { word: string; onClose: () =
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end">
-      <button aria-label="Close dictionary" onClick={onClose} className="absolute inset-0 bg-scrim" />
+      <button
+        aria-label="Close dictionary"
+        onClick={onClose}
+        className="absolute inset-0 bg-scrim"
+      />
       <div className="pb-safe px-safe-sm relative max-h-[70svh] w-full overflow-y-auto rounded-t-2xl border-t border-gold/25 bg-card pt-4">
         <div className="flex items-start justify-between gap-3 px-4">
           <div>
-            <h2 className="font-display text-2xl text-ivory">{term || "Dictionary"}</h2>
+            <h2 className="font-display text-2xl text-ivory">
+              {term || "Dictionary"}
+            </h2>
             {entry?.phonetic ? (
-              <p className="text-xs tracking-wide text-gold/70">{entry.phonetic}</p>
+              <p className="text-xs tracking-wide text-gold/70">
+                {entry.phonetic}
+              </p>
             ) : null}
           </div>
           <div className="flex items-center gap-1">
@@ -91,16 +105,24 @@ export function DictionarySheet({ word, onClose }: { word: string; onClose: () =
             </p>
           ) : null}
 
-          {error ? <p className="py-4 text-sm text-muted-foreground">{error}</p> : null}
+          {error ? (
+            <p className="py-4 text-sm text-muted-foreground">{error}</p>
+          ) : null}
 
           {entry?.meanings.slice(0, 4).map((meaning, i) => (
-            <section key={`${meaning.partOfSpeech}-${i}`} className="border-t border-border/60 py-3 first:border-0">
+            <section
+              key={`${meaning.partOfSpeech}-${i}`}
+              className="border-t border-border/60 py-3 first:border-0"
+            >
               <h3 className="text-[11px] uppercase tracking-[0.2em] text-gold/70">
                 {meaning.partOfSpeech}
               </h3>
               <ol className="mt-1.5 space-y-2">
                 {meaning.definitions.slice(0, 3).map((def, j) => (
-                  <li key={j} className="text-sm leading-relaxed text-foreground">
+                  <li
+                    key={j}
+                    className="text-sm leading-relaxed text-foreground"
+                  >
                     {def.definition}
                     {def.example ? (
                       <span className="mt-0.5 block text-xs italic text-muted-foreground">

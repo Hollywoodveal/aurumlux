@@ -42,7 +42,9 @@ export function StreakPill({ books, dailyGoal, recoveries }: Props) {
       <Flame
         className={cn(
           "size-4 shrink-0",
-          streak.current > 0 || streak.atRisk ? "text-gold" : "text-muted-foreground",
+          streak.current > 0 || streak.atRisk
+            ? "text-gold"
+            : "text-muted-foreground",
         )}
         aria-hidden
       />

@@ -82,7 +82,8 @@ export class SpokenHighlighter {
   rangeFor(span: { start: number; end: number }): Range | null {
     if (this.passageStart < 0 || !this.doc) return null;
     const from = this.map[this.passageStart + span.start];
-    const to = this.map[Math.min(this.passageStart + span.end, this.passageEnd) - 1];
+    const to =
+      this.map[Math.min(this.passageStart + span.end, this.passageEnd) - 1];
     if (!from || !to) return null;
     try {
       const range = this.doc.createRange();
@@ -97,19 +98,27 @@ export class SpokenHighlighter {
   /** Range covering the whole current passage, used to page ahead of narration. */
   passageRange(): Range | null {
     if (this.passageStart < 0) return null;
-    return this.rangeFor({ start: 0, end: this.passageEnd - this.passageStart });
+    return this.rangeFor({
+      start: 0,
+      end: this.passageEnd - this.passageStart,
+    });
   }
-
-
 
   /** Paint the current word (and dim the rest of the passage) if supported. */
   paint(span: { start: number; end: number } | null): Range | null {
     const doc = this.doc;
-    const win = doc?.defaultView as (Window & typeof globalThis) | null | undefined;
-    const highlights = (win?.CSS as unknown as { highlights?: Map<string, unknown> } | undefined)
-      ?.highlights;
-    const Ctor = (win as unknown as { Highlight?: new (...ranges: Range[]) => unknown } | undefined)
-      ?.Highlight;
+    const win = doc?.defaultView as
+      | (Window & typeof globalThis)
+      | null
+      | undefined;
+    const highlights = (
+      win?.CSS as unknown as { highlights?: Map<string, unknown> } | undefined
+    )?.highlights;
+    const Ctor = (
+      win as unknown as
+        | { Highlight?: new (...ranges: Range[]) => unknown }
+        | undefined
+    )?.Highlight;
     const range = span ? this.rangeFor(span) : null;
     if (!highlights || !Ctor) return range;
     try {

@@ -1,9 +1,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BookA, Bookmark, ChevronLeft, ChevronRight, List, Palette, Search, X } from "lucide-react";
+import {
+  BookA,
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  List,
+  Palette,
+  Search,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
-import { getFile, putAnnotation, uid, updateBook, type Annotation, type BookMeta } from "@/lib/db";
+import {
+  getFile,
+  putAnnotation,
+  uid,
+  updateBook,
+  type Annotation,
+  type BookMeta,
+} from "@/lib/db";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_PREFS,
@@ -18,13 +34,14 @@ import {
   type ReaderThemeChoice,
 } from "@/lib/reader-prefs";
 import { useAppTheme } from "@/hooks/useAppTheme";
-import { ReadAloudBar, speechSupported, type ReadAloudControls } from "@/components/reader/ReadAloudBar";
+import {
+  ReadAloudBar,
+  speechSupported,
+  type ReadAloudControls,
+} from "@/components/reader/ReadAloudBar";
 import { DictionarySheet } from "@/components/reader/DictionarySheet";
 import { NoteComposer } from "@/components/reader/NoteComposer";
 import { SpokenHighlighter } from "@/lib/spoken-highlight";
-
-
-
 
 export { DEFAULT_PREFS };
 export type { ReaderPrefs, ReaderTheme, ReaderThemeChoice };
@@ -47,34 +64,48 @@ export function ReaderSettings({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end">
-      <button aria-label="Close settings" onClick={onClose} className="absolute inset-0 bg-scrim" />
+      <button
+        aria-label="Close settings"
+        onClick={onClose}
+        className="absolute inset-0 bg-scrim"
+      />
       <div className="animate-rise pb-safe px-safe relative max-h-[88vh] w-full overflow-y-auto rounded-t-3xl border-t border-gold/25 bg-card py-5">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-xl text-gold">Reading</h3>
-          <button onClick={onClose} aria-label="Close" className="flex size-11 items-center justify-center">
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="flex size-11 items-center justify-center"
+          >
             <X className="size-5 text-muted-foreground" />
           </button>
         </div>
 
-        <p className="mt-5 text-xs uppercase tracking-[0.16em] text-muted-foreground">Page colour</p>
+        <p className="mt-5 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          Page colour
+        </p>
         <div className="mt-2 flex gap-2">
-          {(["auto", "light", "sepia", "dark"] as ReaderThemeChoice[]).map((t) => {
-            // "Auto" previews whatever the app theme currently resolves to.
-            const preview = THEME_COLORS[resolveReaderTheme(t, appTheme)];
-            return (
-              <button
-                key={t}
-                onClick={() => onChange({ ...prefs, theme: t })}
-                className={cn(
-                  "min-h-11 flex-1 rounded-lg border py-2 text-sm capitalize",
-                  prefs.theme === t ? "border-gold/60 ring-1 ring-gold/40" : "border-border",
-                )}
-                style={{ background: preview.bg, color: preview.fg }}
-              >
-                {t}
-              </button>
-            );
-          })}
+          {(["auto", "light", "sepia", "dark"] as ReaderThemeChoice[]).map(
+            (t) => {
+              // "Auto" previews whatever the app theme currently resolves to.
+              const preview = THEME_COLORS[resolveReaderTheme(t, appTheme)];
+              return (
+                <button
+                  key={t}
+                  onClick={() => onChange({ ...prefs, theme: t })}
+                  className={cn(
+                    "min-h-11 flex-1 rounded-lg border py-2 text-sm capitalize",
+                    prefs.theme === t
+                      ? "border-gold/60 ring-1 ring-gold/40"
+                      : "border-border",
+                  )}
+                  style={{ background: preview.bg, color: preview.fg }}
+                >
+                  {t}
+                </button>
+              );
+            },
+          )}
         </div>
         <p className="mt-1.5 text-[11px] text-muted-foreground">
           Auto follows the theme you picked in Settings.
@@ -82,31 +113,53 @@ export function ReaderSettings({
 
         {showFonts ? (
           <>
-            <p className="mt-5 text-xs uppercase tracking-[0.16em] text-muted-foreground">Font</p>
+            <p className="mt-5 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              Font
+            </p>
             <div className="mt-2 grid grid-cols-4 gap-2">
-              {READER_FONTS.filter((f) => f.value !== DYSLEXIC_FONT).map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => onChange({ ...prefs, fontFamily: f.value })}
-                  style={{ fontFamily: f.value }}
-                  className={cn(
-                    "min-h-11 rounded-lg border py-2 text-sm",
-                    prefs.fontFamily === f.value
-                      ? "border-gold/60 text-gold"
-                      : "border-border text-muted-foreground",
-                  )}
-                >
-                  {f.label}
-                </button>
-              ))}
+              {READER_FONTS.filter((f) => f.value !== DYSLEXIC_FONT).map(
+                (f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => onChange({ ...prefs, fontFamily: f.value })}
+                    style={{ fontFamily: f.value }}
+                    className={cn(
+                      "min-h-11 rounded-lg border py-2 text-sm",
+                      prefs.fontFamily === f.value
+                        ? "border-gold/60 text-gold"
+                        : "border-border text-muted-foreground",
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                ),
+              )}
             </div>
           </>
         ) : null}
 
         {[
-          { key: "fontSize" as const, label: "Font size", min: 70, max: 180, step: 5 },
-          { key: "lineHeight" as const, label: "Line spacing", min: 1.2, max: 2.4, step: 0.1 },
-          { key: "margin" as const, label: "Margins", min: 0, max: 60, step: 4 },
+          {
+            key: "fontSize" as const,
+            label: "Font size",
+            min: 70,
+            max: 180,
+            step: 5,
+          },
+          {
+            key: "lineHeight" as const,
+            label: "Line spacing",
+            min: 1.2,
+            max: 2.4,
+            step: 0.1,
+          },
+          {
+            key: "margin" as const,
+            label: "Margins",
+            min: 0,
+            max: 60,
+            step: 4,
+          },
         ].map((s) => (
           <div key={s.key} className="mt-5">
             <div className="flex justify-between text-xs uppercase tracking-[0.16em] text-muted-foreground">
@@ -120,15 +173,25 @@ export function ReaderSettings({
               max={s.max}
               step={s.step}
               value={prefs[s.key]}
-              onChange={(e) => onChange({ ...prefs, [s.key]: Number(e.target.value) })}
+              onChange={(e) =>
+                onChange({ ...prefs, [s.key]: Number(e.target.value) })
+              }
               className="mt-2 w-full accent-[oklch(0.82_0.132_87)]"
             />
           </div>
         ))}
 
-        <p className="mt-6 text-xs uppercase tracking-[0.16em] text-muted-foreground">Comfort</p>
+        <p className="mt-6 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          Comfort
+        </p>
         {[
-          { key: "brightness" as const, label: "Dim screen", min: 0, max: 60, step: 5 },
+          {
+            key: "brightness" as const,
+            label: "Dim screen",
+            min: 0,
+            max: 60,
+            step: 5,
+          },
           { key: "warmth" as const, label: "Warmth", min: 0, max: 60, step: 5 },
         ].map((s) => (
           <div key={s.key} className="mt-4">
@@ -143,13 +206,17 @@ export function ReaderSettings({
               max={s.max}
               step={s.step}
               value={prefs[s.key]}
-              onChange={(e) => onChange({ ...prefs, [s.key]: Number(e.target.value) })}
+              onChange={(e) =>
+                onChange({ ...prefs, [s.key]: Number(e.target.value) })
+              }
               className="mt-2 w-full accent-[oklch(0.82_0.132_87)]"
             />
           </div>
         ))}
 
-        <p className="mt-6 text-xs uppercase tracking-[0.16em] text-muted-foreground">Page turn</p>
+        <p className="mt-6 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          Page turn
+        </p>
         <div className="mt-2 flex gap-2">
           {(["none", "slide", "fade"] as ReaderPrefs["pageAnim"][]).map((a) => (
             <button
@@ -157,7 +224,9 @@ export function ReaderSettings({
               onClick={() => onChange({ ...prefs, pageAnim: a })}
               className={cn(
                 "min-h-11 flex-1 rounded-lg border py-2 text-sm capitalize",
-                prefs.pageAnim === a ? "border-gold/60 text-gold" : "border-border text-muted-foreground",
+                prefs.pageAnim === a
+                  ? "border-gold/60 text-gold"
+                  : "border-border text-muted-foreground",
               )}
             >
               {a}
@@ -167,8 +236,12 @@ export function ReaderSettings({
 
         <div className="mt-6 flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Readable font</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">Atkinson Hyperlegible, wider spacing</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              Readable font
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Atkinson Hyperlegible, wider spacing
+            </p>
           </div>
           <button
             onClick={() => onChange({ ...prefs, dyslexic: !prefs.dyslexic })}
@@ -176,7 +249,9 @@ export function ReaderSettings({
             aria-label="Toggle readable font"
             className={cn(
               "min-h-11 min-w-11 rounded-full border px-4 text-xs uppercase tracking-widest",
-              prefs.dyslexic ? "border-gold/60 bg-gold/10 text-gold" : "border-border text-muted-foreground",
+              prefs.dyslexic
+                ? "border-gold/60 bg-gold/10 text-gold"
+                : "border-border text-muted-foreground",
             )}
           >
             {prefs.dyslexic ? "On" : "Off"}
@@ -196,7 +271,9 @@ export function ReaderSettings({
               max={1.6}
               step={0.1}
               value={prefs.speechRate}
-              onChange={(e) => onChange({ ...prefs, speechRate: Number(e.target.value) })}
+              onChange={(e) =>
+                onChange({ ...prefs, speechRate: Number(e.target.value) })
+              }
               className="mt-2 w-full accent-[oklch(0.82_0.132_87)]"
             />
           </div>
@@ -210,7 +287,9 @@ export function ReaderSettings({
             Glow each word as it is narrated, and tap it to jump there
           </p>
           <button
-            onClick={() => onChange({ ...prefs, highlightWords: !prefs.highlightWords })}
+            onClick={() =>
+              onChange({ ...prefs, highlightWords: !prefs.highlightWords })
+            }
             aria-pressed={prefs.highlightWords}
             aria-label="Toggle word highlighting"
             className={cn(
@@ -225,24 +304,26 @@ export function ReaderSettings({
         </div>
 
         {showTapToRead ? (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-[11px] text-muted-foreground">
-            Tap any word to start reading aloud from there
-          </p>
-          <button
-            onClick={() => onChange({ ...prefs, tapToRead: !prefs.tapToRead })}
-            aria-pressed={prefs.tapToRead}
-            aria-label="Toggle tap to read aloud"
-            className={cn(
-              "ml-3 min-h-11 min-w-11 rounded-full border px-4 text-xs uppercase tracking-widest",
-              prefs.tapToRead
-                ? "border-gold/60 bg-gold/10 text-gold"
-                : "border-border text-muted-foreground",
-            )}
-          >
-            {prefs.tapToRead ? "On" : "Off"}
-          </button>
-        </div>
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground">
+              Tap any word to start reading aloud from there
+            </p>
+            <button
+              onClick={() =>
+                onChange({ ...prefs, tapToRead: !prefs.tapToRead })
+              }
+              aria-pressed={prefs.tapToRead}
+              aria-label="Toggle tap to read aloud"
+              className={cn(
+                "ml-3 min-h-11 min-w-11 rounded-full border px-4 text-xs uppercase tracking-widest",
+                prefs.tapToRead
+                  ? "border-gold/60 bg-gold/10 text-gold"
+                  : "border-border text-muted-foreground",
+              )}
+            >
+              {prefs.tapToRead ? "On" : "Off"}
+            </button>
+          </div>
         ) : null}
 
         {prefs.highlightWords ? (
@@ -258,12 +339,16 @@ export function ReaderSettings({
               max={90}
               step={5}
               value={prefs.highlightIntensity}
-              onChange={(e) => onChange({ ...prefs, highlightIntensity: Number(e.target.value) })}
+              onChange={(e) =>
+                onChange({
+                  ...prefs,
+                  highlightIntensity: Number(e.target.value),
+                })
+              }
               className="mt-2 w-full accent-[oklch(0.82_0.132_87)]"
             />
           </div>
         ) : null}
-
       </div>
     </div>
   );
@@ -284,7 +369,11 @@ export function EpubReader({
   onPrefs: (p: ReaderPrefs) => void;
   annotations: Annotation[];
   onAnnotationsChanged: () => void;
-  onProgress: (p: { progress: number; location: string; chapter: string }) => void;
+  onProgress: (p: {
+    progress: number;
+    location: string;
+    chapter: string;
+  }) => void;
   onBack: () => void;
   /** Live daily-target control, docked into the bottom bar. */
   goalHud?: React.ReactNode;
@@ -295,14 +384,17 @@ export function EpubReader({
   // Page colour actually painted: the per-book override, or the app theme when "auto".
   const readerTheme = resolveReaderTheme(prefs.theme, useAppTheme());
   const [toc, setToc] = useState<{ label: string; href: string }[]>([]);
-  const [panel, setPanel] = useState<null | "toc" | "settings" | "search" | "notes">(null);
+  const [panel, setPanel] = useState<
+    null | "toc" | "settings" | "search" | "notes"
+  >(null);
   /** Word sent to the dictionary sheet, or null when it is closed. */
   const [lookup, setLookup] = useState<string | null>(null);
 
-
   const [chapter, setChapter] = useState("");
   const [percent, setPercent] = useState(book.progress);
-  const [results, setResults] = useState<{ cfi: string; excerpt: string }[]>([]);
+  const [results, setResults] = useState<{ cfi: string; excerpt: string }[]>(
+    [],
+  );
   const [query, setQuery] = useState("");
   const [ready, setReady] = useState(false);
   const prefsRef = useRef(prefs);
@@ -312,21 +404,22 @@ export function EpubReader({
   const spokenDocRef = useRef<Document | null>(null);
   const pagingRef = useRef(false);
   /** CFI comparator from epub.js, loaded with the book (kept out of SSR). */
-  const cfiRef = useRef<{ compare: (a: string, b: string) => number } | null>(null);
+  const cfiRef = useRef<{ compare: (a: string, b: string) => number } | null>(
+    null,
+  );
   /** Passage being narrated, kept so paging can be re-checked after a re-flow. */
   const lastPassageRef = useRef<string | null>(null);
   /** Latest "is the spoken passage still on this page?" check. */
   const recheckPageRef = useRef<(() => void) | null>(null);
 
-
   /** Range of the word currently being spoken, so a tap on it can jump there. */
   const spokenRangeRef = useRef<Range | null>(null);
   /** Latest in-document tap handler, read by the listener added on render. */
-  const docTapRef = useRef<((e: PointerEvent | MouseEvent) => void) | null>(null);
+  const docTapRef = useRef<((e: PointerEvent | MouseEvent) => void) | null>(
+    null,
+  );
   /** Narration controls, used to read aloud from a tapped word. */
   const readAloudRef = useRef<ReadAloudControls | null>(null);
-
-
 
   const relocatedResolveRef = useRef<(() => void) | null>(null);
 
@@ -338,7 +431,11 @@ export function EpubReader({
       const buffer = await blob.arrayBuffer();
       const epubjs = await import("epubjs");
       const ePub = epubjs.default;
-      const CFI = (epubjs as unknown as { EpubCFI?: new () => { compare: (a: string, b: string) => number } }).EpubCFI;
+      const CFI = (
+        epubjs as unknown as {
+          EpubCFI?: new () => { compare: (a: string, b: string) => number };
+        }
+      ).EpubCFI;
       if (CFI) cfiRef.current = new CFI();
 
       if (destroyed) return;
@@ -349,7 +446,11 @@ export function EpubReader({
         height: "100%",
         flow: "paginated",
         spread: "none",
-        allowScriptedContent: true,
+        // Books are untrusted input (especially ones imported from a link). With
+        // scripts allowed, epub.js gives the iframe both allow-scripts and
+        // allow-same-origin, so a book's JavaScript could read every book, note
+        // and setting in this origin's IndexedDB. Keep book content script-free.
+        allowScriptedContent: false,
       });
       renditionRef.current = rendition;
       // Restore the saved locations index before the first paint so the very
@@ -368,7 +469,10 @@ export function EpubReader({
 
       const nav = await epub.loaded.navigation;
       setToc(
-        (nav.toc ?? []).map((t: any) => ({ label: String(t.label ?? "").trim(), href: t.href })),
+        (nav.toc ?? []).map((t: any) => ({
+          label: String(t.label ?? "").trim(),
+          href: t.href,
+        })),
       );
 
       /**
@@ -377,18 +481,21 @@ export function EpubReader({
        * shown but the stored progress is left untouched, so closing the reader
        * early can no longer overwrite the real number with a coarse guess.
        */
-      const percentFor = (location: any): { shown: number; exact: number | null } => {
+      const percentFor = (
+        location: any,
+      ): { shown: number; exact: number | null } => {
         const cfi = location?.start?.cfi;
         let exact: number | null = null;
         if (epub.locations?.length()) {
           const ratio =
-            (cfi ? epub.locations.percentageFromCfi(cfi) : null) ?? location?.start?.percentage ?? 0;
+            (cfi ? epub.locations.percentageFromCfi(cfi) : null) ??
+            location?.start?.percentage ??
+            0;
           exact = Math.round(Math.min(1, Math.max(0, ratio)) * 100);
         }
         // Without the index, keep showing the stored figure rather than a guess.
         return { shown: exact ?? book.progress ?? 0, exact };
       };
-
 
       rendition.on("relocated", (location: any) => {
         const { shown, exact } = percentFor(location);
@@ -403,7 +510,9 @@ export function EpubReader({
         });
 
         const anim = prefsRef.current.pageAnim;
-        const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        const reduceMotion = window.matchMedia?.(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
         const el = hostRef.current;
         if (el && anim !== "none" && !reduceMotion) {
           const cls = anim === "slide" ? "page-anim-slide" : "page-anim-fade";
@@ -423,7 +532,8 @@ export function EpubReader({
 
       // Taps inside the book document: used to jump to the spoken word.
       rendition.on("rendered", (_section: unknown, view: any) => {
-        const doc: Document | undefined = view?.document ?? view?.contents?.document;
+        const doc: Document | undefined =
+          view?.document ?? view?.contents?.document;
         doc?.addEventListener(
           "pointerdown",
           (e: PointerEvent) => docTapRef.current?.(e),
@@ -431,15 +541,20 @@ export function EpubReader({
         );
       });
 
-
       annotations
         .filter((a) => a.type === "highlight" && a.location)
         .forEach((a) => {
           try {
-            rendition.annotations.highlight(a.location, {}, undefined, "aurum-hl", {
-              fill: a.color,
-              "fill-opacity": "0.35",
-            });
+            rendition.annotations.highlight(
+              a.location,
+              {},
+              undefined,
+              "aurum-hl",
+              {
+                fill: a.color,
+                "fill-opacity": "0.35",
+              },
+            );
           } catch {
             /* ignore */
           }
@@ -451,7 +566,9 @@ export function EpubReader({
         ? Promise.resolve()
         : epub.locations.generate(1200).then(async () => {
             try {
-              await updateBook(book.id, { locationsIndex: epub.locations.save() });
+              await updateBook(book.id, {
+                locationsIndex: epub.locations.save(),
+              });
             } catch {
               /* index cache is best-effort */
             }
@@ -465,8 +582,13 @@ export function EpubReader({
           const { shown, exact } = percentFor(loc);
           setPercent(shown);
           if (exact !== null) {
-            const label = epub.navigation?.get(loc.start.href)?.label?.trim() ?? "";
-            onProgress({ progress: exact, location: loc.start.cfi, chapter: label });
+            const label =
+              epub.navigation?.get(loc.start.href)?.label?.trim() ?? "";
+            onProgress({
+              progress: exact,
+              location: loc.start.cfi,
+              chapter: label,
+            });
           }
         })
         .catch(() => undefined);
@@ -480,8 +602,6 @@ export function EpubReader({
         pagingRef.current = false;
         recheckPageRef.current?.();
       });
-
-
     })();
 
     return () => {
@@ -512,14 +632,20 @@ export function EpubReader({
         "padding-left": `${prefs.margin}px !important`,
         "padding-right": `${prefs.margin}px !important`,
         ...(prefs.dyslexic
-          ? { "letter-spacing": "0.02em !important", "word-spacing": "0.12em !important" }
+          ? {
+              "letter-spacing": "0.02em !important",
+              "word-spacing": "0.12em !important",
+            }
           : {}),
       },
       p: {
         "line-height": `${prefs.lineHeight} !important`,
         "font-family": `${font} !important`,
         ...(prefs.dyslexic
-          ? { "letter-spacing": "0.02em !important", "word-spacing": "0.12em !important" }
+          ? {
+              "letter-spacing": "0.02em !important",
+              "word-spacing": "0.12em !important",
+            }
           : {}),
       },
       a: { color: "#c9a227 !important" },
@@ -531,7 +657,6 @@ export function EpubReader({
       "::highlight(aurum-passage)": {
         background: `rgba(201,162,39,${alphas.passage.toFixed(2)})`,
       },
-
     });
 
     rendition.themes.select("aurum");
@@ -615,7 +740,8 @@ export function EpubReader({
     const rendition = renditionRef.current;
     const contents = rendition?.getContents?.()?.[0];
     const doc = contents?.document ?? contents?.content?.ownerDocument;
-    const text: string | undefined = doc?.body?.textContent ?? contents?.content?.textContent;
+    const text: string | undefined =
+      doc?.body?.textContent ?? contents?.content?.textContent;
     return text?.trim() || null;
   }, []);
 
@@ -636,7 +762,9 @@ export function EpubReader({
   /** Document of the section currently rendered in the epub.js iframe. */
   const currentDoc = useCallback((): Document | undefined => {
     const contents = renditionRef.current?.getContents?.()?.[0];
-    return (contents?.document ?? contents?.content?.ownerDocument) as Document | undefined;
+    return (contents?.document ?? contents?.content?.ownerDocument) as
+      | Document
+      | undefined;
   }, []);
 
   /**
@@ -659,7 +787,6 @@ export function EpubReader({
       if (cmp && cfi && start && end) {
         return cmp.compare(cfi, start) < 0 || cmp.compare(cfi, end) > 0;
       }
-
     } catch {
       /* fall through to geometry */
     }
@@ -673,26 +800,28 @@ export function EpubReader({
     return rect.left >= left + width - 2 || rect.right <= left + 2;
   }, []);
 
-
   /** Move the reader to a range's exact spot in the text. */
-  const jumpToRange = useCallback((range: Range, opts?: { paging?: boolean }) => {
-    const rendition = renditionRef.current;
-    const contents = rendition?.getContents?.()?.[0];
-    try {
-      const cfi = contents?.cfiFromRange?.(range);
-      if (!cfi) return false;
-      if (opts?.paging) pagingRef.current = true;
-      void Promise.resolve(rendition.display(cfi)).finally(() => {
-        window.setTimeout(() => {
-          pagingRef.current = false;
-        }, 300);
-      });
-      return true;
-    } catch {
-      pagingRef.current = false;
-      return false;
-    }
-  }, []);
+  const jumpToRange = useCallback(
+    (range: Range, opts?: { paging?: boolean }) => {
+      const rendition = renditionRef.current;
+      const contents = rendition?.getContents?.()?.[0];
+      try {
+        const cfi = contents?.cfiFromRange?.(range);
+        if (!cfi) return false;
+        if (opts?.paging) pagingRef.current = true;
+        void Promise.resolve(rendition.display(cfi)).finally(() => {
+          window.setTimeout(() => {
+            pagingRef.current = false;
+          }, 300);
+        });
+        return true;
+      } catch {
+        pagingRef.current = false;
+        return false;
+      }
+    },
+    [],
+  );
 
   /** Locate each spoken passage in the rendered page so words can be followed. */
   const handleSpokenPassage = useCallback(
@@ -743,53 +872,53 @@ export function EpubReader({
     };
   }, []);
 
-
-
-
   /**
    * Character offset of the word under a tap, measured against the same
    * section text narration is chunked from (`doc.body.textContent`, trimmed).
    */
-  const offsetAtPoint = useCallback((doc: Document, x: number, y: number): number | null => {
-    const any = doc as any;
-    let node: Text | null = null;
-    let nodeOffset = 0;
-    if (typeof any.caretRangeFromPoint === "function") {
-      const r = any.caretRangeFromPoint(x, y);
-      if (r?.startContainer?.nodeType === 3) {
-        node = r.startContainer as Text;
-        nodeOffset = r.startOffset;
+  const offsetAtPoint = useCallback(
+    (doc: Document, x: number, y: number): number | null => {
+      const any = doc as any;
+      let node: Text | null = null;
+      let nodeOffset = 0;
+      if (typeof any.caretRangeFromPoint === "function") {
+        const r = any.caretRangeFromPoint(x, y);
+        if (r?.startContainer?.nodeType === 3) {
+          node = r.startContainer as Text;
+          nodeOffset = r.startOffset;
+        }
+      } else if (typeof any.caretPositionFromPoint === "function") {
+        const pos = any.caretPositionFromPoint(x, y);
+        if (pos?.offsetNode?.nodeType === 3) {
+          node = pos.offsetNode as Text;
+          nodeOffset = pos.offset;
+        }
       }
-    } else if (typeof any.caretPositionFromPoint === "function") {
-      const pos = any.caretPositionFromPoint(x, y);
-      if (pos?.offsetNode?.nodeType === 3) {
-        node = pos.offsetNode as Text;
-        nodeOffset = pos.offset;
+      if (!node || !doc.body) return null;
+      const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+      let total = 0;
+      let found = false;
+      let n = walker.nextNode() as Text | null;
+      while (n) {
+        if (n === node) {
+          total += Math.min(nodeOffset, n.data.length);
+          found = true;
+          break;
+        }
+        total += n.data.length;
+        n = walker.nextNode() as Text | null;
       }
-    }
-    if (!node || !doc.body) return null;
-    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-    let total = 0;
-    let found = false;
-    let n = walker.nextNode() as Text | null;
-    while (n) {
-      if (n === node) {
-        total += Math.min(nodeOffset, n.data.length);
-        found = true;
-        break;
-      }
-      total += n.data.length;
-      n = walker.nextNode() as Text | null;
-    }
-    if (!found) return null;
-    const raw = doc.body.textContent ?? "";
-    const trimmed = raw.trim();
-    let idx = Math.max(0, total - (raw.length - raw.trimStart().length));
-    if (idx >= trimmed.length) return null;
-    // Back up to the start of the tapped word so narration begins cleanly.
-    while (idx > 0 && !/\s/.test(trimmed[idx - 1] ?? " ")) idx -= 1;
-    return idx;
-  }, []);
+      if (!found) return null;
+      const raw = doc.body.textContent ?? "";
+      const trimmed = raw.trim();
+      let idx = Math.max(0, total - (raw.length - raw.trimStart().length));
+      if (idx >= trimmed.length) return null;
+      // Back up to the start of the tapped word so narration begins cleanly.
+      while (idx > 0 && !/\s/.test(trimmed[idx - 1] ?? " ")) idx -= 1;
+      return idx;
+    },
+    [],
+  );
 
   /**
    * Taps inside the book: on the spoken word it jumps the reader there,
@@ -804,7 +933,10 @@ export function EpubReader({
         const pad = 6;
         const hit = [...range.getClientRects()].some(
           (r) =>
-            x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad,
+            x >= r.left - pad &&
+            x <= r.right + pad &&
+            y >= r.top - pad &&
+            y <= r.bottom + pad,
         );
         if (hit) {
           event.preventDefault();
@@ -830,8 +962,6 @@ export function EpubReader({
   );
   docTapRef.current = handleDocPointerDown;
 
-
-
   /** Highlight the word being spoken and turn the page once it moves off-screen. */
   const handleSpokenWord = useCallback(
     (span: { start: number; end: number } | null) => {
@@ -839,7 +969,11 @@ export function EpubReader({
       if (!highlighter) return;
       // Paint only when the follow-along glow is on; paging always tracks the word.
       const glow = prefsRef.current.highlightWords;
-      const range = glow ? highlighter.paint(span) : span ? highlighter.rangeFor(span) : null;
+      const range = glow
+        ? highlighter.paint(span)
+        : span
+          ? highlighter.rangeFor(span)
+          : null;
       spokenRangeRef.current = span && range && glow ? range : null;
       if (!span || !range || pagingRef.current) return;
       if (!isOffPage(range)) return;
@@ -848,13 +982,17 @@ export function EpubReader({
     [isOffPage, jumpToRange],
   );
 
-
-
-
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ background: THEME_COLORS[readerTheme].bg }}>
+    <div
+      className="fixed inset-0 flex flex-col"
+      style={{ background: THEME_COLORS[readerTheme].bg }}
+    >
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
-        <button onClick={onBack} aria-label="Back to library" className="flex size-11 items-center justify-center text-gold">
+        <button
+          onClick={onBack}
+          aria-label="Back to library"
+          className="flex size-11 items-center justify-center text-gold"
+        >
           <ChevronLeft className="size-5" />
         </button>
         <h1 className="min-w-0 flex-1 truncate text-center text-xs font-normal uppercase tracking-[0.14em] text-muted-foreground">
@@ -862,16 +1000,32 @@ export function EpubReader({
           <span aria-hidden="true">{chapter || book.title}</span>
         </h1>
         <div className="flex items-center gap-1 text-gold">
-          <button onClick={() => setPanel("toc")} aria-label="Table of contents" className="flex size-11 items-center justify-center">
+          <button
+            onClick={() => setPanel("toc")}
+            aria-label="Table of contents"
+            className="flex size-11 items-center justify-center"
+          >
             <List className="size-[18px]" />
           </button>
-          <button onClick={() => setPanel("search")} aria-label="Search in book" className="flex size-11 items-center justify-center">
+          <button
+            onClick={() => setPanel("search")}
+            aria-label="Search in book"
+            className="flex size-11 items-center justify-center"
+          >
             <Search className="size-[18px]" />
           </button>
-          <button onClick={() => void addBookmark()} aria-label="Add bookmark" className="flex size-11 items-center justify-center">
+          <button
+            onClick={() => void addBookmark()}
+            aria-label="Add bookmark"
+            className="flex size-11 items-center justify-center"
+          >
             <Bookmark className="size-[18px]" />
           </button>
-          <button onClick={() => setPanel("settings")} aria-label="Reading settings" className="flex size-11 items-center justify-center">
+          <button
+            onClick={() => setPanel("settings")}
+            aria-label="Reading settings"
+            className="flex size-11 items-center justify-center"
+          >
             <Palette className="size-[18px]" />
           </button>
         </div>
@@ -882,12 +1036,16 @@ export function EpubReader({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          style={{ background: `rgba(0,0,0,${Math.min(prefs.brightness, 100) / 100})` }}
+          style={{
+            background: `rgba(0,0,0,${Math.min(prefs.brightness, 100) / 100})`,
+          }}
         />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
-          style={{ background: `rgba(255,159,10,${(Math.min(prefs.warmth, 100) / 100) * 0.5})` }}
+          style={{
+            background: `rgba(255,159,10,${(Math.min(prefs.warmth, 100) / 100) * 0.5})`,
+          }}
         />
         <button
           aria-label="Previous page"
@@ -902,14 +1060,27 @@ export function EpubReader({
       </div>
 
       <footer className="flex items-center gap-3 border-t border-gold/15 bg-background/95 px-safe py-2">
-        <button onClick={() => renditionRef.current?.prev()} aria-label="Previous" className="flex size-11 items-center justify-center text-gold">
+        <button
+          onClick={() => renditionRef.current?.prev()}
+          aria-label="Previous"
+          className="flex size-11 items-center justify-center text-gold"
+        >
           <ChevronLeft className="size-4" />
         </button>
         <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
-          <div className="h-full bg-gradient-gold" style={{ width: `${percent}%` }} />
+          <div
+            className="h-full bg-gradient-gold"
+            style={{ width: `${percent}%` }}
+          />
         </div>
-        <span className="w-9 text-right text-[11px] text-gold/80">{percent}%</span>
-        <button onClick={() => renditionRef.current?.next()} aria-label="Next" className="flex size-11 items-center justify-center text-gold">
+        <span className="w-9 text-right text-[11px] text-gold/80">
+          {percent}%
+        </span>
+        <button
+          onClick={() => renditionRef.current?.next()}
+          aria-label="Next"
+          className="flex size-11 items-center justify-center text-gold"
+        >
           <ChevronRight className="size-4" />
         </button>
       </footer>
@@ -935,7 +1106,9 @@ export function EpubReader({
           onClick={() => {
             // Selection lives inside the epub.js iframe document.
             const contents = renditionRef.current?.getContents?.()?.[0];
-            const text = String(contents?.window?.getSelection?.() ?? "").trim();
+            const text = String(
+              contents?.window?.getSelection?.() ?? "",
+            ).trim();
             if (!text) {
               toast.info("Select a word first, then tap Define");
               return;
@@ -961,7 +1134,6 @@ export function EpubReader({
             mediaArtist={book.author}
             controls={readAloudRef}
           />
-
         ) : null}
       </div>
 
@@ -970,7 +1142,6 @@ export function EpubReader({
       ) : null}
 
       {panel === "settings" ? (
-
         <ReaderSettings
           prefs={prefs}
           onChange={onPrefs}
@@ -978,7 +1149,6 @@ export function EpubReader({
           showTapToRead
         />
       ) : null}
-
 
       {panel === "toc" || panel === "search" || panel === "notes" ? (
         <div className="fixed inset-0 z-50 flex">
@@ -989,8 +1159,14 @@ export function EpubReader({
           />
           <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-xl capitalize text-gold">{panel}</h3>
-              <button onClick={() => setPanel(null)} aria-label="Close" className="flex size-11 items-center justify-center">
+              <h3 className="font-display text-xl capitalize text-gold">
+                {panel}
+              </h3>
+              <button
+                onClick={() => setPanel(null)}
+                aria-label="Close"
+                className="flex size-11 items-center justify-center"
+              >
                 <X className="size-5 text-muted-foreground" />
               </button>
             </div>
@@ -1051,32 +1227,45 @@ export function EpubReader({
               <div className="mt-4 space-y-2">
                 <NoteComposer
                   bookId={book.id}
-                  location={renditionRef.current?.currentLocation()?.start?.cfi ?? ""}
+                  location={
+                    renditionRef.current?.currentLocation()?.start?.cfi ?? ""
+                  }
                   label={chapter || `${percent}%`}
                   onAdded={onAnnotationsChanged}
                 />
                 <ul className="space-y-2">
-                {annotations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No bookmarks, highlights or notes yet.</p>
-                ) : null}
-                {annotations.map((a) => (
-                  <li key={a.id}>
-                    <button
-                      onClick={() => {
-                        if (a.location) renditionRef.current?.display(a.location);
-                        setPanel(null);
-                      }}
-                      className="w-full rounded-lg border-l-2 bg-secondary/50 p-3 text-left"
-                      style={{ borderColor: a.color }}
-                    >
-                      <p className="text-[10px] uppercase tracking-widest text-gold/70">
-                        {a.type} · {a.label}
-                      </p>
-                      {a.text ? <p className="mt-1 text-sm text-foreground">{a.text}</p> : null}
-                      {a.note ? <p className="mt-1 text-sm italic text-muted-foreground">{a.note}</p> : null}
-                    </button>
-                  </li>
-                ))}
+                  {annotations.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No bookmarks, highlights or notes yet.
+                    </p>
+                  ) : null}
+                  {annotations.map((a) => (
+                    <li key={a.id}>
+                      <button
+                        onClick={() => {
+                          if (a.location)
+                            renditionRef.current?.display(a.location);
+                          setPanel(null);
+                        }}
+                        className="w-full rounded-lg border-l-2 bg-secondary/50 p-3 text-left"
+                        style={{ borderColor: a.color }}
+                      >
+                        <p className="text-[10px] uppercase tracking-widest text-gold/70">
+                          {a.type} · {a.label}
+                        </p>
+                        {a.text ? (
+                          <p className="mt-1 text-sm text-foreground">
+                            {a.text}
+                          </p>
+                        ) : null}
+                        {a.note ? (
+                          <p className="mt-1 text-sm italic text-muted-foreground">
+                            {a.note}
+                          </p>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               </div>
             ) : null}

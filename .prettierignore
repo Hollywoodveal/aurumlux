@@ -1,0 +1,4 @@
+dist
+.output
+bun.lock
+src/routeTree.gen.ts

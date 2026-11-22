@@ -8,7 +8,10 @@ const RESUME_KEY = "resumeOnLaunch";
 const LAUNCH_FLAG = "aurum:resumed";
 
 export async function rememberLastRead(bookId: string) {
-  await setSetting(LAST_READ_KEY, { bookId, at: Date.now() } satisfies LastRead);
+  await setSetting(LAST_READ_KEY, {
+    bookId,
+    at: Date.now(),
+  } satisfies LastRead);
 }
 
 export async function getLastRead(): Promise<LastRead | null> {

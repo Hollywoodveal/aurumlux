@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSetting, setSetting } from "@/lib/db";
-import { DEFAULT_DAILY_GOAL, startOfDay, type StreakRecovery } from "@/lib/goals";
+import {
+  DEFAULT_DAILY_GOAL,
+  startOfDay,
+  type StreakRecovery,
+} from "@/lib/goals";
 
 const isClient = typeof window !== "undefined";
 
@@ -14,7 +18,8 @@ export function useDailyGoal() {
   });
   const set = useMutation({
     mutationFn: (minutes: number) => setSetting("dailyGoalMinutes", minutes),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["setting", "dailyGoalMinutes"] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["setting", "dailyGoalMinutes"] }),
   });
   return { minutes: query.data ?? DEFAULT_DAILY_GOAL, set };
 }
@@ -40,7 +45,8 @@ export function useStreakRecoveries() {
       await setSetting(RECOVERY_KEY, next);
       return next;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["setting", RECOVERY_KEY] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["setting", RECOVERY_KEY] }),
   });
 
   const undo = useMutation({
@@ -50,7 +56,8 @@ export function useStreakRecoveries() {
       await setSetting(RECOVERY_KEY, next);
       return next;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["setting", RECOVERY_KEY] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["setting", RECOVERY_KEY] }),
   });
 
   return { list, redeem, undo };

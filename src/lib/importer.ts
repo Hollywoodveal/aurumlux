@@ -629,7 +629,7 @@ export function setOnlineMetadataLookup(enabled: boolean): Promise<void> {
 
 export function detectFormat(name: string): BookFormat | null {
   const ext = name.toLowerCase().split(".").pop() ?? "";
-  if (["epub", "pdf", "cbz", "cbr", "mobi", "azw3", "txt"].includes(ext))
+  if (["epub", "pdf", "cbz", "cbr", "txt"].includes(ext))
     return ext as BookFormat;
   return null;
 }
@@ -639,9 +639,8 @@ export async function importFile(
   fileHash?: string,
 ): Promise<BookMeta> {
   const ext = file.name.toLowerCase().split(".").pop() ?? "";
-  // MOBI/AZW3 have no reader in Aurum: refuse them here rather than letting
-  // them land in the library and open to a blank screen.
-  if (ext === "mobi" || ext === "azw3") {
+  // Kindle formats aren't supported: explain instead of a generic error.
+  if (ext === "mobi" || ext === "azw3" || ext === "azw") {
     throw new Error(
       "Kindle MOBI/AZW3 files can't be read in Aurum — it reads EPUB, PDF, CBZ and TXT. A DRM-free EPUB copy of the same book will work.",
     );
@@ -961,7 +960,7 @@ export async function importFromUrl(
   const blob = await response.blob();
   const name = nameFromResponse(url, response);
   const fmt = detectFormat(name);
-  if (fmt === "mobi" || fmt === "azw3") {
+  if (/\.(mobi|azw3?)$/i.test(name)) {
     throw new Error(
       "Kindle MOBI/AZW3 files can't be read in Aurum — it reads EPUB, PDF, CBZ and TXT.",
     );

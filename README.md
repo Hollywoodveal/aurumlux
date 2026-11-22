@@ -44,21 +44,17 @@ Designed for phones and tablets
 
 Supported Formats
 
-Primary formats:
-
 EPUB
 
 PDF
 
-Architecture should allow future expansion:
-
-CBZ / CBR
-
-MOBI
-
-AZW3
+CBZ (comics)
 
 TXT
+
+CBR comics are RAR archives, which browsers can't unpack; Aurum asks you to
+convert them to CBZ. Kindle MOBI/AZW3 files aren't supported — import a
+DRM-free EPUB instead.
 
 ---
 

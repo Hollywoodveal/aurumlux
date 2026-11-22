@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { BookOpen, FolderPlus, Heart, Layers, Pencil, Target, Trash2, Type, X } from "lucide-react";
+import {
+  BookOpen,
+  FolderPlus,
+  Heart,
+  Layers,
+  Pencil,
+  Target,
+  Trash2,
+  Type,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { CoverImage } from "@/components/CoverImage";
 import { MetadataDialog } from "@/components/MetadataDialog";
@@ -90,7 +100,8 @@ export function BookDetails({
     }
     const patch = buildExternalSessionPatch(book, {
       pages: book.pageCount > 0 && amount > 0 ? amount : undefined,
-      progressTo: book.pageCount <= 0 && amount > 0 && amount <= 100 ? amount : undefined,
+      progressTo:
+        book.pageCount <= 0 && amount > 0 && amount <= 100 ? amount : undefined,
       minutes: minutes > 0 ? minutes : 0,
       day,
     });
@@ -130,18 +141,31 @@ export function BookDetails({
             <CoverImage book={book} />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-2xl leading-tight text-ivory">{book.title}</h2>
+            <h2 className="font-display text-2xl leading-tight text-ivory">
+              {book.title}
+            </h2>
             {book.subtitle ? (
-              <p className="mt-1 text-sm italic text-muted-foreground">{book.subtitle}</p>
+              <p className="mt-1 text-sm italic text-muted-foreground">
+                {book.subtitle}
+              </p>
             ) : null}
-            <p className="mt-1 text-sm text-gold/90">{book.author || "Unknown author"}</p>
+            <p className="mt-1 text-sm text-gold/90">
+              {book.author || "Unknown author"}
+            </p>
             {book.series ? (
-              <p className="mt-0.5 text-xs text-muted-foreground">{book.series}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {book.series}
+              </p>
             ) : null}
             <p className="mt-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
-              {book.format.toUpperCase()} · {book.pageCount || "?"} pages · {fmtSize(book.fileSize)}
+              {book.format.toUpperCase()} · {book.pageCount || "?"} pages ·{" "}
+              {fmtSize(book.fileSize)}
             </p>
-            <StarRating value={book.rating} onChange={setRating} className="mt-1 -ml-3" />
+            <StarRating
+              value={book.rating}
+              onChange={setRating}
+              className="mt-1 -ml-3"
+            />
           </div>
         </div>
 
@@ -149,17 +173,27 @@ export function BookDetails({
           <Button
             className="flex-1 bg-gradient-gold text-primary-foreground"
             onClick={() => {
-              void navigate({ to: "/read/$bookId", params: { bookId: book.id } });
+              void navigate({
+                to: "/read/$bookId",
+                params: { bookId: book.id },
+              });
             }}
           >
             <BookOpen className="size-4" />
-            {book.progress > 0 ? `Continue · ${Math.round(book.progress)}%` : "Read"}
+            {book.progress > 0
+              ? `Continue · ${Math.round(book.progress)}%`
+              : "Read"}
           </Button>
           <Button
             variant="outline"
             aria-label="Toggle favorite"
-            className={cn("border-gold/30", book.favorite && "bg-gold/15 text-gold")}
-            onClick={() => save.mutate({ id: book.id, patch: { favorite: !book.favorite } })}
+            className={cn(
+              "border-gold/30",
+              book.favorite && "bg-gold/15 text-gold",
+            )}
+            onClick={() =>
+              save.mutate({ id: book.id, patch: { favorite: !book.favorite } })
+            }
           >
             <Heart className={cn("size-4", book.favorite && "fill-current")} />
           </Button>
@@ -194,12 +228,17 @@ export function BookDetails({
         {book.progress > 0 ? (
           <div className="mt-4">
             <div className="h-1 overflow-hidden rounded-full bg-secondary">
-              <div className="h-full bg-gradient-gold" style={{ width: `${book.progress}%` }} />
+              <div
+                className="h-full bg-gradient-gold"
+                style={{ width: `${book.progress}%` }}
+              />
             </div>
             <p className="mt-1.5 text-xs text-muted-foreground">
               {Math.round(book.progress)}% complete
               {book.chapter ? ` · ${book.chapter}` : ""}
-              {book.readingTime ? ` · ${Math.round(book.readingTime / 60000)} min read` : ""}
+              {book.readingTime
+                ? ` · ${Math.round(book.readingTime / 60000)} min read`
+                : ""}
             </p>
           </div>
         ) : null}
@@ -213,13 +252,15 @@ export function BookDetails({
             <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-gold/70">
               <BookOpen className="size-3.5" /> Read on your Kindle?
             </span>
-            <span className="text-xs text-muted-foreground">{logOpen ? "Hide" : "Log it"}</span>
+            <span className="text-xs text-muted-foreground">
+              {logOpen ? "Hide" : "Log it"}
+            </span>
           </button>
           {logOpen && (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-muted-foreground">
-                Log a session from another device and your streak, daily goal, and pace stay
-                current.
+                Log a session from another device and your streak, daily goal,
+                and pace stay current.
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1">
@@ -285,7 +326,11 @@ export function BookDetails({
                       : "border-border text-muted-foreground",
                 )}
               >
-                {goal.overdue ? "Past due" : goal.onTrack ? "On track" : "Behind"}
+                {goal.overdue
+                  ? "Past due"
+                  : goal.onTrack
+                    ? "On track"
+                    : "Behind"}
               </span>
             ) : null}
           </div>
@@ -323,7 +368,12 @@ export function BookDetails({
                 onChange={(e) =>
                   save.mutate({
                     id: book.id,
-                    patch: { goalDailyMinutes: Math.max(0, Number(e.target.value) || 0) },
+                    patch: {
+                      goalDailyMinutes: Math.max(
+                        0,
+                        Number(e.target.value) || 0,
+                      ),
+                    },
                   })
                 }
                 className="mt-1 w-full rounded-lg border border-gold/25 bg-background px-2 py-1.5 text-sm text-ivory"
@@ -365,7 +415,8 @@ export function BookDetails({
             </>
           ) : (
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Set a finish date or a daily target and Aurum will track your pace on the stats page.
+              Set a finish date or a daily target and Aurum will track your pace
+              on the stats page.
             </p>
           )}
         </section>
@@ -381,7 +432,10 @@ export function BookDetails({
             id={`font-${book.id}`}
             value={book.fontOverride ?? ""}
             onChange={(e) =>
-              save.mutate({ id: book.id, patch: { fontOverride: e.target.value || null } })
+              save.mutate({
+                id: book.id,
+                patch: { fontOverride: e.target.value || null },
+              })
             }
             className="mt-2 w-full rounded-lg border border-gold/20 bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold/50"
           >
@@ -391,7 +445,9 @@ export function BookDetails({
                 {f.label}
               </option>
             ))}
-            <option value={DYSLEXIC_FONT}>Readable (Atkinson Hyperlegible)</option>
+            <option value={DYSLEXIC_FONT}>
+              Readable (Atkinson Hyperlegible)
+            </option>
           </select>
         </section>
 
@@ -409,7 +465,9 @@ export function BookDetails({
                   save.mutate({
                     id: book.id,
                     patch: {
-                      collections: (book.collections ?? []).filter((c) => c !== name),
+                      collections: (book.collections ?? []).filter(
+                        (c) => c !== name,
+                      ),
                     },
                   })
                 }
@@ -425,7 +483,11 @@ export function BookDetails({
                 if (!name) return;
                 save.mutate({
                   id: book.id,
-                  patch: { collections: [...new Set([...(book.collections ?? []), name])] },
+                  patch: {
+                    collections: [
+                      ...new Set([...(book.collections ?? []), name]),
+                    ],
+                  },
                 });
               }}
               className="flex min-h-9 items-center gap-1.5 rounded-full border border-gold/25 px-3 text-[11px] text-gold/80"
@@ -434,7 +496,6 @@ export function BookDetails({
             </button>
           </div>
         </section>
-
 
         {book.description ? (
           <p className="mt-4 max-h-40 overflow-y-auto text-sm leading-relaxed text-muted-foreground">
@@ -453,7 +514,11 @@ export function BookDetails({
             <div className="rounded-xl border border-destructive/40 p-3">
               <p className="text-sm">Delete this book and all of its notes?</p>
               <div className="mt-3 flex gap-2">
-                <Button variant="ghost" className="flex-1" onClick={() => setConfirming(false)}>
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => setConfirming(false)}
+                >
                   Keep
                 </Button>
                 <Button

@@ -1,6 +1,11 @@
 import { openDB } from "idb";
 
-export type BookUsage = { id: string; fileBytes: number; coverBytes: number; total: number };
+export type BookUsage = {
+  id: string;
+  fileBytes: number;
+  coverBytes: number;
+  total: number;
+};
 export type StorageReport = {
   usage: number | null;
   quota: number | null;
@@ -30,10 +35,12 @@ async function sizeMap(store: "files" | "covers") {
   return out;
 }
 
-
 /** Measures on-device usage: browser quota plus per-book file and cover bytes. */
 export async function measureStorage(): Promise<StorageReport> {
-  const [files, covers] = await Promise.all([sizeMap("files"), sizeMap("covers")]);
+  const [files, covers] = await Promise.all([
+    sizeMap("files"),
+    sizeMap("covers"),
+  ]);
   const perBook: Record<string, BookUsage> = {};
   for (const id of new Set([...Object.keys(files), ...Object.keys(covers)])) {
     const fileBytes = files[id] ?? 0;
@@ -53,13 +60,15 @@ export async function measureStorage(): Promise<StorageReport> {
       /* unsupported */
     }
   }
-  const percent = usage !== null && quota ? Math.min(100, (usage / quota) * 100) : null;
+  const percent =
+    usage !== null && quota ? Math.min(100, (usage / quota) * 100) : null;
   return { usage, quota, percent, booksBytes, perBook };
 }
 
 /** Asks the browser to keep this library out of automatic eviction. */
 export async function requestPersistentStorage() {
-  if (typeof navigator === "undefined" || !navigator.storage?.persist) return false;
+  if (typeof navigator === "undefined" || !navigator.storage?.persist)
+    return false;
   try {
     if (await navigator.storage.persisted()) return true;
     return await navigator.storage.persist();

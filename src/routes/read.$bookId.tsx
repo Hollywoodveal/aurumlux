@@ -18,6 +18,7 @@ import {
   startOfDay,
   type StreakRecovery,
 } from "@/lib/goals";
+import { ActiveTimer } from "@/lib/active-time";
 import { announce } from "@/lib/announce";
 import { clearLastRead, rememberLastRead } from "@/lib/resume";
 import {
@@ -66,6 +67,9 @@ function ReaderPage() {
     savesStreakToday: false,
   });
   const openedAt = useRef(Date.now());
+  // Counts only time spent reading: pauses while hidden, caps idle gaps.
+  const timer = useRef(new ActiveTimer(Date.now()));
+  const baseReadingTime = useRef<number | null>(null);
   const sessionId = useRef(
     Math.random().toString(36).slice(2) + Date.now().toString(36),
   );
@@ -84,6 +88,7 @@ function ReaderPage() {
         getSetting<ReaderPrefs>("readerPrefs", DEFAULT_PREFS),
       ]);
       setBook(b ?? null);
+      baseReadingTime.current = b?.readingTime ?? 0;
       setAnnotations(a);
       setPrefs({ ...DEFAULT_PREFS, ...p });
       setLiveProgress(b?.progress ?? 0);
@@ -140,6 +145,7 @@ function ReaderPage() {
   const onProgress = useCallback(
     (p: { progress: number; location: string; chapter: string }) => {
       latest.current = p;
+      timer.current.activity(Date.now());
       setLiveProgress(p.progress);
       // Mirror page turns into the live region for screen-reader users:
       // chapter changes announce at once; plain page turns are debounced so
@@ -167,45 +173,73 @@ function ReaderPage() {
 
   const persist = useCallback(async () => {
     if (!book) return;
-    const elapsed = Date.now() - openedAt.current;
-    const today = new Date().setHours(0, 0, 0, 0);
-    const days = book.readDays.includes(today)
-      ? book.readDays
-      : [...book.readDays, today];
+    const now = Date.now();
+    const activeMs = timer.current.elapsed(now);
+    const today = new Date(now).setHours(0, 0, 0, 0);
     const p = latest.current;
     if (sessionStartProgress.current === null)
       sessionStartProgress.current = book.progress ?? 0;
     const session = {
       id: sessionId.current,
       start: openedAt.current,
-      end: Date.now(),
+      end: now,
       progressStart: sessionStartProgress.current,
       progressEnd: p?.progress ?? book.progress ?? 0,
       chapter: p?.chapter ?? book.chapter ?? "",
+      activeMs,
     };
-    const prior = (book.sessions ?? []).filter((s) => s.id !== session.id);
-    await updateBook(book.id, {
-      readingTime: book.readingTime + elapsed,
-      readDays: days,
-      sessions: [...prior, session].slice(-400),
-      ...(p
-        ? {
-            progress: p.progress,
-            location: p.location,
-            chapter: p.chapter,
-            ...(p.progress >= 98
-              ? {
-                  status: "finished" as const,
-                  finishedAt: book.finishedAt ?? Date.now(),
-                }
-              : {}),
-          }
-        : {}),
+    // Build the patch from the stored record, not the copy loaded when the
+    // reader opened, so edits made meanwhile (metadata, the EPUB locations
+    // index) are kept.
+    await updateBook(book.id, (cur) => {
+      const prior = (cur.sessions ?? []).filter((s) => s.id !== session.id);
+      return {
+        readingTime: (baseReadingTime.current ?? cur.readingTime) + activeMs,
+        readDays: cur.readDays.includes(today)
+          ? cur.readDays
+          : [...cur.readDays, today],
+        sessions: [...prior, session].slice(-400),
+        ...(p
+          ? {
+              progress: p.progress,
+              location: p.location,
+              chapter: p.chapter,
+              ...(p.progress >= 98
+                ? {
+                    status: "finished" as const,
+                    finishedAt: cur.finishedAt ?? now,
+                  }
+                : {}),
+            }
+          : {}),
+      };
     });
     // Keep library/stats queries in sync so the stats page is current the moment
     // the reader is closed.
     void qc.invalidateQueries({ queryKey: ["books"] });
   }, [book, qc]);
+
+  // Taps, keys and scrolling count as reading; hiding the app pauses the clock.
+  useEffect(() => {
+    const onActivity = () => timer.current.activity(Date.now());
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        timer.current.pause(Date.now());
+        void persist();
+      } else {
+        timer.current.resume(Date.now());
+      }
+    };
+    const events = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
+    events.forEach((e) =>
+      window.addEventListener(e, onActivity, { passive: true }),
+    );
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, onActivity));
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [persist]);
 
   useEffect(() => {
     const interval = window.setInterval(() => void persist(), 15000);
@@ -255,7 +289,7 @@ function ReaderPage() {
       book={book}
       progress={liveProgress}
       baseMinutesToday={dayContext.baseMinutesToday}
-      sessionStart={openedAt.current}
+      sessionMs={(now) => timer.current.elapsed(now)}
       dailyGoal={dailyGoal}
       streakBefore={dayContext.streakBefore}
       savesStreakToday={dayContext.savesStreakToday}

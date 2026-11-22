@@ -37,7 +37,10 @@ export function loadTtsSettings(): TtsSettings {
       const voice = legacy && !isLegacyCloudVoice(legacy) ? legacy : "";
       return { ...DEFAULT_TTS_SETTINGS, voice };
     }
-    const saved = { ...DEFAULT_TTS_SETTINGS, ...(JSON.parse(raw) as Partial<TtsSettings>) };
+    const saved = {
+      ...DEFAULT_TTS_SETTINGS,
+      ...(JSON.parse(raw) as Partial<TtsSettings>),
+    };
     // Cloud voices were removed — fall back to the device voice.
     if (isLegacyCloudVoice(saved.voice)) saved.voice = "";
     return saved;
