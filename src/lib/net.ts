@@ -88,3 +88,36 @@ export async function fetchExternal(
     viaRelay: true,
   };
 }
+
+export type FetchKind = "catalog" | "book" | "sync";
+
+/**
+ * Plain-language explanation for a failed request, with what to do next,
+ * instead of a bare status code.
+ */
+export function friendlyHttpError(
+  status: number,
+  options: { kind: FetchKind; viaRelay?: boolean; signedIn?: boolean },
+): string {
+  const { kind, viaRelay = false, signedIn = false } = options;
+  const thing =
+    kind === "catalog" ? "catalog" : kind === "book" ? "book" : "sync server";
+  if (status === 401 || (status === 403 && signedIn))
+    return signedIn
+      ? `The ${thing} didn't accept that username or password.`
+      : `This ${thing} needs you to sign in. Add your username and password.`;
+  if (status === 403 || status === 429 || status === 503 || status === 502)
+    return viaRelay
+      ? `This site blocks downloads through Aurum. Some libraries refuse requests from cloud servers, which is how Aurum reaches sites that don't allow web apps. Open the site in your browser, download the book there, then import it with Add books.`
+      : `This site is refusing requests right now. Try again later, or download the book in your browser and import it with Add books.`;
+  if (status === 404 || status === 410)
+    return `Nothing was found at that address. Check the link — it may have moved.`;
+  if (status === 415)
+    return kind === "catalog"
+      ? `That address is a web page, not a book catalog. Catalog addresses usually end in /opds, .opds or .atom — look for "OPDS" on the site's help page.`
+      : `That link isn't a book file Aurum can open (EPUB, PDF, CBZ or TXT).`;
+  if (status === 413) return `That file is too large to download.`;
+  if (status >= 500)
+    return `The site is having trouble right now. Try again in a little while.`;
+  return `The ${thing} couldn't be loaded (error ${status}).`;
+}

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import {
   Bookmark,
   ChevronLeft,
+  Share2,
   Highlighter,
   NotebookPen,
   Trash2,
@@ -12,6 +13,11 @@ import { toast } from "sonner";
 import { useAnnotations, useBooks } from "@/hooks/useLibrary";
 import { deleteAnnotation, type Annotation } from "@/lib/db";
 import { BrandMark } from "@/components/BrandMark";
+import {
+  buildNotesMarkdown,
+  notesFileName,
+  shareOrDownload,
+} from "@/lib/export-notes";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -109,6 +115,32 @@ function NotesPage() {
         <h1 className="font-display text-3xl text-gradient-gold">
           Annotations
         </h1>
+        <button
+          type="button"
+          disabled={annotations.length === 0}
+          onClick={async () => {
+            const book =
+              bookFilter === "all"
+                ? undefined
+                : books.find((b) => b.id === bookFilter);
+            const md = buildNotesMarkdown(
+              books,
+              annotations,
+              book ? { bookId: book.id } : {},
+            );
+            const how = await shareOrDownload(md, notesFileName(book));
+            if (how === "downloaded") toast.success("Notes exported");
+          }}
+          aria-label={
+            bookFilter === "all"
+              ? "Export all notes as Markdown"
+              : "Export this book's notes as Markdown"
+          }
+          title="Export as Markdown"
+          className="icon-btn ml-auto disabled:opacity-40"
+        >
+          <Share2 className="size-[18px]" />
+        </button>
       </header>
       <p className="eyebrow mt-3">
         {counts.highlight} highlights · {counts.bookmark} bookmarks ·{" "}

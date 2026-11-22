@@ -1,4 +1,4 @@
-import { fetchExternal } from "./net";
+import { fetchExternal, friendlyHttpError } from "./net";
 import JSZip from "jszip";
 import {
   getFile,
@@ -960,17 +960,23 @@ export async function importFromUrl(
   if (!/^https?:\/\//i.test(url))
     throw new Error("Enter a link starting with http:// or https://");
 
-  const { response, finalUrl } = await fetchExternal(url, {
+  const { response, finalUrl, viaRelay } = await fetchExternal(url, {
     ...(options.authorization ? { authorization: options.authorization } : {}),
   });
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     throw new Error(
-      "That site needs you to sign in. If it's an OPDS catalog, add it in Browse catalogs with your username and password.",
+      options.authorization
+        ? friendlyHttpError(401, { kind: "book", signedIn: true })
+        : "That site needs you to sign in. If it's an OPDS catalog, add it in Browse catalogs with your username and password.",
     );
   }
   if (!response.ok) {
     throw new Error(
-      `The link returned an error (${response.status})${response.status === 404 ? " — the file may have moved or been removed" : ""}. Check the link and try again.`,
+      friendlyHttpError(response.status, {
+        kind: "book",
+        viaRelay,
+        signedIn: Boolean(options.authorization),
+      }),
     );
   }
   const type = (response.headers.get("content-type") ?? "").toLowerCase();

@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { BookBadge, statusSuffix, useBookStatus } from "@/components/BookBadge";
 import { useCoverUrl } from "@/hooks/useLibrary";
 import type { BookMeta } from "@/lib/db";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ export function BookSpine({
   selected?: boolean;
 }) {
   const url = useCoverUrl(book);
+  const status = useBookStatus(book);
   const width = spineWidth(book);
   const compact = height < 160 || width < 34;
 
@@ -30,7 +32,7 @@ export function BookSpine({
     <button
       type="button"
       onClick={() => onSelect(book)}
-      aria-label={`${book.title} by ${book.author}`}
+      aria-label={`${book.title} by ${book.author}${statusSuffix(status)}`}
       aria-pressed={selectable ? selected : undefined}
       className={cn(
         "group relative shrink-0 overflow-hidden rounded-[2px] transition-transform duration-300 will-change-transform hover:-translate-y-2 focus-visible:-translate-y-2 focus-visible:outline-none active:-translate-y-1",
@@ -117,6 +119,8 @@ export function BookSpine({
           </span>
         </span>
       </span>
+
+      {!selectable ? <BookBadge book={book} compact /> : null}
 
       {selectable ? (
         <span

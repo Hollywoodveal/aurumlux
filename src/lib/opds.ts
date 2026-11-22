@@ -4,7 +4,7 @@
  * download books from them. Handles OPDS 1.x (Atom XML) and OPDS 2 (JSON).
  */
 import { getSetting, setSetting } from "./db";
-import { basicAuth, fetchExternal } from "./net";
+import { basicAuth, fetchExternal, friendlyHttpError } from "./net";
 
 export type OpdsCatalog = {
   id: string;
@@ -49,9 +49,9 @@ const CATALOGS_KEY = "opdsCatalogs";
 
 export const DEFAULT_CATALOGS: OpdsCatalog[] = [
   {
-    id: "gutenberg",
-    title: "Project Gutenberg",
-    url: "https://m.gutenberg.org/ebooks.opds/",
+    id: "feedbooks",
+    title: "Feedbooks",
+    url: "https://catalog.feedbooks.com/catalog/index.atom",
   },
 ];
 
@@ -61,6 +61,11 @@ export const SUGGESTED_CATALOGS: {
   url: string;
   note: string;
 }[] = [
+  {
+    title: "Feedbooks",
+    url: "https://catalog.feedbooks.com/catalog/index.atom",
+    note: "Free public-domain classics and more",
+  },
   {
     title: "Standard Ebooks",
     url: "https://standardebooks.org/feeds/opds",
@@ -73,13 +78,41 @@ export const SUGGESTED_CATALOGS: {
   },
 ];
 
+/**
+ * Free libraries whose books are best downloaded from their website: they
+ * don't allow web apps or cloud relays to fetch from them directly.
+ */
+export const FREE_BOOK_SITES: { title: string; url: string; note: string }[] = [
+  {
+    title: "Project Gutenberg",
+    url: "https://www.gutenberg.org/",
+    note: "75,000+ public-domain books",
+  },
+  {
+    title: "Standard Ebooks",
+    url: "https://standardebooks.org/ebooks",
+    note: "Carefully formatted public-domain classics",
+  },
+];
+
+/** The first release defaulted to Gutenberg, which blocks the relay. */
+const RETIRED_DEFAULT_IDS = new Set(["gutenberg"]);
+
 const ACCEPT =
   "application/atom+xml;profile=opds-catalog, application/opds+json, application/atom+xml;q=0.9, application/json;q=0.8, */*;q=0.5";
 
 const READABLE = /epub|pdf|comicbook\+zip|x-cbz|text\/plain/i;
 
 export async function listCatalogs(): Promise<OpdsCatalog[]> {
-  return getSetting<OpdsCatalog[]>(CATALOGS_KEY, DEFAULT_CATALOGS);
+  const saved = await getSetting<OpdsCatalog[] | null>(CATALOGS_KEY, null);
+  if (!saved) return DEFAULT_CATALOGS;
+  if (!saved.some((c) => RETIRED_DEFAULT_IDS.has(c.id))) return saved;
+  const kept = saved.filter((c) => !RETIRED_DEFAULT_IDS.has(c.id));
+  const next = kept.some((c) => c.id === "feedbooks")
+    ? kept
+    : [...DEFAULT_CATALOGS, ...kept];
+  await setSetting(CATALOGS_KEY, next);
+  return next;
 }
 
 export async function saveCatalogs(catalogs: OpdsCatalog[]) {
@@ -104,20 +137,27 @@ export async function fetchFeed(
   url: string,
   authorization?: string,
 ): Promise<OpdsFeed> {
-  const { response, finalUrl } = await fetchExternal(url, {
+  const { response, finalUrl, viaRelay } = await fetchExternal(url, {
     accept: ACCEPT,
     ...(authorization ? { authorization } : {}),
   });
-  if (response.status === 401 || response.status === 403)
+  // 401 is a sign-in request; a 403 without credentials is usually a block.
+  if (response.status === 401 || (response.status === 403 && authorization))
     throw new OpdsAuthError();
   if (!response.ok)
-    throw new Error(`The catalog returned an error (${response.status}).`);
+    throw new Error(
+      friendlyHttpError(response.status, {
+        kind: "catalog",
+        viaRelay,
+        signedIn: Boolean(authorization),
+      }),
+    );
   const type = (response.headers.get("content-type") ?? "").toLowerCase();
   const text = await response.text();
   if (type.includes("json") || text.trimStart().startsWith("{"))
     return parseOpds2(JSON.parse(text) as unknown, finalUrl);
   if (type.includes("html") && !text.includes("<feed"))
-    throw new Error("That link is a web page, not an OPDS catalog.");
+    throw new Error(friendlyHttpError(415, { kind: "catalog" }));
   return parseOpds1(text, finalUrl);
 }
 

@@ -98,3 +98,21 @@ export function registerServiceWorker() {
       /* offline support is best-effort */
     });
 }
+
+/** True when Aurum runs as an installed (home-screen) app. */
+export function isStandalone(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches === true ||
+    (window.navigator as { standalone?: boolean }).standalone === true
+  );
+}
+
+/** iPhone/iPad Safari (where uninstalled sites can lose their saved data). */
+export function isIosBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const iPadOs =
+    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return /iPhone|iPad|iPod/.test(ua) || iPadOs;
+}

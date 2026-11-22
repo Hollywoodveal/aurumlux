@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ImportFromUrl } from "@/components/ImportFromUrl";
 import { BrandMark } from "@/components/BrandMark";
@@ -56,7 +56,18 @@ import {
   setOnlineMetadataLookup,
 } from "@/lib/importer";
 
+export type SettingsTab = "reading" | "library" | "sync" | "privacy";
+const TABS: { key: SettingsTab; label: string }[] = [
+  { key: "reading", label: "Reading" },
+  { key: "library", label: "Library" },
+  { key: "sync", label: "Backup & sync" },
+  { key: "privacy", label: "Privacy" },
+];
+const isTab = (v: unknown): v is SettingsTab => TABS.some((t) => t.key === v);
+
 export const Route = createFileRoute("/settings")({
+  validateSearch: (search: Record<string, unknown>): { tab?: SettingsTab } =>
+    isTab(search["tab"]) ? { tab: search["tab"] } : {},
   head: () => ({
     meta: [
       { title: "Settings & backup — Aurum" },
@@ -77,6 +88,8 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
+  const { tab = "reading" } = Route.useSearch();
+  const navigate = useNavigate();
   const { data: books } = useBooks();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -261,354 +274,389 @@ function SettingsPage() {
         <h1 className="font-display text-3xl text-gradient-gold">Settings</h1>
       </header>
 
-      <p className="eyebrow mt-8">Reading</p>
-
-      <SettingsSection
-        id="appearance"
-        title="Appearance"
-        icon={<Palette className="size-4 text-gold" aria-hidden />}
-        className="mt-3"
+      <div
+        role="tablist"
+        aria-label="Settings sections"
+        className="segmented no-scrollbar sticky top-0 z-20 mt-6 overflow-x-auto bg-background/95 py-1 backdrop-blur"
       >
-        <p className="mt-1 text-sm text-muted-foreground">
-          Choose how Aurum looks. The reader follows this automatically unless
-          you pick a page colour of its own while reading.
-        </p>
-        <ThemePicker />
-      </SettingsSection>
-
-      <SettingsSection
-        id="import-url"
-        title="Import from a link"
-        className="mt-4"
-      >
-        <p className="mt-1 text-sm text-muted-foreground">
-          Paste a direct EPUB, PDF, CBZ or TXT link and Aurum will download it
-          straight onto your device, or browse OPDS catalogs such as Project
-          Gutenberg, Standard Ebooks or your own Calibre server.
-        </p>
-        <ImportFromUrl />
-      </SettingsSection>
-
-      <SettingsSection id="resume" title="Resume reading" className="mt-4">
-        <p className="mt-1 text-sm text-muted-foreground">
-          When Aurum opens, go straight back into the book you were last
-          reading, at the exact page you left off.
-        </p>
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-sm text-ivory">
-            Reopen my last book on launch
-          </span>
-          <Switch
-            checked={resume}
-            label="Reopen my last book on launch"
-            onChange={(next) => {
-              setResume(next);
-              void setResumeOnLaunch(next);
-            }}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            void clearLastRead().then(() =>
-              toast.success("Aurum will open to your library next time"),
-            );
-          }}
-          className="btn btn-outline mt-4 text-xs uppercase tracking-[0.18em]"
-        >
-          Forget saved spot
-        </button>
-      </SettingsSection>
-
-      <p className="eyebrow mt-8">Your data</p>
-
-      <SettingsSection id="backup" title="Backup" className="mt-3">
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your library lives only on this device. A <strong>full backup</strong>{" "}
-          (.zip) includes the book files and covers themselves — carry it
-          through Files or your own cloud folder to move your whole library to
-          another device. The light JSON export holds only metadata, progress,
-          bookmarks and highlights, without the books.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        {TABS.map((t) => (
           <button
-            onClick={() => void exportFull()}
-            disabled={busy}
-            className="btn btn-gold"
+            key={t.key}
+            type="button"
+            role="tab"
+            id={`tab-${t.key}`}
+            aria-selected={tab === t.key}
+            aria-controls={`panel-${t.key}`}
+            onClick={() =>
+              void navigate({
+                to: "/settings",
+                search: { tab: t.key },
+                replace: true,
+              })
+            }
           >
-            <Download className="size-4" /> Full backup (.zip)
+            {t.label}
           </button>
-          <button
-            onClick={() => void exportLibrary()}
-            className="btn btn-outline"
-          >
-            <Download className="size-4" /> Light export (JSON)
-          </button>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            className="btn btn-outline"
-          >
-            <Upload className="size-4" /> Restore backup
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json,application/zip,.zip"
-            className="hidden"
-            onChange={(e) => void importBackup(e.target.files?.[0])}
-          />
-        </div>
-      </SettingsSection>
+        ))}
+      </div>
 
-      <SettingsSection
-        id="sync"
-        title="Encrypted transfer"
-        icon={<Lock className="size-4 text-gold" aria-hidden />}
-        className="mt-3"
-      >
-        <p className="mt-1 text-sm text-muted-foreground">
-          Move reading positions, bookmarks and highlights between your devices
-          with an encrypted file. Choose a passphrase — it never leaves this
-          device, and without it the file cannot be opened.
-        </p>
-        <label
-          htmlFor="sync-pass"
-          className="mt-3 block text-[11px] uppercase tracking-[0.16em] text-gold/70"
-        >
-          Passphrase
-        </label>
-        <input
-          id="sync-pass"
-          type="password"
-          value={passphrase}
-          onChange={(e) => setPassphrase(e.target.value)}
-          autoComplete="off"
-          placeholder="At least 8 characters"
-          className="mt-1.5 w-full rounded-xl border border-gold/20 bg-secondary/60 px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-gold/50"
-        />
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            onClick={() => void exportSync()}
-            disabled={busy || passphrase.length < 8}
-            className="btn btn-gold"
+      {tab === "reading" ? (
+        <div role="tabpanel" id="panel-reading" aria-labelledby="tab-reading">
+          <SettingsSection
+            id="appearance"
+            title="Appearance"
+            icon={<Palette className="size-4 text-gold" aria-hidden />}
+            className="mt-4"
           >
-            <ShieldCheck className="size-4" /> Export encrypted
-          </button>
-          <button
-            onClick={() => syncRef.current?.click()}
-            disabled={busy || passphrase.length < 8}
-            className="btn btn-outline"
-          >
-            <Upload className="size-4" /> Merge from device
-          </button>
-          <input
-            ref={syncRef}
-            type="file"
-            accept=".aurum,text/plain"
-            className="hidden"
-            onChange={(e) => void mergeSync(e.target.files?.[0])}
-          />
-        </div>
-      </SettingsSection>
-
-      <SettingsSection
-        id="webdav-sync"
-        title="Sync across devices"
-        icon={<RefreshCw className="size-4 text-gold" aria-hidden />}
-        className="mt-3"
-      >
-        <SyncSettings />
-      </SettingsSection>
-
-      <SettingsSection
-        id="search-index"
-        title="Full-text search"
-        icon={<SearchCheck className="size-4 text-gold" aria-hidden />}
-        className="mt-3"
-      >
-        <p className="mt-1 text-sm text-muted-foreground">
-          Build a private, on-device index so library search can look inside
-          your books, not just titles and authors.
-        </p>
-        <button
-          onClick={() => void buildIndex()}
-          disabled={indexing || books.length === 0}
-          className="btn btn-outline mt-4"
-        >
-          <SearchCheck className="size-4" />
-          {indexing ? (indexProgress ?? "Indexing…") : "Index my books"}
-        </button>
-      </SettingsSection>
-
-      <SettingsSection
-        id="storage"
-        title="Storage"
-        icon={<HardDrive className="size-4 text-gold" aria-hidden />}
-        className="mt-3"
-      >
-        {report ? (
-          <>
             <p className="mt-1 text-sm text-muted-foreground">
-              {report.quota
-                ? `${fmtBytes(report.usage ?? 0)} used of about ${fmtBytes(report.quota)} available on this device`
-                : `${fmtBytes(report.booksBytes)} used by your books`}
+              Choose how Aurum looks. The reader follows this automatically
+              unless you pick a page colour of its own while reading.
             </p>
-
-            {report.percent !== null ? (
-              <div className="mt-3">
-                <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-                  <div
-                    className={
-                      nearQuota
-                        ? "h-full bg-destructive"
-                        : "h-full bg-gradient-gold"
-                    }
-                    style={{ width: `${Math.max(1, report.percent)}%` }}
-                  />
-                </div>
-                <p className="mt-1.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  {report.percent.toFixed(1)}% of device quota · books use{" "}
-                  {fmtBytes(report.booksBytes)}
-                </p>
-              </div>
-            ) : null}
-
-            {nearQuota ? (
-              <p className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs leading-relaxed text-destructive">
-                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-                You are close to this device's storage limit. Delete a few large
-                books below before importing more, or your browser may start
-                evicting data.
-              </p>
-            ) : null}
-
-            {!persisted ? (
-              <button
-                onClick={async () => {
-                  const ok = await requestPersistentStorage();
-                  setPersisted(ok);
-                  toast[ok ? "success" : "error"](
-                    ok
-                      ? "Your library is protected from eviction"
-                      : "Your browser declined persistent storage",
-                  );
+            <ThemePicker />
+          </SettingsSection>
+          <SettingsSection id="resume" title="Resume reading" className="mt-3">
+            <p className="mt-1 text-sm text-muted-foreground">
+              When Aurum opens, go straight back into the book you were last
+              reading, at the exact page you left off.
+            </p>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-sm text-ivory">
+                Reopen my last book on launch
+              </span>
+              <Switch
+                checked={resume}
+                label="Reopen my last book on launch"
+                onChange={(next) => {
+                  setResume(next);
+                  void setResumeOnLaunch(next);
                 }}
-                className="btn btn-outline mt-4 text-xs uppercase tracking-[0.16em]"
-              >
-                Protect from eviction
-              </button>
-            ) : (
-              <p className="mt-3 text-[11px] uppercase tracking-[0.16em] text-gold/80">
-                Persistent storage granted
-              </p>
-            )}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                void clearLastRead().then(() =>
+                  toast.success("Aurum will open to your library next time"),
+                );
+              }}
+              className="btn btn-outline mt-4 text-xs uppercase tracking-[0.18em]"
+            >
+              Forget saved spot
+            </button>
+          </SettingsSection>
+        </div>
+      ) : null}
 
-            <ul className="mt-4 space-y-2">
-              {heaviest.map(({ book, bytes }) => (
-                <li key={book.id} className="flex items-center gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-ivory">
-                      {book.title || "Untitled"}
-                    </p>
-                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                      {book.format.toUpperCase()} · {fmtBytes(bytes)}
-                      {report.perBook[book.id]?.coverBytes
-                        ? ` · cover ${fmtBytes(report.perBook[book.id]!.coverBytes)}`
-                        : ""}
+      {tab === "library" ? (
+        <div role="tabpanel" id="panel-library" aria-labelledby="tab-library">
+          <SettingsSection
+            id="import-url"
+            title="Import from a link"
+            className="mt-4"
+          >
+            <p className="mt-1 text-sm text-muted-foreground">
+              Paste a direct EPUB, PDF, CBZ or TXT link and Aurum will download
+              it straight onto your device, or browse OPDS catalogs such as
+              Feedbooks, Standard Ebooks or your own Calibre server.
+            </p>
+            <ImportFromUrl />
+          </SettingsSection>
+          <SettingsSection
+            id="search-index"
+            title="Full-text search"
+            icon={<SearchCheck className="size-4 text-gold" aria-hidden />}
+            className="mt-3"
+          >
+            <p className="mt-1 text-sm text-muted-foreground">
+              Build a private, on-device index so library search can look inside
+              your books, not just titles and authors.
+            </p>
+            <button
+              onClick={() => void buildIndex()}
+              disabled={indexing || books.length === 0}
+              className="btn btn-outline mt-4"
+            >
+              <SearchCheck className="size-4" />
+              {indexing ? (indexProgress ?? "Indexing…") : "Index my books"}
+            </button>
+          </SettingsSection>
+          <SettingsSection
+            id="storage"
+            title="Storage"
+            icon={<HardDrive className="size-4 text-gold" aria-hidden />}
+            className="mt-3"
+          >
+            {report ? (
+              <>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {report.quota
+                    ? `${fmtBytes(report.usage ?? 0)} used of about ${fmtBytes(report.quota)} available on this device`
+                    : `${fmtBytes(report.booksBytes)} used by your books`}
+                </p>
+
+                {report.percent !== null ? (
+                  <div className="mt-3">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className={
+                          nearQuota
+                            ? "h-full bg-destructive"
+                            : "h-full bg-gradient-gold"
+                        }
+                        style={{ width: `${Math.max(1, report.percent)}%` }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                      {report.percent.toFixed(1)}% of device quota · books use{" "}
+                      {fmtBytes(report.booksBytes)}
                     </p>
                   </div>
+                ) : null}
+
+                {nearQuota ? (
+                  <p className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs leading-relaxed text-destructive">
+                    <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                    You are close to this device's storage limit. Delete a few
+                    large books below before importing more, or your browser may
+                    start evicting data.
+                  </p>
+                ) : null}
+
+                {!persisted ? (
                   <button
-                    aria-label={`Delete ${book.title || "book"} to free space`}
                     onClick={async () => {
-                      await remove.mutateAsync(book.id);
-                      refreshStorage();
-                      toast.success("Book deleted");
+                      const ok = await requestPersistentStorage();
+                      setPersisted(ok);
+                      toast[ok ? "success" : "error"](
+                        ok
+                          ? "Your library is protected from eviction"
+                          : "Your browser declined persistent storage",
+                      );
                     }}
-                    className="shrink-0 text-destructive/70"
+                    className="btn btn-outline mt-4 text-xs uppercase tracking-[0.16em]"
                   >
-                    <Trash2 className="size-4" />
+                    Protect from eviction
                   </button>
-                </li>
-              ))}
-              {heaviest.length === 0 ? (
-                <li className="text-sm text-muted-foreground">
-                  No books stored yet.
-                </li>
-              ) : null}
-            </ul>
-          </>
-        ) : (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Measuring on-device usage…
-          </p>
-        )}
-      </SettingsSection>
+                ) : (
+                  <p className="mt-3 text-[11px] uppercase tracking-[0.16em] text-gold/80">
+                    Persistent storage granted
+                  </p>
+                )}
 
-      <p className="eyebrow mt-8">Privacy</p>
-
-      <SettingsSection id="privacy" title="Privacy" className="mt-3">
-        <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
-          <li>· No account, no sign-in.</li>
-          <li>· No ads, no analytics.</li>
-          <li>
-            · Books, covers, notes and progress stored in on-device storage.
-          </li>
-          <li>
-            · No Aurum cloud. Moving data between devices is an encrypted file
-            you transfer yourself, or optional sync to your own WebDAV storage.
-          </li>
-        </ul>
-        <p className="mt-3 text-sm text-muted-foreground">
-          When importing a book with missing details, Aurum can ask Google Books
-          and Open Library to fill in the gaps. This is off by default — with it
-          off, imports never touch the network.
-        </p>
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-sm text-ivory">
-            Look up missing book info online
-          </span>
-          <Switch
-            checked={onlineLookup}
-            label="Look up missing book info online"
-            onChange={(next) => {
-              setOnlineLookup(next);
-              void setOnlineMetadataLookup(next).then(() =>
-                toast.success(
-                  next ? "Online lookups enabled" : "Online lookups disabled",
-                ),
-              );
-            }}
-          />
+                <ul className="mt-4 space-y-2">
+                  {heaviest.map(({ book, bytes }) => (
+                    <li key={book.id} className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm text-ivory">
+                          {book.title || "Untitled"}
+                        </p>
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                          {book.format.toUpperCase()} · {fmtBytes(bytes)}
+                          {report.perBook[book.id]?.coverBytes
+                            ? ` · cover ${fmtBytes(report.perBook[book.id]!.coverBytes)}`
+                            : ""}
+                        </p>
+                      </div>
+                      <button
+                        aria-label={`Delete ${book.title || "book"} to free space`}
+                        onClick={async () => {
+                          await remove.mutateAsync(book.id);
+                          refreshStorage();
+                          toast.success("Book deleted");
+                        }}
+                        className="shrink-0 text-destructive/70"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </li>
+                  ))}
+                  {heaviest.length === 0 ? (
+                    <li className="text-sm text-muted-foreground">
+                      No books stored yet.
+                    </li>
+                  ) : null}
+                </ul>
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Measuring on-device usage…
+              </p>
+            )}
+          </SettingsSection>
         </div>
-      </SettingsSection>
+      ) : null}
 
-      <p className="eyebrow mt-8">App</p>
+      {tab === "sync" ? (
+        <div role="tabpanel" id="panel-sync" aria-labelledby="tab-sync">
+          <SettingsSection
+            id="webdav-sync"
+            title="Sync across devices"
+            icon={<RefreshCw className="size-4 text-gold" aria-hidden />}
+            className="mt-4"
+          >
+            <SyncSettings />
+          </SettingsSection>
+          <SettingsSection
+            id="sync"
+            title="Encrypted transfer"
+            icon={<Lock className="size-4 text-gold" aria-hidden />}
+            className="mt-3"
+          >
+            <p className="mt-1 text-sm text-muted-foreground">
+              Move reading positions, bookmarks and highlights between your
+              devices with an encrypted file. Choose a passphrase — it never
+              leaves this device, and without it the file cannot be opened.
+            </p>
+            <label
+              htmlFor="sync-pass"
+              className="mt-3 block text-[11px] uppercase tracking-[0.16em] text-gold/70"
+            >
+              Passphrase
+            </label>
+            <input
+              id="sync-pass"
+              type="password"
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+              autoComplete="off"
+              placeholder="At least 8 characters"
+              className="mt-1.5 w-full rounded-xl border border-gold/20 bg-secondary/60 px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-gold/50"
+            />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => void exportSync()}
+                disabled={busy || passphrase.length < 8}
+                className="btn btn-gold"
+              >
+                <ShieldCheck className="size-4" /> Export encrypted
+              </button>
+              <button
+                onClick={() => syncRef.current?.click()}
+                disabled={busy || passphrase.length < 8}
+                className="btn btn-outline"
+              >
+                <Upload className="size-4" /> Merge from device
+              </button>
+              <input
+                ref={syncRef}
+                type="file"
+                accept=".aurum,text/plain"
+                className="hidden"
+                onChange={(e) => void mergeSync(e.target.files?.[0])}
+              />
+            </div>
+          </SettingsSection>
+          <SettingsSection id="backup" title="Backup" className="mt-3">
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your library lives only on this device. A{" "}
+              <strong>full backup</strong> (.zip) includes the book files and
+              covers themselves — carry it through Files or your own cloud
+              folder to move your whole library to another device. The light
+              JSON export holds only metadata, progress, bookmarks and
+              highlights, without the books.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => void exportFull()}
+                disabled={busy}
+                className="btn btn-gold"
+              >
+                <Download className="size-4" /> Full backup (.zip)
+              </button>
+              <button
+                onClick={() => void exportLibrary()}
+                className="btn btn-outline"
+              >
+                <Download className="size-4" /> Light export (JSON)
+              </button>
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={busy}
+                className="btn btn-outline"
+              >
+                <Upload className="size-4" /> Restore backup
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json,application/zip,.zip"
+                className="hidden"
+                onChange={(e) => void importBackup(e.target.files?.[0])}
+              />
+            </div>
+          </SettingsSection>
+        </div>
+      ) : null}
 
-      <SettingsSection id="onboarding" title="Getting started" className="mt-3">
-        <p className="mt-1 text-sm text-muted-foreground">
-          Replay the short walkthrough of the shelf, select mode and reader
-          gestures.
-        </p>
-        <button
-          type="button"
-          className="btn btn-outline mt-4 text-xs uppercase tracking-[0.16em]"
-          onClick={() => {
-            replay();
-            toast.success("Tour will show on the library screen");
-          }}
-        >
-          Replay the tour
-        </button>
-      </SettingsSection>
-
-      <SettingsSection id="install" title="Install Aurum" className="mt-3">
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add Aurum to your home screen from your browser menu to read full
-          screen and offline. Once installed, the app shell is cached so your
-          library opens with no connection at all.
-        </p>
-      </SettingsSection>
+      {tab === "privacy" ? (
+        <div role="tabpanel" id="panel-privacy" aria-labelledby="tab-privacy">
+          <SettingsSection id="privacy" title="Privacy" className="mt-4">
+            <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+              <li>· No account, no sign-in.</li>
+              <li>· No ads, no analytics.</li>
+              <li>
+                · Books, covers, notes and progress stored in on-device storage.
+              </li>
+              <li>
+                · No Aurum cloud. Moving data between devices is an encrypted
+                file you transfer yourself, or optional sync to your own WebDAV
+                storage.
+              </li>
+            </ul>
+            <p className="mt-3 text-sm text-muted-foreground">
+              When importing a book with missing details, Aurum can ask Google
+              Books and Open Library to fill in the gaps. This is off by default
+              — with it off, imports never touch the network.
+            </p>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-sm text-ivory">
+                Look up missing book info online
+              </span>
+              <Switch
+                checked={onlineLookup}
+                label="Look up missing book info online"
+                onChange={(next) => {
+                  setOnlineLookup(next);
+                  void setOnlineMetadataLookup(next).then(() =>
+                    toast.success(
+                      next
+                        ? "Online lookups enabled"
+                        : "Online lookups disabled",
+                    ),
+                  );
+                }}
+              />
+            </div>
+          </SettingsSection>
+          <SettingsSection
+            id="onboarding"
+            title="Getting started"
+            className="mt-3"
+          >
+            <p className="mt-1 text-sm text-muted-foreground">
+              Replay the short walkthrough of the shelf, select mode and reader
+              gestures.
+            </p>
+            <button
+              type="button"
+              className="btn btn-outline mt-4 text-xs uppercase tracking-[0.16em]"
+              onClick={() => {
+                replay();
+                toast.success("Tour will show on the library screen");
+              }}
+            >
+              Replay the tour
+            </button>
+          </SettingsSection>
+          <SettingsSection id="install" title="Install Aurum" className="mt-3">
+            <p className="mt-1 text-sm text-muted-foreground">
+              Add Aurum to your home screen from your browser menu to read full
+              screen and offline. Once installed, the app shell is cached so
+              your library opens with no connection at all.
+            </p>
+          </SettingsSection>
+        </div>
+      ) : null}
 
       <p className="mt-8 text-center text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
         Aurum · Where every page is treasured

@@ -19,60 +19,23 @@ import {
   type MergeReport,
   type SyncBundle,
 } from "./backup";
-import { getSetting, setSetting } from "./db";
 import { basicAuth, fetchExternal } from "./net";
+import {
+  getSyncConfig,
+  saveSyncConfig,
+  syncFileUrl,
+  validateSyncConfig,
+} from "./sync-config";
 
-export type SyncConfig = {
-  enabled: boolean;
-  /** WebDAV folder, e.g. https://cloud.example.com/remote.php/dav/files/me/Aurum/ */
-  folderUrl: string;
-  username: string;
-  password: string;
-  passphrase: string;
-  /** Sync when the app opens and after closing a book. */
-  auto: boolean;
-  lastSyncAt: number | null;
-  lastError: string | null;
-};
-
-export const SYNC_FILE = "aurum-sync.aurum";
-const KEY = "syncConfig";
-
-export const DEFAULT_SYNC: SyncConfig = {
-  enabled: false,
-  folderUrl: "",
-  username: "",
-  password: "",
-  passphrase: "",
-  auto: true,
-  lastSyncAt: null,
-  lastError: null,
-};
-
-export async function getSyncConfig(): Promise<SyncConfig> {
-  return {
-    ...DEFAULT_SYNC,
-    ...(await getSetting<Partial<SyncConfig>>(KEY, {})),
-  };
-}
-
-export async function saveSyncConfig(config: SyncConfig) {
-  await setSetting(KEY, config);
-}
-
-/** The sync file's URL inside the configured folder. */
-export function syncFileUrl(folderUrl: string) {
-  const base = folderUrl.trim().replace(/\/+$/, "");
-  return `${base}/${SYNC_FILE}`;
-}
-
-export function validateSyncConfig(c: SyncConfig): string | null {
-  if (!/^https:\/\//i.test(c.folderUrl.trim()))
-    return "Enter your WebDAV folder address, starting with https://";
-  if (c.passphrase.length < 8)
-    return "Choose an encryption passphrase of at least 8 characters";
-  return null;
-}
+export {
+  DEFAULT_SYNC,
+  SYNC_FILE,
+  getSyncConfig,
+  saveSyncConfig,
+  syncFileUrl,
+  validateSyncConfig,
+  type SyncConfig,
+} from "./sync-config";
 
 function friendly(status: number) {
   if (status === 401 || status === 403)

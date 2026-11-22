@@ -3,14 +3,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/settings/Switch";
+import { syncNow } from "@/lib/sync";
 import {
   DEFAULT_SYNC,
   getSyncConfig,
   saveSyncConfig,
-  syncNow,
   validateSyncConfig,
   type SyncConfig,
-} from "@/lib/sync";
+} from "@/lib/sync-config";
 
 const field =
   "mt-1.5 w-full rounded-xl border border-gold/20 bg-secondary/60 px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-gold/50";
@@ -68,6 +68,7 @@ export function SyncSettings() {
     const next = { ...config, enabled: false };
     setConfig(next);
     await saveSyncConfig(next);
+    void qc.invalidateQueries({ queryKey: ["syncStatus"] });
     toast.info("Sync turned off on this device");
   }
 

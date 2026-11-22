@@ -4,6 +4,7 @@ import {
   BookOpen,
   ChevronRight,
   Download,
+  ExternalLink,
   Library,
   Loader2,
   Plus,
@@ -23,6 +24,7 @@ import { useBookMutations } from "@/hooks/useLibrary";
 import { importFromUrl } from "@/lib/importer";
 import { relayUrl } from "@/lib/net";
 import {
+  FREE_BOOK_SITES,
   OpdsAuthError,
   SUGGESTED_CATALOGS,
   authFor,
@@ -379,6 +381,41 @@ export function OpdsBrowser({ open, onOpenChange, initialUrl }: Props) {
                 <Plus className="size-4" /> Add a catalog
               </Button>
               {loading ? <Spinner /> : null}
+              <div className="pt-5">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-gold/70">
+                  Download from the website
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  These libraries don&apos;t let apps download for you. Open the
+                  site, download the EPUB, then come back and tap Add books.
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {FREE_BOOK_SITES.map((site) => (
+                    <li key={site.url}>
+                      <a
+                        href={site.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 rounded-xl border border-gold/15 px-3 py-2.5"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm text-ivory">
+                            {site.title}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            {site.note}
+                          </span>
+                        </span>
+                        <ExternalLink
+                          className="size-4 shrink-0 text-gold"
+                          aria-hidden
+                        />
+                        <span className="sr-only">(opens in your browser)</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ) : (
             <ul className="space-y-2">
