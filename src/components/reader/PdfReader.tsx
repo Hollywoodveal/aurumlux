@@ -211,7 +211,11 @@ export function PdfReader({
         viewTransitionName: BOOK_OPEN,
       }}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
+      <header
+        role="toolbar"
+        aria-label="Reader controls"
+        className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm"
+      >
         <button
           onClick={onBack}
           aria-label="Back to library"
@@ -271,7 +275,11 @@ export function PdfReader({
         ) : null}
       </div>
 
-      <footer className="pb-safe-sm flex flex-wrap items-center gap-2 border-t border-gold/15 bg-background/95 px-safe py-2">
+      <footer
+        role="group"
+        aria-label="Page navigation"
+        className="pb-safe-sm flex flex-wrap items-center gap-2 border-t border-gold/15 bg-background/95 px-safe py-2"
+      >
         <div className="flex w-full items-center gap-3">
           <button
             onClick={() => setPanel("notes")}

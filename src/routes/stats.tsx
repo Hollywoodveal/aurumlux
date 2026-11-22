@@ -941,7 +941,9 @@ function StatsPage() {
                   className="font-display leading-none transition-opacity hover:opacity-70"
                   style={{
                     fontSize: `${0.95 + (n / maxAuthor) * 1.5}rem`,
-                    color: `oklch(${0.7 + (n / maxAuthor) * 0.15} ${0.05 + (n / maxAuthor) * 0.09} 87)`,
+                    // Theme-aware: blends the theme's gold (readable on every
+                    // background) with muted text, stronger for frequent authors.
+                    color: `color-mix(in oklab, var(--gold) ${Math.round(45 + (n / maxAuthor) * 55)}%, var(--color-muted-foreground))`,
                   }}
                 >
                   {a}

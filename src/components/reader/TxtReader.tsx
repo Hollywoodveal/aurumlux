@@ -246,7 +246,11 @@ export function TxtReader({
       className="fixed inset-0 z-50 flex h-dvh flex-col"
       style={{ background: theme.bg, viewTransitionName: BOOK_OPEN }}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
+      <header
+        role="toolbar"
+        aria-label="Reader controls"
+        className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm"
+      >
         <button
           onClick={onBack}
           aria-label="Back to library"
@@ -308,7 +312,11 @@ export function TxtReader({
         )}
       </div>
 
-      <footer className="flex flex-wrap items-center gap-2 border-t border-gold/15 bg-background/95 px-safe pb-safe-sm py-2">
+      <footer
+        role="group"
+        aria-label="Page navigation"
+        className="flex flex-wrap items-center gap-2 border-t border-gold/15 bg-background/95 px-safe pb-safe-sm py-2"
+      >
         <div className="flex w-full items-center gap-3">
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
             <div
