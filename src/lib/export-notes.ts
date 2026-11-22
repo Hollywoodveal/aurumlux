@@ -85,8 +85,12 @@ export function notesFileName(book?: BookMeta) {
 }
 
 /** Offer the file to the share sheet (iPhone: Files, Notes, Mail…), else download it. */
-export async function shareOrDownload(markdown: string, fileName: string) {
-  const file = new File([markdown], fileName, { type: "text/markdown" });
+export async function shareOrDownload(
+  content: string | Blob,
+  fileName: string,
+  type = "text/markdown",
+) {
+  const file = new File([content], fileName, { type });
   const nav = navigator as Navigator & {
     canShare?: (data: { files: File[] }) => boolean;
   };

@@ -3,20 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpDown,
-  BarChart3,
   CheckSquare,
   ChevronDown,
   FolderPlus,
   Layers,
   RefreshCw,
   Search,
-  Settings,
   SlidersHorizontal,
   Sparkles,
   Tag,
   Trash2,
   X,
-  NotebookPen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BookDetails } from "@/components/BookDetails";
@@ -39,6 +36,7 @@ import {
 } from "@/components/LibraryViews";
 import { MissingFilesContext } from "@/components/BookBadge";
 import { ContinueReading } from "@/components/ContinueReading";
+import { EmptyArt } from "@/components/EmptyArt";
 import { StorageSafetyCard } from "@/components/StorageSafetyCard";
 import { SyncDot } from "@/components/SyncDot";
 import {
@@ -413,7 +411,7 @@ function LibraryPage() {
           <div className="flex items-center gap-3">
             <BrandMark size={46} />
             <div>
-              <h1 className="font-display text-4xl leading-none text-gradient-gold">
+              <h1 className="font-display text-4xl leading-none foil-shine">
                 Aurum <span className="sr-only">— private offline library</span>
               </h1>
               <p className="mt-1.5 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
@@ -421,21 +419,6 @@ function LibraryPage() {
               </p>
             </div>
           </div>
-          <nav aria-label="Primary" className="flex items-center gap-1.5">
-            <Link
-              to="/notes"
-              aria-label="Highlights, bookmarks and notes"
-              className="icon-btn"
-            >
-              <NotebookPen className="size-[18px]" />
-            </Link>
-            <Link to="/stats" aria-label="Statistics" className="icon-btn">
-              <BarChart3 className="size-[18px]" />
-            </Link>
-            <Link to="/settings" aria-label="Settings" className="icon-btn">
-              <Settings className="size-[18px]" />
-            </Link>
-          </nav>
         </header>
 
         <div className="flex items-center gap-2">
@@ -643,9 +626,7 @@ function LibraryPage() {
 
         {books.length === 0 ? (
           <section className="mt-8 pb-24 text-center sm:mt-16">
-            <div className="mx-auto w-fit">
-              <BrandMark size={84} label="Aurum logo" />
-            </div>
+            <EmptyArt variant="shelf" className="w-56" />
             <h2 className="mt-5 font-display text-2xl text-ivory">
               Your shelves are waiting
             </h2>
@@ -699,9 +680,14 @@ function LibraryPage() {
               </div>
               <div className="mt-4">
                 {filtered.length === 0 ? (
-                  <p className="py-10 text-center text-sm text-muted-foreground">
-                    No books here yet.
-                  </p>
+                  <div className="py-8 text-center">
+                    <EmptyArt variant={query ? "search" : "shelf"} />
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      {query
+                        ? `No books match “${query.trim()}”.`
+                        : "Nothing on this shelf yet."}
+                    </p>
+                  </div>
                 ) : view === "spine" ? (
                   <SpineShelf
                     books={visible}
@@ -740,7 +726,7 @@ function LibraryPage() {
         )}
 
         {selectMode ? (
-          <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 flex w-[min(92vw,32rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-gold/30 bg-card/95 px-3 py-2 shadow-lux backdrop-blur">
+          <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 flex w-[min(92vw,32rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-gold/30 bg-card/95 px-3 py-2 shadow-lux backdrop-blur">
             <span className="pl-1 text-xs text-muted-foreground">
               <span className="text-gold">{checked.size}</span> selected
             </span>
@@ -803,7 +789,7 @@ function LibraryPage() {
             </button>
           </div>
         ) : (
-          <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 -translate-x-1/2">
+          <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 -translate-x-1/2">
             <ImportButton />
           </div>
         )}

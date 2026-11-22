@@ -40,6 +40,9 @@ import {
   toDateInput,
 } from "@/lib/goals";
 import { DYSLEXIC_FONT, READER_FONTS } from "@/lib/reader-prefs";
+import { celebrate } from "@/lib/celebrate";
+import { prepareBookOpen } from "@/lib/transitions";
+import { useCoverColor } from "@/hooks/useCoverColor";
 import { cn } from "@/lib/utils";
 
 const STATUSES: { value: ReadingStatus; label: string }[] = [
@@ -72,6 +75,8 @@ export function BookDetails({
   const { data: allNotes } = useAnnotations();
   const notes = allNotes.filter((a) => a.bookId === book.id);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const coverRef = useRef<HTMLDivElement>(null);
+  const glow = useCoverColor(book);
   const drag = useRef<{ startY: number; dy: number } | null>(null);
 
   // Drag the handle down to dismiss, like a native sheet.
@@ -113,7 +118,9 @@ export function BookDetails({
     toast.success(rating ? `Rated ${rating} of 5` : "Rating cleared");
   };
 
-  const setStatus = (status: ReadingStatus) =>
+  const setStatus = (status: ReadingStatus) => {
+    if (status === "finished" && book.status !== "finished")
+      celebrate({ title: "Book finished", subtitle: book.title });
     save.mutate({
       id: book.id,
       patch: {
@@ -123,6 +130,7 @@ export function BookDetails({
           : {}),
       },
     });
+  };
 
   /** Log reading done on another device (e.g. a Kindle) so streaks, goals, and pace stay current. */
   const logSession = async () => {
@@ -173,6 +181,15 @@ export function BookDetails({
         aria-label={`Details for ${book.title}`}
         className="animate-rise relative z-10 max-h-[88svh] w-full overflow-y-auto overflow-x-hidden rounded-t-3xl border-t border-gold/25 bg-card px-safe pb-safe pt-4 shadow-lux sm:max-w-md sm:rounded-3xl sm:pb-6"
       >
+        {glow ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-72"
+            style={{
+              background: `radial-gradient(120% 80% at 30% 0%, rgb(${glow} / 0.38), transparent 70%)`,
+            }}
+          />
+        ) : null}
         {/* Blurred cover wash behind the top of the sheet. */}
         <div
           aria-hidden
@@ -201,7 +218,10 @@ export function BookDetails({
         </button>
 
         <div className="relative flex gap-4">
-          <div className="h-[168px] w-[112px] shrink-0 overflow-hidden rounded-md hairline-gold shadow-lux">
+          <div
+            ref={coverRef}
+            className="h-[168px] w-[112px] shrink-0 overflow-hidden rounded-md hairline-gold shadow-lux"
+          >
             <CoverImage book={book} />
           </div>
           <div className="min-w-0 flex-1">
@@ -241,6 +261,7 @@ export function BookDetails({
               void navigate({
                 to: "/read/$bookId",
                 params: { bookId: book.id },
+                viewTransition: prepareBookOpen(coverRef.current),
               });
             }}
           >

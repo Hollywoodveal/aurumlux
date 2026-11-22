@@ -35,7 +35,7 @@ export function BookSpine({
       aria-label={`${book.title} by ${book.author}${statusSuffix(status)}`}
       aria-pressed={selectable ? selected : undefined}
       className={cn(
-        "group relative shrink-0 overflow-hidden rounded-[2px] transition-transform duration-300 will-change-transform hover:-translate-y-2 focus-visible:-translate-y-2 focus-visible:outline-none active:-translate-y-1",
+        "spine-sheen spine-press group relative shrink-0 overflow-hidden rounded-[2px] transition-transform duration-300 will-change-transform hover:-translate-y-2 focus-visible:-translate-y-2 focus-visible:outline-none active:-translate-y-1",
         selectable && selected && "-translate-y-2",
       )}
       style={{

@@ -1,7 +1,8 @@
 {
-  "name": "Aurum \u2014 Where every page is treasured",
+  "id": "/",
+  "name": "Aurum — Where every page is treasured",
   "short_name": "Aurum",
-  "description": "A premium offline-first e-reader for EPUB and PDF books.",
+  "description": "A private, offline-first e-reader for EPUB, PDF, comics and text, with a black & gold bookshelf.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

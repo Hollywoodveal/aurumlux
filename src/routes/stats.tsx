@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { useHydrated } from "@/hooks/useHydrated";
 import { BrandMark } from "@/components/BrandMark";
+import { YearStory } from "@/components/YearStory";
 import { useAnnotations, useBooks } from "@/hooks/useLibrary";
 import { useDailyGoal, useStreakRecoveries } from "@/hooks/useSettings";
 import {
@@ -224,6 +225,7 @@ function StatsPage() {
     [books],
   );
 
+  const [storyOpen, setStoryOpen] = useState(false);
   const yearRecap = useMemo(() => {
     const year = new Date().getFullYear();
     const inYear = (ms: number) => new Date(ms).getFullYear() === year;
@@ -546,9 +548,23 @@ function StatsPage() {
       </section>
 
       <section className="mt-8 rounded-2xl border border-gold/25 bg-card p-4 shadow-lux">
-        <h2 className="flex items-center gap-1.5 text-xs uppercase tracking-[0.2em] text-gold/70">
-          <Award className="size-3.5" /> Your {yearRecap.year} in reading
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-1.5 text-xs uppercase tracking-[0.2em] text-gold/70">
+            <Award className="size-3.5" /> Your {yearRecap.year} in reading
+          </h2>
+          {yearRecap.hasData ? (
+            <button
+              type="button"
+              onClick={() => setStoryOpen(true)}
+              className="rounded-full bg-gradient-gold px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-primary-foreground"
+            >
+              Play your year
+            </button>
+          ) : null}
+        </div>
+        {storyOpen ? (
+          <YearStory recap={yearRecap} onClose={() => setStoryOpen(false)} />
+        ) : null}
         {!yearRecap.hasData ? (
           <p className="mt-3 text-sm text-muted-foreground">
             Nothing logged yet this year — your recap fills in as you read.

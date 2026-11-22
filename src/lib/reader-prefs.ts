@@ -49,6 +49,8 @@ export type ReaderPrefs = {
   highlightIntensity: number;
   /** Tap a word in the page to start narrating from exactly there. */
   tapToRead: boolean;
+  /** Gold drop cap on chapter openings and small-caps chapter titles (EPUB). */
+  bookTypography: boolean;
 };
 
 export const DEFAULT_PREFS: ReaderPrefs = {
@@ -65,6 +67,7 @@ export const DEFAULT_PREFS: ReaderPrefs = {
   highlightWords: true,
   highlightIntensity: 42,
   tapToRead: true,
+  bookTypography: true,
 };
 
 /** Highlight colours for the spoken word and its passage at a given intensity. */

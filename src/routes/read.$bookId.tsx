@@ -20,6 +20,8 @@ import {
   type StreakRecovery,
 } from "@/lib/goals";
 import { ActiveTimer } from "@/lib/active-time";
+import { celebrate } from "@/lib/celebrate";
+import { BOOK_OPEN } from "@/lib/transitions";
 import { announce } from "@/lib/announce";
 import { clearLastRead, rememberLastRead } from "@/lib/resume";
 import {
@@ -197,7 +199,9 @@ function ReaderPage() {
     // Build the patch from the stored record, not the copy loaded when the
     // reader opened, so edits made meanwhile (metadata, the EPUB locations
     // index) are kept.
+    let justFinished = false;
     await updateBook(book.id, (cur) => {
+      justFinished = cur.status !== "finished" && (p?.progress ?? 0) >= 98;
       const prior = (cur.sessions ?? []).filter((s) => s.id !== session.id);
       return {
         readingTime: (baseReadingTime.current ?? cur.readingTime) + activeMs,
@@ -220,6 +224,8 @@ function ReaderPage() {
           : {}),
       };
     });
+    if (justFinished)
+      celebrate({ title: "Book finished", subtitle: book.title });
     // Keep library/stats queries in sync so the stats page is current the moment
     // the reader is closed.
     void qc.invalidateQueries({ queryKey: ["books"] });
@@ -273,7 +279,10 @@ function ReaderPage() {
 
   if (!loaded) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
+      <div
+        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background"
+        style={{ viewTransitionName: BOOK_OPEN }}
+      >
         <BrandMark size={64} label="Aurum logo" />
         <p className="font-display text-2xl text-gradient-gold">Aurum</p>
       </div>

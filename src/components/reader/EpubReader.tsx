@@ -2,6 +2,7 @@
 import type React from "react";
 import { chapterLeftLabel, PagePace } from "@/lib/chapter-pace";
 import { TapZoneHint } from "@/components/reader/TapZoneHint";
+import { BOOK_OPEN } from "@/lib/transitions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BookA,
@@ -234,6 +235,32 @@ export function ReaderSettings({
               {a}
             </button>
           ))}
+        </div>
+
+        <div className="mt-6 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              Book typography
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Gold drop caps and small-caps chapter titles
+            </p>
+          </div>
+          <button
+            onClick={() =>
+              onChange({ ...prefs, bookTypography: !prefs.bookTypography })
+            }
+            aria-pressed={prefs.bookTypography}
+            aria-label="Toggle book typography"
+            className={cn(
+              "min-h-11 min-w-11 rounded-full border px-4 text-xs uppercase tracking-widest",
+              prefs.bookTypography
+                ? "border-gold/60 bg-gold/10 text-gold"
+                : "border-border text-muted-foreground",
+            )}
+          >
+            {prefs.bookTypography ? "On" : "Off"}
+          </button>
         </div>
 
         <div className="mt-6 flex items-center justify-between">
@@ -661,6 +688,27 @@ export function EpubReader({
           : {}),
       },
       a: { color: "#c9a227 !important" },
+      ...(prefs.bookTypography
+        ? {
+            "h1, h2, h3": {
+              "font-variant": "small-caps",
+              "letter-spacing": "0.06em",
+              "font-weight": "600",
+              "text-align": "center",
+            },
+            // The first paragraph after a chapter heading opens with a drop cap.
+            "h1 + p::first-letter, h2 + p::first-letter, h3 + p::first-letter":
+              {
+                float: "left",
+                "font-size": "3.4em",
+                "line-height": "0.82",
+                "padding-top": "0.06em",
+                "padding-right": "0.08em",
+                color: "#c9a227",
+                "font-weight": "600",
+              },
+          }
+        : {}),
       // Follow-along narration: the spoken word glows, its passage stays tinted.
       "::highlight(aurum-spoken)": {
         background: `rgba(201,162,39,${alphas.word.toFixed(2)})`,
@@ -996,7 +1044,10 @@ export function EpubReader({
   return (
     <div
       className="fixed inset-0 flex flex-col"
-      style={{ background: THEME_COLORS[readerTheme].bg }}
+      style={{
+        background: THEME_COLORS[readerTheme].bg,
+        viewTransitionName: BOOK_OPEN,
+      }}
     >
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
         <button

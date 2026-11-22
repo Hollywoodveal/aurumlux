@@ -14,8 +14,38 @@ import { Toaster } from "@/components/ui/sonner";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { LiveAnnouncer } from "@/components/LiveAnnouncer";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
+import { BottomNav, TabBarSpacer } from "@/components/BottomNav";
+import { Celebration } from "@/components/Celebration";
 import { registerServiceWorker } from "@/lib/pwa";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
+
+/**
+ * iPhone/iPad launch screens for the Home Screen app (black, gold logo), so it
+ * never flashes white on open. [css width, css height, pixel ratio, file].
+ */
+const SPLASH_SCREENS: [number, number, number, string][] = [
+  [440, 956, 3, "splash-1320x2868.png"],
+  [402, 874, 3, "splash-1206x2622.png"],
+  [430, 932, 3, "splash-1290x2796.png"],
+  [393, 852, 3, "splash-1179x2556.png"],
+  [390, 844, 3, "splash-1170x2532.png"],
+  [428, 926, 3, "splash-1284x2778.png"],
+  [375, 812, 3, "splash-1125x2436.png"],
+  [414, 896, 3, "splash-1242x2688.png"],
+  [414, 896, 2, "splash-828x1792.png"],
+  [414, 736, 3, "splash-1242x2208.png"],
+  [375, 667, 2, "splash-750x1334.png"],
+  [320, 568, 2, "splash-640x1136.png"],
+  [1024, 1366, 2, "splash-2048x2732.png"],
+  [834, 1194, 2, "splash-1668x2388.png"],
+  [820, 1180, 2, "splash-1640x2360.png"],
+  [768, 1024, 2, "splash-1536x2048.png"],
+];
+const splashLinks = SPLASH_SCREENS.map(([w, h, r, file]) => ({
+  rel: "apple-touch-startup-image",
+  href: `/splash/${file}`,
+  media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r}) and (orientation: portrait)`,
+}));
 
 function NotFoundComponent() {
   return (
@@ -126,6 +156,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { rel: "manifest", href: "/manifest.webmanifest" },
         { rel: "icon", type: "image/png", href: "/favicon.png" },
         { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+        ...splashLinks,
       ],
     }),
 
@@ -182,6 +213,9 @@ function RootComponent() {
       </a>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <TabBarSpacer />
+      <BottomNav />
+      <Celebration />
       <LiveAnnouncer />
       <UpdatePrompt />
       <InstallPrompt />

@@ -48,8 +48,11 @@ export function SpineShelf({
   return (
     <div className="space-y-5">
       {chunk(books, 12).map((row, i) => (
-        <div key={i} className="rounded-xl shelf-plank px-3 pt-4">
-          <div className="no-scrollbar flex items-end gap-[3px] overflow-x-auto pb-3">
+        <div
+          key={i}
+          className="shelf-spotlight rounded-xl shelf-plank px-3 pt-4"
+        >
+          <div className="no-scrollbar relative z-[1] flex items-end gap-[3px] overflow-x-auto pb-3">
             {row.map((book) => (
               <BookSpine
                 key={book.id}
@@ -172,8 +175,11 @@ export function CompactShelf({
   return (
     <div className="space-y-4">
       {chunk(books, 12).map((row, i) => (
-        <div key={i} className="rounded-lg shelf-plank px-2 pt-3">
-          <div className="no-scrollbar flex items-end gap-1 overflow-x-auto pb-2">
+        <div
+          key={i}
+          className="shelf-spotlight rounded-lg shelf-plank px-2 pt-3"
+        >
+          <div className="no-scrollbar relative z-[1] flex items-end gap-1 overflow-x-auto pb-2">
             {row.map((book) => (
               <BookSpine
                 key={book.id}

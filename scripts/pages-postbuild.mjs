@@ -30,6 +30,8 @@ const { count, size } = await generateSW({
   // `mjs` is required: pdf.js ships its worker as pdf.worker.min-*.mjs and the
   // PDF reader cannot open a book offline without it.
   globPatterns: ["**/*.{js,mjs,css,html,ico,png,svg,woff2}"],
+  // Launch screens are only read by iOS when the Home Screen app opens.
+  globIgnores: ["splash/**"],
   maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
   // No precached index.html fallback: Pages serves index.html for navigations
   // via `_redirects`, and the NetworkFirst runtime cache below handles them.

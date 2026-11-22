@@ -1,9 +1,12 @@
+import { useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { BookOpen } from "lucide-react";
 import { BookBadge } from "@/components/BookBadge";
 import { CoverImage } from "@/components/CoverImage";
 import type { BookMeta } from "@/lib/db";
 import { estimateMinutesLeft, formatMinutesLeft } from "@/lib/goals";
+import { prepareBookOpen } from "@/lib/transitions";
+import { useCoverColor } from "@/hooks/useCoverColor";
 
 function timeLeft(book: BookMeta) {
   const minutes = estimateMinutesLeft(book);
@@ -22,7 +25,9 @@ export function ContinueReading({
   onOpenDetails: (book: BookMeta) => void;
 }) {
   const navigate = useNavigate();
+  const coverRef = useRef<HTMLButtonElement>(null);
   const [hero, ...rest] = books;
+  const glow = useCoverColor(hero);
   if (!hero) return null;
   const left = timeLeft(hero);
   const pct = Math.round(hero.progress);
@@ -42,8 +47,18 @@ export function ContinueReading({
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card via-card/85 to-card/60"
         />
+        {glow ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: `radial-gradient(90% 120% at 10% 0%, rgb(${glow} / 0.42), transparent 65%)`,
+            }}
+          />
+        ) : null}
         <div className="relative flex gap-4">
           <button
+            ref={coverRef}
             type="button"
             onClick={() => onOpenDetails(hero)}
             aria-label={`Details for ${hero.title}`}
@@ -94,6 +109,7 @@ export function ContinueReading({
                   void navigate({
                     to: "/read/$bookId",
                     params: { bookId: hero.id },
+                    viewTransition: prepareBookOpen(coverRef.current),
                   })
                 }
                 className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-gradient-gold px-5 text-sm font-medium text-primary-foreground shadow-lux"
