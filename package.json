@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
     "build:pages": "vite build && bun scripts/pages-postbuild.mjs"
   },
   "dependencies": {
