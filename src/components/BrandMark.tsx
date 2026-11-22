@@ -1,8 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The Aurum mark — a silver line-art "A" over an open book (source:
- * design/logo.svg). Decorative next to the wordmark,
+ * The Aurum mark — a black closed book with a gold "A" and ribbon. Decorative next to the wordmark,
  * so it carries no alt text; give it a label only when it stands alone.
  */
 export function BrandMark({
