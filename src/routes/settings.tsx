@@ -60,8 +60,8 @@ export type SettingsTab = "reading" | "library" | "sync" | "privacy";
 const TABS: { key: SettingsTab; label: string }[] = [
   { key: "reading", label: "Reading" },
   { key: "library", label: "Library" },
-  { key: "sync", label: "Sync & backup" },
-  { key: "privacy", label: "Privacy & app" },
+  { key: "sync", label: "Backup & sync" },
+  { key: "privacy", label: "Privacy" },
 ];
 const isTab = (v: unknown): v is SettingsTab => TABS.some((t) => t.key === v);
 

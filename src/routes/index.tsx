@@ -416,12 +416,15 @@ function LibraryPage() {
               <h1 className="font-display text-4xl leading-none text-gradient-gold">
                 Aurum <span className="sr-only">— private offline library</span>
               </h1>
-              <p className="mt-1.5 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+              <p className="mt-1.5 text-[9px] uppercase tracking-[0.22em] text-muted-foreground min-[420px]:text-[10px] min-[420px]:tracking-[0.28em]">
                 Where every page is treasured
               </p>
             </div>
           </div>
-          <nav aria-label="Primary" className="flex items-center gap-1.5">
+          <nav
+            aria-label="Primary"
+            className="flex items-center gap-1 min-[420px]:gap-1.5"
+          >
             <SyncDot />
             <Link
               to="/notes"

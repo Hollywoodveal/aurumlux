@@ -62,7 +62,7 @@ export function StorageSafetyCard() {
         <X className="size-4" />
       </button>
       <div className="flex gap-3 pr-6">
-        <div className="mt-0.5 rounded-full border border-gold/40 p-2 text-gold">
+        <div className="mt-0.5 h-fit shrink-0 self-start rounded-full border border-gold/40 p-2 text-gold">
           <ShieldCheck className="size-4" aria-hidden />
         </div>
         <div className="min-w-0">
