@@ -1,4 +1,4 @@
-// Cover check: import books whose files carry real cover images (EPUB 2
+// Cover regression test (runs in CI after the smoke test): import books whose files carry real cover images (EPUB 2
 // <meta name="cover">, EPUB 3 cover-image, CBZ, PDF) and verify every view
 // shows the image, before and after a reload. Usage:
 // node tests/e2e/covers.mjs <dist/client> <playwright> <jszip> <engine>
@@ -257,7 +257,9 @@ const db = await page.evaluate(
       };
     }),
 );
+let failures = 0;
 const noCover = db.filter((b) => !b.has || !b.stored);
+failures += noCover.length;
 console.log(
   `[${engine}] imported ${db.length}; without a stored cover: ${noCover.length}`,
 );
@@ -284,6 +286,7 @@ async function checkView(label) {
   console.log(
     `[${engine}] ${label}: ${r.imgs} cover images, ${r.broken.length} not loaded, ${r.fallbacks} text fallbacks`,
   );
+  failures += r.broken.length + r.fallbacks;
   if (r.broken.length)
     console.log(`   e.g. ${r.broken.slice(0, 5).join(" | ")}`);
 }
@@ -309,6 +312,7 @@ async function spines(label) {
   console.log(
     `[${engine}] ${label}: ${r.total} spines, ${r.withImg} showing cover art`,
   );
+  failures += r.total - r.withImg;
 }
 
 for (const pass of ["fresh", "after reload"]) {
@@ -339,3 +343,8 @@ for (const l of [...new Set(logs)].slice(0, 10))
   console.log(`   ${l.slice(0, 200)}`);
 await browser.close();
 server.close();
+if (failures > 0) {
+  console.log(`✗ ${failures} cover problem(s)`);
+  process.exit(1);
+}
+console.log("✓ every book shows its cover in every view");
