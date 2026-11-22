@@ -129,6 +129,11 @@ function relay(req, res, target) {
       return res.end(catalogEpub);
     }
   }
+  if (u.host === "blocked.test") {
+    // Like a library that refuses requests from cloud servers.
+    res.writeHead(503, { "content-type": "text/html", "x-final-url": target });
+    return res.end("<h1>Service unavailable</h1>");
+  }
   if (u.host === "dav.test" && u.pathname === "/Aurum/aurum-sync.aurum") {
     if (
       req.headers.authorization !==
@@ -339,8 +344,57 @@ await step("imports and renders an EPUB; its script does not run", async () => {
   );
 });
 
+await step(
+  "library shows the continue-reading card and details sheet",
+  async () => {
+    await page.goto(BASE);
+    await page.waitForLoadState("networkidle");
+    const hero = page.getByRole("region", { name: "Continue reading" });
+    await hero.getByRole("button", { name: "Continue", exact: true }).waitFor();
+    expect(
+      (await hero.innerText()).includes("Script Test"),
+      "hero card doesn't show the book being read",
+    );
+    await page.screenshot({ path: `${shots}/library.png` });
+    await hero.getByRole("button", { name: /Details for Script Test/ }).click();
+    const sheet = page.getByRole("dialog", { name: /Details for Script Test/ });
+    await sheet
+      .getByRole("button", { name: /Continue|Read/ })
+      .first()
+      .waitFor();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${shots}/details-sheet.png` });
+    await page.getByRole("button", { name: "Close details" }).click({
+      position: { x: 10, y: 10 },
+    });
+  },
+);
+
+await step(
+  "a catalog that blocks the relay gets a plain-language message",
+  async () => {
+    await page.goto(`${BASE}/settings?tab=library`);
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${shots}/settings-tabs.png` });
+    await page.getByRole("button", { name: /Browse book catalogs/ }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByText("Feedbooks").first().waitFor();
+    await dialog.getByText("Download from the website").waitFor();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${shots}/catalogs-home.png` });
+    await dialog.getByRole("button", { name: /Add a catalog/ }).click();
+    await dialog
+      .getByPlaceholder("https://…/opds")
+      .fill("https://blocked.test/opds");
+    await dialog.getByRole("button", { name: /^Add catalog$/ }).click();
+    await dialog.getByText(/blocks downloads through Aurum/).waitFor();
+    await page.screenshot({ path: `${shots}/catalog-blocked.png` });
+    await page.keyboard.press("Escape");
+  },
+);
+
 await step("browses an OPDS catalog and downloads a book", async () => {
-  await page.goto(`${BASE}/settings`);
+  await page.goto(`${BASE}/settings?tab=library`);
   await page.waitForLoadState("networkidle");
   const link = page.getByLabel("Book or catalog link").first();
   await link.fill(CATALOG);
@@ -363,7 +417,7 @@ await step("browses an OPDS catalog and downloads a book", async () => {
 });
 
 await step("syncs to WebDAV (first upload, then an ETag update)", async () => {
-  await page.goto(`${BASE}/settings`);
+  await page.goto(`${BASE}/settings?tab=sync`);
   await page.waitForLoadState("networkidle");
   await page.fill("#sync-url", "https://dav.test/Aurum/");
   await page.fill("#sync-user", "reader");
@@ -385,6 +439,16 @@ await step("syncs to WebDAV (first upload, then an ETag update)", async () => {
   for (let i = 0; i < 40 && dav.puts < 2; i += 1)
     await page.waitForTimeout(250);
   expect(dav.puts === 2, `second sync did not upload (puts=${dav.puts})`);
+});
+
+await step("library header shows the sync status", async () => {
+  await page.goto(BASE);
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: /^Synced/ }).waitFor();
+  await page.screenshot({
+    path: `${shots}/library-synced.png`,
+    clip: { x: 0, y: 0, width: 400, height: 140 },
+  });
 });
 
 await step("no CSP violations or page errors overall", async () => {

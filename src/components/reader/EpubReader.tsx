@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type React from "react";
+import { chapterLeftLabel, PagePace } from "@/lib/chapter-pace";
+import { TapZoneHint } from "@/components/reader/TapZoneHint";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BookA,
@@ -392,6 +394,8 @@ export function EpubReader({
 
   const [chapter, setChapter] = useState("");
   const [percent, setPercent] = useState(book.progress);
+  const [chapterLeft, setChapterLeft] = useState<string | null>(null);
+  const paceRef = useRef(new PagePace());
   const [results, setResults] = useState<{ cfi: string; excerpt: string }[]>(
     [],
   );
@@ -503,6 +507,14 @@ export function EpubReader({
         const current = epub.navigation?.get(location.start.href);
         const label = current?.label?.trim() ?? "";
         setChapter(label);
+        paceRef.current.turn(Date.now());
+        setChapterLeft(
+          chapterLeftLabel(
+            location.start?.displayed?.page,
+            location.start?.displayed?.total,
+            paceRef.current.msPerPage(),
+          ),
+        );
         onProgress({
           progress: exact ?? book.progress ?? shown,
           location: location.start.cfi,
@@ -1056,6 +1068,7 @@ export function EpubReader({
           onClick={() => renditionRef.current?.next()}
           className="absolute inset-y-0 right-0 w-[18%]"
         />
+        <TapZoneHint />
       </div>
 
       <footer className="flex items-center gap-3 border-t border-gold/15 bg-background/95 px-safe py-2">
@@ -1066,11 +1079,18 @@ export function EpubReader({
         >
           <ChevronLeft className="size-4" />
         </button>
-        <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
-          <div
-            className="h-full bg-gradient-gold"
-            style={{ width: `${percent}%` }}
-          />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="h-1 overflow-hidden rounded-full bg-secondary">
+            <div
+              className="h-full bg-gradient-gold"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+          {chapterLeft ? (
+            <p className="truncate text-center text-[10px] text-muted-foreground">
+              {chapterLeft}
+            </p>
+          ) : null}
         </div>
         <span className="w-9 text-right text-[11px] text-gold/80">
           {percent}%

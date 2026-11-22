@@ -264,6 +264,12 @@ export async function putFile(id: string, blob: Blob) {
   await db.put("files", blob, id);
 }
 
+/** Ids of books whose file is stored on this device (keys only, no blobs). */
+export async function listFileIds(): Promise<string[]> {
+  const db = await getDB();
+  return (await db.getAllKeys("files")) as string[];
+}
+
 export async function getFile(id: string): Promise<Blob | undefined> {
   const db = await getDB();
   return (await db.get("files", id)) as Blob | undefined;

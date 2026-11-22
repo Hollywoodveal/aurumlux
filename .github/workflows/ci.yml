@@ -61,6 +61,9 @@ jobs:
           npx playwright install --with-deps chromium
       - timeout-minutes: 5
         run: node tests/e2e/smoke.mjs dist/client /tmp/pw/node_modules/playwright "$PWD/node_modules/jszip"
+      - name: TEMP print screenshots for review
+        if: always()
+        run: for f in e2e-screenshots/*.png; do echo "SHOT $(basename "$f") $(base64 -w0 "$f")"; done
       - uses: actions/upload-artifact@v4
         if: always()
         with:

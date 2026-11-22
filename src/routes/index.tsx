@@ -34,9 +34,19 @@ import {
   ListShelf,
   SpineShelf,
   ViewSwitcher,
+  useIncremental,
   type ViewMode,
 } from "@/components/LibraryViews";
-import { useAnnotations, useBookMutations, useBooks } from "@/hooks/useLibrary";
+import { MissingFilesContext } from "@/components/BookBadge";
+import { ContinueReading } from "@/components/ContinueReading";
+import { StorageSafetyCard } from "@/components/StorageSafetyCard";
+import { SyncDot } from "@/components/SyncDot";
+import {
+  useAnnotations,
+  useBookMutations,
+  useBooks,
+  useFileIds,
+} from "@/hooks/useLibrary";
 import type { BookMeta } from "@/lib/db";
 import { recountPages, refetchCover, refetchMetadata } from "@/lib/importer";
 import { resolveLaunchResume } from "@/lib/resume";
@@ -379,430 +389,428 @@ function LibraryPage() {
     return groupSeries([...list].sort(cmp[sort]));
   }, [books, annotations, shelf, sort, query, tag, collection, textHits]);
 
+  const { visible, hasMore, sentinel } = useIncremental(filtered);
+  const { data: fileIds } = useFileIds();
+  const missingFiles = useMemo(
+    () =>
+      fileIds
+        ? new Set(books.filter((b) => !fileIds.has(b.id)).map((b) => b.id))
+        : null,
+    [books, fileIds],
+  );
+
   const reading = books
     .filter((b) => b.status === "reading")
     .sort((a, b) => b.lastOpened - a.lastOpened);
 
   return (
-    <main
-      id="main-content"
-      className="mx-auto min-h-dvh w-full max-w-3xl pb-24 px-safe pt-safe lg:max-w-6xl"
-    >
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <BrandMark size={46} />
-          <div>
-            <h1 className="font-display text-4xl leading-none text-gradient-gold">
-              Aurum <span className="sr-only">— private offline library</span>
-            </h1>
-            <p className="mt-1.5 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-              Where every page is treasured
-            </p>
-          </div>
-        </div>
-        <nav aria-label="Primary" className="flex items-center gap-1.5">
-          <Link
-            to="/notes"
-            aria-label="Highlights, bookmarks and notes"
-            className="icon-btn"
-          >
-            <NotebookPen className="size-[18px]" />
-          </Link>
-          <Link to="/stats" aria-label="Statistics" className="icon-btn">
-            <BarChart3 className="size-[18px]" />
-          </Link>
-          <Link to="/settings" aria-label="Settings" className="icon-btn">
-            <Settings className="size-[18px]" />
-          </Link>
-        </nav>
-      </header>
-
-      <StreakPill
-        books={books}
-        dailyGoal={dailyGoal}
-        recoveries={recoveries.list}
-      />
-
-      <div className="mt-5 flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search your library by title, author, or note"
-            placeholder="Search titles, authors, notes"
-            className="w-full rounded-full border border-gold/20 bg-secondary/60 py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-gold/50"
-          />
-        </div>
-        <div className="relative">
-          <button
-            type="button"
-            aria-label={`Sort books, currently ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
-            title={`Sort: ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
-            onClick={() => setSortOpen((v) => !v)}
-            className="icon-btn"
-          >
-            <ArrowUpDown className="size-[18px]" />
-          </button>
-          {sortOpen ? (
-            <div className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-gold/25 bg-popover shadow-lux">
-              {SORTS.map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => {
-                    setSort(s.key);
-                    setSortOpen(false);
-                  }}
-                  className={cn(
-                    "block w-full px-4 py-2.5 text-left text-sm",
-                    sort === s.key ? "bg-gold/10 text-gold" : "text-foreground",
-                  )}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div
-        className="segmented no-scrollbar mt-4 overflow-x-auto"
-        role="group"
-        aria-label="Shelves"
+    <MissingFilesContext.Provider value={missingFiles}>
+      <main
+        id="main-content"
+        className="mx-auto min-h-dvh w-full max-w-3xl pb-24 px-safe pt-safe lg:max-w-6xl"
       >
-        {SHELVES.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            aria-selected={shelf === s.key}
-            onClick={() => setShelf(s.key)}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      {allTags.length > 0 || allCollections.length > 0 ? (
-        <div className="mt-3">
-          <button
-            type="button"
-            aria-expanded={filtersOpen}
-            onClick={() => setFiltersOpen((v) => !v)}
-            className={cn(
-              "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-xs uppercase tracking-[0.14em] transition-colors",
-              filtersOpen || tag || collection
-                ? "border-gold/50 text-gold"
-                : "border-gold/25 text-gold/70",
-            )}
-          >
-            <SlidersHorizontal className="size-3.5" />
-            Filters
-            {(tag || collection) && (
-              <span className="flex size-5 items-center justify-center rounded-full bg-gold/20 text-[10px] text-gold">
-                {(tag ? 1 : 0) + (collection ? 1 : 0)}
-              </span>
-            )}
-            <ChevronDown
-              className={cn(
-                "size-3.5 transition-transform",
-                filtersOpen && "rotate-180",
-              )}
-              aria-hidden
-            />
-          </button>
-          {filtersOpen ? (
-            <div className="card mt-2 p-4">
-              {allTags.length > 0 ? (
-                <div>
-                  <p className="eyebrow flex items-center gap-1.5">
-                    <Tag aria-hidden className="size-3" /> Tags
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {allTags.map(([name, count]) => (
-                      <button
-                        key={name}
-                        type="button"
-                        aria-pressed={tag === name}
-                        onClick={() =>
-                          setTag((prev) => (prev === name ? null : name))
-                        }
-                        className="chip"
-                      >
-                        {name} <span className="text-gold/50">{count}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {allCollections.length > 0 ? (
-                <div className={allTags.length > 0 ? "mt-4" : ""}>
-                  <p className="eyebrow flex items-center gap-1.5">
-                    <Layers aria-hidden className="size-3" /> Collections
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {allCollections.map(([name, count]) => (
-                      <button
-                        key={name}
-                        type="button"
-                        aria-pressed={collection === name}
-                        onClick={() =>
-                          setCollection((prev) => (prev === name ? null : name))
-                        }
-                        className="chip"
-                      >
-                        {name} <span className="text-gold/50">{count}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {tag || collection ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTag(null);
-                    setCollection(null);
-                  }}
-                  className="btn-ghost mt-3 px-0 text-xs uppercase tracking-[0.14em]"
-                >
-                  Clear all filters
-                </button>
-              ) : null}
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <BrandMark size={46} />
+            <div>
+              <h1 className="font-display text-4xl leading-none text-gradient-gold">
+                Aurum <span className="sr-only">— private offline library</span>
+              </h1>
+              <p className="mt-1.5 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+                Where every page is treasured
+              </p>
             </div>
-          ) : null}
-        </div>
-      ) : null}
+          </div>
+          <nav aria-label="Primary" className="flex items-center gap-1.5">
+            <SyncDot />
+            <Link
+              to="/notes"
+              aria-label="Highlights, bookmarks and notes"
+              className="icon-btn"
+            >
+              <NotebookPen className="size-[18px]" />
+            </Link>
+            <Link to="/stats" aria-label="Statistics" className="icon-btn">
+              <BarChart3 className="size-[18px]" />
+            </Link>
+            <Link to="/settings" aria-label="Settings" className="icon-btn">
+              <Settings className="size-[18px]" />
+            </Link>
+          </nav>
+        </header>
 
-      {insideHits.length > 0 ? (
-        <section
-          className="card mt-5 p-4"
-          aria-label="Search results inside your books"
-        >
-          <h2 className="eyebrow">Inside your books</h2>
-          <ul className="mt-2 divide-y divide-border/60">
-            {insideHits.map(({ book, hits }) => (
-              <li key={book.id} className="py-2.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate font-display text-sm text-ivory">
-                    {book.title}
-                  </p>
-                  <Link
-                    to="/read/$bookId"
-                    params={{ bookId: book.id }}
-                    className="shrink-0 rounded-full border border-gold/30 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-gold"
-                  >
-                    Read
-                  </Link>
-                </div>
-                {hits.slice(0, 2).map((hit, i) => (
-                  <p
-                    key={`${hit.href}-${i}`}
-                    className="mt-1 text-[11px] leading-relaxed text-muted-foreground"
-                  >
-                    <span className="text-gold/60">{hit.label} · </span>
-                    {hit.snippet}
-                  </p>
-                ))}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+        <StreakPill
+          books={books}
+          dailyGoal={dailyGoal}
+          recoveries={recoveries.list}
+        />
 
-      {books.length === 0 ? (
-        <section className="mt-8 pb-24 text-center sm:mt-16">
-          <div className="mx-auto w-fit">
-            <BrandMark size={84} label="Aurum logo" />
+        {books.length > 0 ? <StorageSafetyCard /> : null}
+
+        <div className="mt-5 flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search your library by title, author, or note"
+              placeholder="Search titles, authors, notes"
+              className="w-full rounded-full border border-gold/20 bg-secondary/60 py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-gold/50"
+            />
           </div>
-          <h2 className="mt-5 font-display text-2xl text-ivory">
-            Your shelves are waiting
-          </h2>
-          <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
-            Import EPUB, PDF, CBZ or TXT files from your device. Everything
-            stays offline, on your phone.
-          </p>
-          <div className="mt-6 flex justify-center">
-            <ImportButton label="Import books" />
-          </div>
-          <div className="mx-auto mt-4 max-w-sm text-left">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-gold/70">
-              Or import from a link
-            </p>
-            <ImportFromUrl />
-          </div>
-        </section>
-      ) : (
-        <>
-          {reading.length > 0 && shelf === "all" && !query ? (
-            <section className="mt-6" aria-label="Continue reading">
-              <h2 className="eyebrow">Continue reading</h2>
-              <div className="no-scrollbar -mx-4 mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
-                {reading.map((b) => (
+          <div className="relative">
+            <button
+              type="button"
+              aria-label={`Sort books, currently ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
+              title={`Sort: ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
+              onClick={() => setSortOpen((v) => !v)}
+              className="icon-btn"
+            >
+              <ArrowUpDown className="size-[18px]" />
+            </button>
+            {sortOpen ? (
+              <div className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-gold/25 bg-popover shadow-lux">
+                {SORTS.map((s) => (
                   <button
-                    key={b.id}
+                    key={s.key}
                     type="button"
-                    onClick={() => setSelected(b)}
-                    className="card w-40 shrink-0 p-3.5 text-left shadow-lux"
+                    onClick={() => {
+                      setSort(s.key);
+                      setSortOpen(false);
+                    }}
+                    className={cn(
+                      "block w-full px-4 py-2.5 text-left text-sm",
+                      sort === s.key
+                        ? "bg-gold/10 text-gold"
+                        : "text-foreground",
+                    )}
                   >
-                    <p className="line-clamp-2 font-display text-base leading-tight text-ivory">
-                      {b.title}
-                    </p>
-                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                      {b.author}
-                    </p>
-                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-secondary">
-                      <div
-                        className="h-full bg-gradient-gold"
-                        style={{ width: `${b.progress}%` }}
-                      />
-                    </div>
-                    <p className="mt-1 text-[10px] text-gold/70">
-                      {Math.round(b.progress)}%
-                    </p>
+                    {s.label}
                   </button>
                 ))}
               </div>
-            </section>
-          ) : null}
+            ) : null}
+          </div>
+        </div>
 
-          <section className="mt-7">
-            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-              <h2 className="eyebrow whitespace-nowrap">
-                {SHELVES.find((s) => s.key === shelf)?.label} ·{" "}
-                {filtered.length}
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    selectMode ? exitSelect() : setSelectMode(true)
-                  }
-                  aria-label={selectMode ? "Cancel selection" : "Select books"}
-                  aria-pressed={selectMode}
-                  title={selectMode ? "Cancel selection" : "Select books"}
-                  className="icon-btn"
-                >
-                  {selectMode ? (
-                    <X className="size-[18px]" />
-                  ) : (
-                    <CheckSquare className="size-[18px]" />
-                  )}
-                </button>
-                <ViewSwitcher value={view} onChange={setView} />
-              </div>
-            </div>
-            <div className="mt-4">
-              {filtered.length === 0 ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">
-                  No books here yet.
-                </p>
-              ) : view === "spine" ? (
-                <SpineShelf
-                  books={filtered}
-                  onSelect={onBookTap}
-                  selectable={selectMode}
-                  selectedIds={checked}
-                />
-              ) : view === "grid" ? (
-                <GridShelf
-                  books={filtered}
-                  onSelect={onBookTap}
-                  selectable={selectMode}
-                  selectedIds={checked}
-                />
-              ) : view === "list" ? (
-                <ListShelf
-                  books={filtered}
-                  onSelect={onBookTap}
-                  selectable={selectMode}
-                  selectedIds={checked}
-                />
-              ) : (
-                <CompactShelf
-                  books={filtered}
-                  onSelect={onBookTap}
-                  selectable={selectMode}
-                  selectedIds={checked}
-                />
+        <div
+          className="segmented no-scrollbar mt-4 overflow-x-auto"
+          role="group"
+          aria-label="Shelves"
+        >
+          {SHELVES.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              aria-selected={shelf === s.key}
+              onClick={() => setShelf(s.key)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {allTags.length > 0 || allCollections.length > 0 ? (
+          <div className="mt-3">
+            <button
+              type="button"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((v) => !v)}
+              className={cn(
+                "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-xs uppercase tracking-[0.14em] transition-colors",
+                filtersOpen || tag || collection
+                  ? "border-gold/50 text-gold"
+                  : "border-gold/25 text-gold/70",
               )}
+            >
+              <SlidersHorizontal className="size-3.5" />
+              Filters
+              {(tag || collection) && (
+                <span className="flex size-5 items-center justify-center rounded-full bg-gold/20 text-[10px] text-gold">
+                  {(tag ? 1 : 0) + (collection ? 1 : 0)}
+                </span>
+              )}
+              <ChevronDown
+                className={cn(
+                  "size-3.5 transition-transform",
+                  filtersOpen && "rotate-180",
+                )}
+                aria-hidden
+              />
+            </button>
+            {filtersOpen ? (
+              <div className="card mt-2 p-4">
+                {allTags.length > 0 ? (
+                  <div>
+                    <p className="eyebrow flex items-center gap-1.5">
+                      <Tag aria-hidden className="size-3" /> Tags
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {allTags.map(([name, count]) => (
+                        <button
+                          key={name}
+                          type="button"
+                          aria-pressed={tag === name}
+                          onClick={() =>
+                            setTag((prev) => (prev === name ? null : name))
+                          }
+                          className="chip"
+                        >
+                          {name} <span className="text-gold/50">{count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {allCollections.length > 0 ? (
+                  <div className={allTags.length > 0 ? "mt-4" : ""}>
+                    <p className="eyebrow flex items-center gap-1.5">
+                      <Layers aria-hidden className="size-3" /> Collections
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {allCollections.map(([name, count]) => (
+                        <button
+                          key={name}
+                          type="button"
+                          aria-pressed={collection === name}
+                          onClick={() =>
+                            setCollection((prev) =>
+                              prev === name ? null : name,
+                            )
+                          }
+                          className="chip"
+                        >
+                          {name} <span className="text-gold/50">{count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {tag || collection ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTag(null);
+                      setCollection(null);
+                    }}
+                    className="btn-ghost mt-3 px-0 text-xs uppercase tracking-[0.14em]"
+                  >
+                    Clear all filters
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {insideHits.length > 0 ? (
+          <section
+            className="card mt-5 p-4"
+            aria-label="Search results inside your books"
+          >
+            <h2 className="eyebrow">Inside your books</h2>
+            <ul className="mt-2 divide-y divide-border/60">
+              {insideHits.map(({ book, hits }) => (
+                <li key={book.id} className="py-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate font-display text-sm text-ivory">
+                      {book.title}
+                    </p>
+                    <Link
+                      to="/read/$bookId"
+                      params={{ bookId: book.id }}
+                      className="shrink-0 rounded-full border border-gold/30 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-gold"
+                    >
+                      Read
+                    </Link>
+                  </div>
+                  {hits.slice(0, 2).map((hit, i) => (
+                    <p
+                      key={`${hit.href}-${i}`}
+                      className="mt-1 text-[11px] leading-relaxed text-muted-foreground"
+                    >
+                      <span className="text-gold/60">{hit.label} · </span>
+                      {hit.snippet}
+                    </p>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {books.length === 0 ? (
+          <section className="mt-8 pb-24 text-center sm:mt-16">
+            <div className="mx-auto w-fit">
+              <BrandMark size={84} label="Aurum logo" />
+            </div>
+            <h2 className="mt-5 font-display text-2xl text-ivory">
+              Your shelves are waiting
+            </h2>
+            <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
+              Import EPUB, PDF, CBZ or TXT files from your device. Everything
+              stays offline, on your phone.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <ImportButton label="Import books" />
+            </div>
+            <div className="mx-auto mt-4 max-w-sm text-left">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-gold/70">
+                Or import from a link
+              </p>
+              <ImportFromUrl />
             </div>
           </section>
-        </>
-      )}
+        ) : (
+          <>
+            {reading.length > 0 && shelf === "all" && !query ? (
+              <ContinueReading books={reading} onOpenDetails={setSelected} />
+            ) : null}
 
-      {selectMode ? (
-        <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 flex w-[min(92vw,32rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-gold/30 bg-card/95 px-3 py-2 shadow-lux backdrop-blur">
-          <span className="pl-1 text-xs text-muted-foreground">
-            <span className="text-gold">{checked.size}</span> selected
-          </span>
-          <button
-            type="button"
-            onClick={() =>
-              setChecked((prev) =>
-                prev.size === filtered.length
-                  ? new Set()
-                  : new Set(filtered.map((b) => b.id)),
-              )
-            }
-            className="ml-auto rounded-full border border-gold/30 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold/90"
-          >
-            {checked.size === filtered.length ? "None" : "All"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void recountChecked()}
-            disabled={checked.size === 0 || recounting}
-            aria-label="Recalculate page count for selected books"
-            className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold disabled:opacity-40"
-          >
-            <RefreshCw
-              className={cn("size-3.5", recounting && "animate-spin")}
-            />
-            Pages
-          </button>
+            <section className="mt-7">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
+                <h2 className="eyebrow whitespace-nowrap">
+                  {SHELVES.find((s) => s.key === shelf)?.label} ·{" "}
+                  {filtered.length}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectMode ? exitSelect() : setSelectMode(true)
+                    }
+                    aria-label={
+                      selectMode ? "Cancel selection" : "Select books"
+                    }
+                    aria-pressed={selectMode}
+                    title={selectMode ? "Cancel selection" : "Select books"}
+                    className="icon-btn"
+                  >
+                    {selectMode ? (
+                      <X className="size-[18px]" />
+                    ) : (
+                      <CheckSquare className="size-[18px]" />
+                    )}
+                  </button>
+                  <ViewSwitcher value={view} onChange={setView} />
+                </div>
+              </div>
+              <div className="mt-4">
+                {filtered.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-muted-foreground">
+                    No books here yet.
+                  </p>
+                ) : view === "spine" ? (
+                  <SpineShelf
+                    books={visible}
+                    onSelect={onBookTap}
+                    selectable={selectMode}
+                    selectedIds={checked}
+                  />
+                ) : view === "grid" ? (
+                  <GridShelf
+                    books={visible}
+                    onSelect={onBookTap}
+                    selectable={selectMode}
+                    selectedIds={checked}
+                  />
+                ) : view === "list" ? (
+                  <ListShelf
+                    books={visible}
+                    onSelect={onBookTap}
+                    selectable={selectMode}
+                    selectedIds={checked}
+                  />
+                ) : (
+                  <CompactShelf
+                    books={visible}
+                    onSelect={onBookTap}
+                    selectable={selectMode}
+                    selectedIds={checked}
+                  />
+                )}
+                {hasMore ? (
+                  <div ref={sentinel} aria-hidden className="h-10" />
+                ) : null}
+              </div>
+            </section>
+          </>
+        )}
 
-          <button
-            type="button"
-            onClick={() => void fetchChecked()}
-            disabled={checked.size === 0 || fetching}
-            aria-label="Auto-fetch metadata and covers for selected books"
-            className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold disabled:opacity-40"
-          >
-            <Sparkles className={cn("size-3.5", fetching && "animate-pulse")} />
-            Fetch
-          </button>
-          <button
-            type="button"
-            onClick={() => void collectChecked()}
-            disabled={checked.size === 0}
-            aria-label="Add selected books to a collection"
-            className="flex items-center gap-1.5 rounded-full border border-gold/30 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold/90 disabled:opacity-40"
-          >
-            <FolderPlus className="size-3.5" />
-            Shelf
-          </button>
-          <button
-            type="button"
-            onClick={() => void deleteChecked()}
-            disabled={checked.size === 0 || remove.isPending}
-            className="flex items-center gap-1.5 rounded-full border border-destructive/50 bg-destructive/15 px-3.5 py-1.5 text-[11px] uppercase tracking-[0.12em] text-destructive disabled:opacity-40"
-          >
-            <Trash2 className="size-3.5" />
-            Delete
-          </button>
-        </div>
-      ) : (
-        <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 -translate-x-1/2">
-          <ImportButton />
-        </div>
-      )}
+        {selectMode ? (
+          <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 flex w-[min(92vw,32rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-gold/30 bg-card/95 px-3 py-2 shadow-lux backdrop-blur">
+            <span className="pl-1 text-xs text-muted-foreground">
+              <span className="text-gold">{checked.size}</span> selected
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setChecked((prev) =>
+                  prev.size === filtered.length
+                    ? new Set()
+                    : new Set(filtered.map((b) => b.id)),
+                )
+              }
+              className="ml-auto rounded-full border border-gold/30 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold/90"
+            >
+              {checked.size === filtered.length ? "None" : "All"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void recountChecked()}
+              disabled={checked.size === 0 || recounting}
+              aria-label="Recalculate page count for selected books"
+              className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold disabled:opacity-40"
+            >
+              <RefreshCw
+                className={cn("size-3.5", recounting && "animate-spin")}
+              />
+              Pages
+            </button>
 
-      {current ? (
-        <BookDetails book={current} onClose={() => setSelected(null)} />
-      ) : null}
-      <Onboarding />
-    </main>
+            <button
+              type="button"
+              onClick={() => void fetchChecked()}
+              disabled={checked.size === 0 || fetching}
+              aria-label="Auto-fetch metadata and covers for selected books"
+              className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold disabled:opacity-40"
+            >
+              <Sparkles
+                className={cn("size-3.5", fetching && "animate-pulse")}
+              />
+              Fetch
+            </button>
+            <button
+              type="button"
+              onClick={() => void collectChecked()}
+              disabled={checked.size === 0}
+              aria-label="Add selected books to a collection"
+              className="flex items-center gap-1.5 rounded-full border border-gold/30 px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-gold/90 disabled:opacity-40"
+            >
+              <FolderPlus className="size-3.5" />
+              Shelf
+            </button>
+            <button
+              type="button"
+              onClick={() => void deleteChecked()}
+              disabled={checked.size === 0 || remove.isPending}
+              className="flex items-center gap-1.5 rounded-full border border-destructive/50 bg-destructive/15 px-3.5 py-1.5 text-[11px] uppercase tracking-[0.12em] text-destructive disabled:opacity-40"
+            >
+              <Trash2 className="size-3.5" />
+              Delete
+            </button>
+          </div>
+        ) : (
+          <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 -translate-x-1/2">
+            <ImportButton />
+          </div>
+        )}
+
+        {current ? (
+          <BookDetails book={current} onClose={() => setSelected(null)} />
+        ) : null}
+        <Onboarding />
+      </main>
+    </MissingFilesContext.Provider>
   );
 }

@@ -1,4 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
+import { BookBadge } from "@/components/BookBadge";
 import { BookSpine } from "@/components/BookSpine";
 import { CoverImage } from "@/components/CoverImage";
 import { StarRating } from "@/components/StarRating";
@@ -78,7 +80,7 @@ export function GridShelf({
           key={book.id}
           type="button"
           onClick={() => onSelect(book)}
-          className="group relative text-left"
+          className="group relative text-left [contain-intrinsic-size:auto_260px] [content-visibility:auto]"
         >
           <div
             className={cn(
@@ -95,6 +97,7 @@ export function GridShelf({
               <SelectMark selected={selectedIds?.has(book.id) ?? false} />
             </span>
           ) : null}
+          <BookBadge book={book} className="absolute right-1.5 top-1.5" />
           <p className="mt-2 line-clamp-2 font-display text-sm leading-tight text-ivory">
             {book.title}
           </p>
@@ -116,7 +119,10 @@ export function ListShelf({
   return (
     <ul className="divide-y divide-border/60">
       {books.map((book) => (
-        <li key={book.id}>
+        <li
+          key={book.id}
+          className="[contain-intrinsic-size:auto_88px] [content-visibility:auto]"
+        >
           <button
             type="button"
             onClick={() => onSelect(book)}
@@ -132,8 +138,9 @@ export function ListShelf({
               <p className="truncate font-display text-base text-ivory">
                 {book.title}
               </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {book.author}
+              <p className="flex items-center gap-2 truncate text-xs text-muted-foreground">
+                <span className="truncate">{book.author}</span>
+                <BookBadge book={book} className="shrink-0" />
               </p>
               {/* Read-only: the whole row is already a button, so no nested controls. */}
               {book.rating ? (
@@ -217,4 +224,41 @@ export function ViewSwitcher({
       ))}
     </div>
   );
+}
+
+/**
+ * Render a long list a page at a time: the first `step` items at once, then
+ * more whenever the sentinel scrolls near the viewport. Keeps big libraries
+ * fast on older phones without a virtualization library.
+ */
+export function useIncremental<T>(items: T[], step = 60) {
+  const [count, setCount] = useState(step);
+  const sentinel = useRef<HTMLDivElement | null>(null);
+
+  // Start over when the list itself changes (new shelf, search, sort).
+  useEffect(() => setCount(step), [items, step]);
+
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || count >= items.length) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setCount(items.length);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting))
+          setCount((c) => Math.min(items.length, c + step));
+      },
+      { rootMargin: "800px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [count, items.length, step]);
+
+  return {
+    visible: count >= items.length ? items : items.slice(0, count),
+    hasMore: count < items.length,
+    sentinel,
+  };
 }

@@ -5,6 +5,7 @@ import {
   deleteBook,
   getCover,
   listBooks,
+  listFileIds,
   updateBook,
   type BookMeta,
 } from "@/lib/db";
@@ -17,6 +18,18 @@ export function useBooks() {
     queryFn: listBooks,
     enabled: isClient,
     initialData: [] as BookMeta[],
+  });
+}
+
+/**
+ * Ids of books whose file is on this device. Lives under the "books" key so
+ * every library refresh (import, delete, sync) refreshes it too.
+ */
+export function useFileIds() {
+  return useQuery({
+    queryKey: ["books", "fileIds"],
+    queryFn: async () => new Set(await listFileIds()),
+    enabled: isClient,
   });
 }
 

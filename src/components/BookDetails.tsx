@@ -1,4 +1,8 @@
-import { useState } from "react";
+import {
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   BookOpen,
@@ -6,18 +10,25 @@ import {
   Heart,
   Layers,
   Pencil,
+  Share2,
   Target,
   Trash2,
   Type,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { BookBadge } from "@/components/BookBadge";
 import { CoverImage } from "@/components/CoverImage";
 import { MetadataDialog } from "@/components/MetadataDialog";
 import { StarRating } from "@/components/StarRating";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useBookMutations } from "@/hooks/useLibrary";
+import { useAnnotations, useBookMutations } from "@/hooks/useLibrary";
+import {
+  buildNotesMarkdown,
+  notesFileName,
+  shareOrDownload,
+} from "@/lib/export-notes";
 import type { BookMeta, ReadingStatus } from "@/lib/db";
 import {
   bookGoalStatus,
@@ -58,6 +69,36 @@ export function BookDetails({
   const [logPages, setLogPages] = useState("");
   const [logMinutes, setLogMinutes] = useState("");
   const [logDate, setLogDate] = useState(toDateInput(Date.now()));
+  const { data: allNotes } = useAnnotations();
+  const notes = allNotes.filter((a) => a.bookId === book.id);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ startY: number; dy: number } | null>(null);
+
+  // Drag the handle down to dismiss, like a native sheet.
+  const onDragStart = (e: ReactPointerEvent) => {
+    drag.current = { startY: e.clientY, dy: 0 };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onDragMove = (e: ReactPointerEvent) => {
+    if (!drag.current || !sheetRef.current) return;
+    drag.current.dy = Math.max(0, e.clientY - drag.current.startY);
+    sheetRef.current.style.transform = `translateY(${drag.current.dy}px)`;
+    sheetRef.current.style.transition = "none";
+  };
+  const onDragEnd = () => {
+    const dy = drag.current?.dy ?? 0;
+    drag.current = null;
+    const el = sheetRef.current;
+    if (!el) return;
+    el.style.transition = "transform 200ms ease-out";
+    if (dy > 110) {
+      el.style.transform = "translateY(100%)";
+      window.setTimeout(onClose, 180);
+    } else {
+      el.style.transform = "";
+    }
+  };
+
   const goal = bookGoalStatus(book);
   const minutesLeft = estimateMinutesLeft(book);
   const timeLeftText =
@@ -125,8 +166,31 @@ export function BookDetails({
         onClick={onClose}
         className="absolute inset-0 z-0 bg-scrim backdrop-blur-sm"
       />
-      <div className="animate-rise relative z-10 max-h-[88svh] w-full overflow-y-auto rounded-t-3xl border-t border-gold/25 bg-card px-safe pb-safe pt-4 shadow-lux sm:max-w-md sm:rounded-3xl sm:pb-6">
-        <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-gold/30" />
+      <div
+        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Details for ${book.title}`}
+        className="animate-rise relative z-10 max-h-[88svh] w-full overflow-y-auto overflow-x-hidden rounded-t-3xl border-t border-gold/25 bg-card px-safe pb-safe pt-4 shadow-lux sm:max-w-md sm:rounded-3xl sm:pb-6"
+      >
+        {/* Blurred cover wash behind the top of the sheet. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-64 overflow-hidden opacity-30"
+        >
+          <CoverImage book={book} className="scale-125 blur-2xl" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-card/70 to-card" />
+        </div>
+        <div
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          onPointerCancel={onDragEnd}
+          className="relative -mt-2 mb-2 flex cursor-grab touch-none justify-center py-2"
+          aria-hidden
+        >
+          <div className="h-1 w-12 rounded-full bg-gold/40" />
+        </div>
         <button
           type="button"
           onClick={onClose}
@@ -136,7 +200,7 @@ export function BookDetails({
           <X className="size-5" />
         </button>
 
-        <div className="flex gap-4">
+        <div className="relative flex gap-4">
           <div className="h-[168px] w-[112px] shrink-0 overflow-hidden rounded-md hairline-gold shadow-lux">
             <CoverImage book={book} />
           </div>
@@ -152,6 +216,7 @@ export function BookDetails({
             <p className="mt-1 text-sm text-gold/90">
               {book.author || "Unknown author"}
             </p>
+            <BookBadge book={book} className="mt-1.5" />
             {book.series ? (
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {book.series}
@@ -169,9 +234,9 @@ export function BookDetails({
           </div>
         </div>
 
-        <div className="mt-4 flex gap-2">
+        <div className="relative mt-5 flex gap-2">
           <Button
-            className="flex-1 bg-gradient-gold text-primary-foreground"
+            className="h-12 flex-1 bg-gradient-gold text-base text-primary-foreground shadow-lux"
             onClick={() => {
               void navigate({
                 to: "/read/$bookId",
@@ -188,7 +253,7 @@ export function BookDetails({
             variant="outline"
             aria-label="Toggle favorite"
             className={cn(
-              "border-gold/30",
+              "h-12 border-gold/30",
               book.favorite && "bg-gold/15 text-gold",
             )}
             onClick={() =>
@@ -200,11 +265,28 @@ export function BookDetails({
           <Button
             variant="outline"
             aria-label="Edit metadata"
-            className="border-gold/30"
+            className="h-12 border-gold/30"
             onClick={() => setEditing(true)}
           >
             <Pencil className="size-4" />
           </Button>
+          {notes.length > 0 ? (
+            <Button
+              variant="outline"
+              aria-label={`Export ${notes.length} highlights and notes`}
+              title="Export highlights & notes"
+              className="h-12 border-gold/30"
+              onClick={async () => {
+                const how = await shareOrDownload(
+                  buildNotesMarkdown([book], notes, { bookId: book.id }),
+                  notesFileName(book),
+                );
+                if (how === "downloaded") toast.success("Notes exported");
+              }}
+            >
+              <Share2 className="size-4" />
+            </Button>
+          ) : null}
         </div>
 
         <div className="mt-4 flex gap-2">

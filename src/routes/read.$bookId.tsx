@@ -264,7 +264,9 @@ function ReaderPage() {
       .then(clearLastRead)
       .then(() => {
         // Share the new position with other devices, if sync is set up.
-        void import("@/lib/sync").then((m) => m.autoSync());
+        void import("@/lib/sync")
+          .then((m) => m.autoSync())
+          .then(() => qc.invalidateQueries({ queryKey: ["syncStatus"] }));
         return navigate({ to: "/" });
       });
   };

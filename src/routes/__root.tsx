@@ -171,6 +171,7 @@ function RootComponent() {
       .then((r) => {
         if (r && r.positions + r.added + r.removed + r.annotations > 0)
           void queryClient.invalidateQueries();
+        else void queryClient.invalidateQueries({ queryKey: ["syncStatus"] });
       });
   }, [queryClient]);
 
