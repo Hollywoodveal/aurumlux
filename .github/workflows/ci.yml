@@ -42,7 +42,7 @@ jobs:
     name: Browser smoke test
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
@@ -61,6 +61,10 @@ jobs:
           npx playwright install --with-deps chromium
       - timeout-minutes: 5
         run: node tests/e2e/smoke.mjs dist/client /tmp/pw/node_modules/playwright "$PWD/node_modules/jszip"
+      - name: Cover regression test
+        if: success() || failure()
+        timeout-minutes: 5
+        run: node tests/e2e/covers.mjs dist/client /tmp/pw/node_modules/playwright "$PWD/node_modules/jszip" chromium
       - uses: actions/upload-artifact@v5
         if: always()
         with:

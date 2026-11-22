@@ -1,3 +1,4 @@
+import { coverBlob, findEpubCover, mimeForPath } from "./epub-cover";
 import { fetchExternal, friendlyHttpError } from "./net";
 import type JSZip from "jszip";
 import {
@@ -251,38 +252,11 @@ async function parseEpub(file: File, book: BookMeta) {
       : Math.max(hrefs.length * 12, Math.round(file.size / 2200));
   }
 
-  // cover
-  let coverHref = "";
-  const metaCover = Array.from(opf.getElementsByTagName("meta")).find(
-    (m) => m.getAttribute("name") === "cover",
-  );
-  const items = Array.from(opf.getElementsByTagName("item"));
-  const byId = (id: string) => items.find((i) => i.getAttribute("id") === id);
-  if (metaCover)
-    coverHref =
-      byId(metaCover.getAttribute("content") ?? "")?.getAttribute("href") ?? "";
-  if (!coverHref) {
-    const props = items.find((i) =>
-      (i.getAttribute("properties") ?? "").includes("cover-image"),
-    );
-    coverHref = props?.getAttribute("href") ?? "";
-  }
-  if (!coverHref) {
-    const guess = items.find(
-      (i) =>
-        (i.getAttribute("media-type") ?? "").startsWith("image/") &&
-        /cover/i.test(i.getAttribute("href") ?? ""),
-    );
-    coverHref = guess?.getAttribute("href") ?? "";
-  }
-  if (coverHref) {
-    const path = decodeURIComponent(dir + coverHref).replace(/^\.\//, "");
-    const entry = zip.file(path) ?? zip.file(coverHref);
-    if (entry) {
-      const blob = await entry.async("blob");
-      await putCover(book.id, blob);
-      book.hasCover = true;
-    }
+  // cover (see epub-cover.ts for the ways publishers mark it)
+  const coverHit = await findEpubCover(zip, opf, dir);
+  if (coverHit) {
+    await putCover(book.id, await coverBlob(coverHit));
+    book.hasCover = true;
   }
 }
 
@@ -326,7 +300,13 @@ async function parseComicArchive(file: File, book: BookMeta) {
   try {
     const zip = await (await loadJSZip()).loadAsync(file);
     const entries = Object.values(zip.files)
-      .filter((f) => !f.dir && /\.(jpe?g|png|gif|webp)$/i.test(f.name))
+      .filter(
+        (f) =>
+          !f.dir &&
+          /\.(jpe?g|png|gif|webp)$/i.test(f.name) &&
+          // macOS adds "__MACOSX/._page.jpg" resource files that aren't images.
+          !/(^|\/)(__MACOSX\/|\._)/.test(f.name),
+      )
       .sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { numeric: true }),
       );
@@ -334,8 +314,12 @@ async function parseComicArchive(file: File, book: BookMeta) {
     book.pageCount = entries.length;
     const first = entries[0];
     if (first) {
-      const blob = await first.async("blob");
-      await putCover(book.id, blob);
+      await putCover(
+        book.id,
+        new Blob([await first.async("arraybuffer")], {
+          type: mimeForPath(first.name),
+        }),
+      );
       book.hasCover = true;
     }
   } catch {
@@ -907,7 +891,10 @@ export async function recountPages(book: BookMeta): Promise<number | null> {
     try {
       const zip = await (await loadJSZip()).loadAsync(file);
       pages = Object.values(zip.files).filter(
-        (f) => !f.dir && /\.(jpe?g|png|gif|webp)$/i.test(f.name),
+        (f) =>
+          !f.dir &&
+          /\.(jpe?g|png|gif|webp)$/i.test(f.name) &&
+          !/(^|\/)(__MACOSX\/|\._)/.test(f.name),
       ).length;
     } catch {
       pages = Math.round(file.size / 2200);
@@ -923,6 +910,40 @@ export async function recountPages(book: BookMeta): Promise<number | null> {
 }
 
 const LINK_EXT = /\.(epub|pdf|cbz|txt)(\?|#|$)/i;
+
+/**
+ * Look again inside stored book files for covers that weren't found at import
+ * (older imports only recognised the simplest cover markings). Local only.
+ * Returns how many books gained a cover.
+ */
+export async function restoreMissingCovers(
+  onProgress?: (done: number, total: number) => void,
+): Promise<number> {
+  const missing = (await listBooks()).filter((b) => !b.hasCover);
+  let found = 0;
+  for (const [i, book] of missing.entries()) {
+    onProgress?.(i, missing.length);
+    const file = await getFile(book.id);
+    if (!file) continue;
+    const probe = { ...emptyBook(), id: book.id, format: book.format };
+    try {
+      await parseInto(
+        file instanceof File
+          ? file
+          : new File([file], `book.${book.format}`, { type: file.type }),
+        probe,
+      );
+    } catch {
+      continue;
+    }
+    if (probe.hasCover) {
+      await updateBook(book.id, { hasCover: true });
+      found += 1;
+    }
+  }
+  onProgress?.(missing.length, missing.length);
+  return found;
+}
 
 /** File extension for a book MIME type, or null when it isn't one Aurum reads. */
 export function extensionForType(contentType: string): string | null {

@@ -74,7 +74,12 @@ export function CbzReader({
         const JSZip = (await import("jszip")).default;
         const zip = await JSZip.loadAsync(blob);
         const entries = Object.values(zip.files)
-          .filter((f: any) => !f.dir && /\.(jpe?g|png|gif|webp)$/i.test(f.name))
+          .filter(
+            (f: any) =>
+              !f.dir &&
+              /\.(jpe?g|png|gif|webp)$/i.test(f.name) &&
+              !/(^|\/)(__MACOSX\/|\._)/.test(f.name),
+          )
           .sort((a: any, b: any) =>
             a.name.localeCompare(b.name, undefined, { numeric: true }),
           );
