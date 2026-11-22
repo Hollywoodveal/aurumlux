@@ -1,6 +1,19 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { BarChart3, Library, NotebookPen, Settings } from "lucide-react";
+import { useHydrated } from "@/hooks/useHydrated";
 import { cn } from "@/lib/utils";
+
+/**
+ * Current path. The router's value can lag on a direct load of a deep link
+ * (the app shell is prerendered at "/"), so after hydration read the address
+ * bar; the router value is still used so this re-renders on navigation.
+ */
+function useCurrentPath() {
+  const routerPath = useLocation({ select: (l) => l.pathname });
+  const hydrated = useHydrated();
+  if (!hydrated) return null;
+  return window.location.pathname || routerPath;
+}
 
 const TABS = [
   { to: "/", label: "Library", icon: Library },
@@ -19,7 +32,7 @@ export const TAB_BAR_SPACE = "calc(4.25rem + env(safe-area-inset-bottom, 0px))";
  * to the active tab. Hidden in the reader.
  */
 export function BottomNav() {
-  const pathname = useLocation({ select: (l) => l.pathname });
+  const pathname = useCurrentPath();
   const active = TABS.findIndex((t) => t.to === pathname);
   if (active < 0) return null;
 
@@ -65,7 +78,7 @@ export function BottomNav() {
 
 /** Empty space at the end of a page so the tab bar never covers content. */
 export function TabBarSpacer() {
-  const pathname = useLocation({ select: (l) => l.pathname });
-  if (!TAB_ROUTES.includes(pathname)) return null;
+  const pathname = useCurrentPath();
+  if (!pathname || !TAB_ROUTES.includes(pathname)) return null;
   return <div aria-hidden style={{ height: TAB_BAR_SPACE }} />;
 }

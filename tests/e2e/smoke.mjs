@@ -319,12 +319,9 @@ await step("imports and renders an EPUB; its script does not run", async () => {
   const frame = page.frameLocator("iframe").first();
   await frame.locator("#marker").waitFor({ timeout: 15000 });
   await page.screenshot({ path: `${shots}/reader.png` });
-  const tabBars = await page.getByRole("navigation", { name: "Main" }).count();
-  if (tabBars > 0)
-    console.log("  note: tab bar is in the DOM on the reader route");
   expect(
-    !(await page.getByRole("link", { name: "Stats" }).isVisible()),
-    "tab bar is visible over the reader",
+    (await page.getByRole("navigation", { name: "Main" }).count()) === 0,
+    "tab bar is rendered on the reader route",
   );
   expect(
     (await frame.locator("#marker").innerText()).includes("Ishmael"),
