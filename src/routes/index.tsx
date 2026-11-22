@@ -80,6 +80,12 @@ export const Route = createFileRoute("/")({
   component: LibraryPage,
 });
 
+/**
+ * Shared empty result. A fresh `[]` default on every render would make the
+ * filtered list look new each time, which reset the incremental shelf.
+ */
+const NO_TEXT_HITS: Awaited<ReturnType<typeof searchText>> = [];
+
 type SortKey =
   "title" | "author" | "series" | "recent" | "progress" | "rating" | "pages";
 type ShelfKey =
@@ -208,7 +214,7 @@ function LibraryPage() {
   }, [books]);
 
   const trimmed = query.trim();
-  const { data: textHits = [] } = useQuery({
+  const { data: textHits = NO_TEXT_HITS } = useQuery({
     queryKey: ["textsearch", trimmed],
     queryFn: () => searchText(trimmed),
     enabled: typeof window !== "undefined" && trimmed.length >= 2,

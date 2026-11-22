@@ -492,6 +492,44 @@ await step("tab bar navigates; the year-in-review story plays", async () => {
   await page.screenshot({ path: `${shots}/notes-empty.png` });
 });
 
+await step(
+  "big library: shelves stay put when scrolled to the bottom",
+  async () => {
+    await page.goto(BASE);
+    await page.waitForLoadState("networkidle");
+    const files = Array.from({ length: 70 }, (_, i) => ({
+      name: `Bulk ${String(i + 1).padStart(2, "0")}.txt`,
+      mimeType: "text/plain",
+      buffer: Buffer.from(
+        `Bulk book ${i + 1}\n\n${"A line of text. ".repeat(40)}`,
+      ),
+    }));
+    await page
+      .locator('input[type="file"][accept*=".epub"]')
+      .first()
+      .setInputFiles(files);
+    const spines = page.locator('button[aria-label^="Bulk "]');
+    let count = 0;
+    for (let i = 0; i < 80 && count < 70; i += 1) {
+      await page.mouse.wheel(0, 4000);
+      await page.waitForTimeout(400);
+      count = await spines.count();
+    }
+    expect(count === 70, `only ${count} of 70 imported books rendered`);
+    // Sit at the bottom; before the fix the last shelf kept vanishing.
+    const samples = [];
+    for (let i = 0; i < 8; i += 1) {
+      await page.mouse.wheel(0, 4000);
+      await page.waitForTimeout(250);
+      samples.push(await spines.count());
+    }
+    expect(
+      samples.every((n) => n === 70),
+      `shelves flickered at the bottom: ${samples.join(", ")}`,
+    );
+  },
+);
+
 await step("no CSP violations or page errors overall", async () => {
   const appProblems = problems.filter((p) => !p.includes("blob:"));
   expect(appProblems.length === 0, appProblems.join("\n"));
