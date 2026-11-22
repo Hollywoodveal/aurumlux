@@ -734,8 +734,15 @@ Respect user ownership
 
 Network use is limited to features the reader explicitly enables or taps: optional
 online metadata lookups at import (off by default; queries Google Books and Open
-Library), manual metadata refresh, word definitions, and importing a book from a
-web link. There is no background tracking and no analytics.
+Library), manual metadata refresh, word definitions, importing a book from a web
+link or an OPDS catalog, and optional sync to the reader's own WebDAV storage (off
+by default; end-to-end encrypted with their passphrase). There is no background
+tracking and no analytics.
+
+When a site doesn't allow direct downloads from web apps (no CORS headers), the
+request is retried through Aurum's own fetch relay, a Cloudflare Pages Function at
+`/api/fetch` (`functions/api/fetch.ts`). It only accepts requests from Aurum's own
+pages, only carries book, catalog, image and sync-file content, and stores nothing.
 
 ---
 
@@ -785,34 +792,41 @@ You need [Bun](https://bun.sh).
 git clone https://github.com/Hollywoodveal/aurumlux.git
 cd aurumlux
 bun install
-bun run dev      # http://localhost:8080
+bun run dev        # http://localhost:8080
 ```
 
 ```sh
-bun run build    # production build into .output/
-bun run lint     # eslint
-npx tsc --noEmit # typecheck
+bun run lint       # eslint + prettier
+bun run typecheck  # tsc --noEmit
+bun test           # unit tests in tests/
+bun run build      # static site + service worker + CSP into dist/client
 ```
+
+The fetch relay doesn't run under `bun run dev`, so OPDS catalogs and links from
+sites without CORS only work in a deployed build (or `wrangler pages dev dist/client`).
 
 ## Deployment
 
-The app is deployed to Cloudflare Pages at https://aurumlux.pages.dev
-(Pages project `aurumlux`). It builds as a static SPA — the app is fully
-client-side (all data lives in IndexedDB), so there is no server to run.
-
-```sh
-bun run build:pages
-```
-
-Then deploy the `dist/client` directory with the Cloudflare Pages direct-upload
-API (the `cloudflare-pages` skill's `pages_deploy.py` handles this; no
-Wrangler login needed). The old Workers URL
+The app is a static SPA on Cloudflare Pages at https://aurumlux.pages.dev (Pages
+project `aurumlux`), plus one Pages Function, the fetch relay. The old Workers URL
 (https://aurumlux.daiyveal.workers.dev) 301-redirects to the Pages site, so
 existing bookmarks and installed home-screen icons keep working.
 
-Pushing to `main` alone does not ship — there is no working CI deploy, so
-treat the Workers Builds GitHub integration as informational only.
+**Automatic:** `.github/workflows/ci.yml` runs lint, typecheck, tests and the build
+on every pull request and push. On a push to `main` it also deploys, once these
+repository secrets are set (Settings → Secrets and variables → Actions):
 
-Cache rules live in `public/_headers`: `sw.js` and the Workbox runtime are always
-revalidated so installed users pick up new builds, hashed files under `/assets/`
-are cached immutably for a year, and the web manifest is cached for an hour.
+- `CLOUDFLARE_API_TOKEN`: an API token with the *Cloudflare Pages: Edit* permission
+- `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID
+
+Without them the deploy step is skipped with a warning.
+
+**Manual:** `bun run deploy` (builds, then `wrangler pages deploy`, which also
+uploads `functions/`). Deploy with Wrangler rather than the bare direct-upload
+API, which doesn't include Pages Functions.
+
+The build step `scripts/pages-postbuild.mjs` writes `index.html`, generates the
+service worker, and appends a Content-Security-Policy to `_headers` that allows
+the app shell's inline scripts by hash only. Other cache rules live in
+`public/_headers`: `sw.js` and the Workbox runtime are always revalidated so
+installed users pick up new builds, and the web manifest is cached for an hour.

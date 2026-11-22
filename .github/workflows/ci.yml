@@ -20,12 +20,6 @@ jobs:
         with:
           bun-version: 1.3.x
       - run: bun install --frozen-lockfile
-      - name: TEMP prettier diff
-        continue-on-error: true
-        run: |
-          ./node_modules/.bin/prettier --write "src/**/*.{ts,tsx}" "functions/**/*.ts" "scripts/**/*.mjs" "tests/**/*.ts" vite.config.ts eslint.config.js > /dev/null
-          git diff --no-color
-          git checkout -- .
       # Later steps still run when an earlier check fails, so one run reports
       # every problem.
       - run: bun run lint

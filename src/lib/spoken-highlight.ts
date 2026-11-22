@@ -108,16 +108,13 @@ export class SpokenHighlighter {
   paint(span: { start: number; end: number } | null): Range | null {
     const doc = this.doc;
     const win = doc?.defaultView as
-      | (Window & typeof globalThis)
-      | null
-      | undefined;
+      (Window & typeof globalThis) | null | undefined;
     const highlights = (
       win?.CSS as unknown as { highlights?: Map<string, unknown> } | undefined
     )?.highlights;
     const Ctor = (
       win as unknown as
-        | { Highlight?: new (...ranges: Range[]) => unknown }
-        | undefined
+        { Highlight?: new (...ranges: Range[]) => unknown } | undefined
     )?.Highlight;
     const range = span ? this.rangeFor(span) : null;
     if (!highlights || !Ctor) return range;
@@ -141,8 +138,7 @@ export class SpokenHighlighter {
 
   clear() {
     const win = this.doc?.defaultView as unknown as
-      | { CSS?: { highlights?: Map<string, unknown> } }
-      | undefined;
+      { CSS?: { highlights?: Map<string, unknown> } } | undefined;
     try {
       win?.CSS?.highlights?.delete("aurum-spoken");
       win?.CSS?.highlights?.delete("aurum-passage");

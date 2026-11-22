@@ -73,21 +73,9 @@ export const Route = createFileRoute("/")({
 });
 
 type SortKey =
-  | "title"
-  | "author"
-  | "series"
-  | "recent"
-  | "progress"
-  | "rating"
-  | "pages";
+  "title" | "author" | "series" | "recent" | "progress" | "rating" | "pages";
 type ShelfKey =
-  | "all"
-  | "reading"
-  | "finished"
-  | "want"
-  | "favorites"
-  | "year"
-  | "stalled";
+  "all" | "reading" | "finished" | "want" | "favorites" | "year" | "stalled";
 
 const SHELVES: { key: ShelfKey; label: string }[] = [
   { key: "all", label: "All books" },

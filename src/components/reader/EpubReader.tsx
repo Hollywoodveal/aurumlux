@@ -763,8 +763,7 @@ export function EpubReader({
   const currentDoc = useCallback((): Document | undefined => {
     const contents = renditionRef.current?.getContents?.()?.[0];
     return (contents?.document ?? contents?.content?.ownerDocument) as
-      | Document
-      | undefined;
+      Document | undefined;
   }, []);
 
   /**
