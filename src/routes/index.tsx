@@ -416,16 +416,12 @@ function LibraryPage() {
               <h1 className="font-display text-4xl leading-none text-gradient-gold">
                 Aurum <span className="sr-only">— private offline library</span>
               </h1>
-              <p className="mt-1.5 text-[9px] uppercase tracking-[0.22em] text-muted-foreground min-[420px]:text-[10px] min-[420px]:tracking-[0.28em]">
+              <p className="mt-1.5 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
                 Where every page is treasured
               </p>
             </div>
           </div>
-          <nav
-            aria-label="Primary"
-            className="flex items-center gap-1 min-[420px]:gap-1.5"
-          >
-            <SyncDot />
+          <nav aria-label="Primary" className="flex items-center gap-1.5">
             <Link
               to="/notes"
               aria-label="Highlights, bookmarks and notes"
@@ -442,11 +438,14 @@ function LibraryPage() {
           </nav>
         </header>
 
-        <StreakPill
-          books={books}
-          dailyGoal={dailyGoal}
-          recoveries={recoveries.list}
-        />
+        <div className="flex items-center gap-2">
+          <StreakPill
+            books={books}
+            dailyGoal={dailyGoal}
+            recoveries={recoveries.list}
+          />
+          <SyncDot className="mt-4" />
+        </div>
 
         {books.length > 0 ? <StorageSafetyCard /> : null}
 

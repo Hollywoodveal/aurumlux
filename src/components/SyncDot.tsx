@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * Gold dot: up to date. Red dot: the last sync failed (tap to fix).
  * Tapping when healthy syncs now.
  */
-export function SyncDot() {
+export function SyncDot({ className }: { className?: string }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -58,7 +58,7 @@ export function SyncDot() {
       onClick={() => void onTap()}
       aria-label={label}
       title={label}
-      className="icon-btn relative"
+      className={cn("icon-btn relative", className)}
     >
       <RefreshCw className={cn("size-[18px]", busy && "animate-spin")} />
       <span

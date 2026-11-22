@@ -447,7 +447,7 @@ await step("library header shows the sync status", async () => {
   await page.getByRole("button", { name: /^Synced/ }).waitFor();
   await page.screenshot({
     path: `${shots}/library-synced.png`,
-    clip: { x: 0, y: 0, width: 400, height: 140 },
+    clip: { x: 0, y: 0, width: 400, height: 200 },
   });
 });
 
