@@ -192,11 +192,12 @@ const server = createServer((req, res) => {
   res.writeHead(200, headers);
   res.end(readFileSync(file));
 });
-await new Promise((r) => server.listen(4190, r));
-const BASE = "http://localhost:4190";
+await new Promise((r) => server.listen(4190, "127.0.0.1", r));
+const BASE = "http://127.0.0.1:4190";
 mkdirSync("cover-shots", { recursive: true });
 
 const browser = await pw[engine].launch();
+console.log(`[${engine}] browser ${browser.version()}`);
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 page.setDefaultTimeout(20000);
 const logs = [];
@@ -204,6 +205,11 @@ page.on("console", (m) => {
   if (m.type() === "error" || m.type() === "warning") logs.push(m.text());
 });
 page.on("pageerror", (e) => logs.push(`pageerror: ${e.message}`));
+page.on("requestfailed", (r) =>
+  console.log(
+    `[${engine}] request failed: ${r.url()} ${r.failure()?.errorText}`,
+  ),
+);
 
 await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 60000 });
 await page.locator("h1").first().waitFor({ timeout: 60000 });
