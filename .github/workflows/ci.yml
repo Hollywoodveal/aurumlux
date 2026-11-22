@@ -38,9 +38,37 @@ jobs:
           path: dist/client
           retention-days: 7
 
+  e2e:
+    name: Browser smoke test
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist/client
+      - name: Install Playwright (outside the project, so the lockfile is untouched)
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund playwright@1
+          npx playwright install --with-deps chromium
+      - run: node tests/e2e/smoke.mjs dist/client /tmp/pw/node_modules/playwright "$PWD/node_modules/jszip"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-screenshots
+          path: e2e-screenshots
+          retention-days: 7
+
   deploy:
     name: Deploy to Cloudflare Pages
-    needs: check
+    needs: [check, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
