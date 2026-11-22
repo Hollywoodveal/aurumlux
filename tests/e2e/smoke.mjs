@@ -203,6 +203,7 @@ const context = await browser.newContext({
   viewport: { width: 400, height: 860 },
 });
 const page = await context.newPage();
+page.setDefaultTimeout(15000);
 const problems = [];
 page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
 page.on("console", (m) => {
@@ -244,19 +245,7 @@ await step("app boots under the CSP", async () => {
   await page.goto(BASE);
   await page.waitForLoadState("networkidle");
   // Skip the first-run tour.
-  await page.evaluate(
-    () =>
-      new Promise((resolve, reject) => {
-        const open = indexedDB.open("aurum");
-        open.onsuccess = () => {
-          const tx = open.result.transaction("settings", "readwrite");
-          tx.objectStore("settings").put(true, "onboardingSeen");
-          tx.oncomplete = () => resolve(null);
-          tx.onerror = () => reject(tx.error);
-        };
-        open.onerror = () => reject(open.error);
-      }),
-  );
+  await putSetting("onboardingSeen", true);
   await page.reload();
   await page.waitForLoadState("networkidle");
   const text = await page.locator("body").innerText();
@@ -264,23 +253,49 @@ await step("app boots under the CSP", async () => {
   expect(problems.length === 0, `problems on boot:\n${problems.join("\n")}`);
 });
 
-async function bookIdByTitle(title) {
+/**
+ * Read or write the app's IndexedDB once the app has created it (version 3),
+ * always closing the connection so the app is never blocked. (No eval: the
+ * page's CSP forbids it, so each operation is spelled out here.)
+ */
+function withDb(op, arg) {
   return page.evaluate(
-    (t) =>
-      new Promise((resolve) => {
+    async ({ op, arg }) => {
+      for (let i = 0; i < 100; i += 1) {
+        const dbs = (await indexedDB.databases?.()) ?? [];
+        if (dbs.some((d) => d.name === "aurum" && (d.version ?? 0) >= 3)) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      const db = await new Promise((resolve, reject) => {
         const open = indexedDB.open("aurum");
-        open.onsuccess = () => {
-          const req = open.result
-            .transaction("books")
-            .objectStore("books")
-            .getAll();
+        open.onsuccess = () => resolve(open.result);
+        open.onerror = () => reject(open.error);
+      });
+      try {
+        if (op === "putSetting") {
+          return await new Promise((resolve, reject) => {
+            const tx = db.transaction("settings", "readwrite");
+            tx.objectStore("settings").put(arg.value, arg.key);
+            tx.oncomplete = () => resolve(null);
+            tx.onerror = () => reject(tx.error);
+          });
+        }
+        return await new Promise((resolve, reject) => {
+          const req = db.transaction("books").objectStore("books").getAll();
           req.onsuccess = () =>
-            resolve(req.result.find((b) => b.title === t)?.id ?? null);
-        };
-      }),
-    title,
+            resolve(req.result.find((b) => b.title === arg)?.id ?? null);
+          req.onerror = () => reject(req.error);
+        });
+      } finally {
+        db.close();
+      }
+    },
+    { op, arg },
   );
 }
+
+const putSetting = (key, value) => withDb("putSetting", { key, value });
+const bookIdByTitle = (title) => withDb("findBook", title);
 
 await step("imports and renders an EPUB; its script does not run", async () => {
   const input = page.locator('input[type="file"][accept*=".epub"]').first();
