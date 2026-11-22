@@ -40,7 +40,10 @@ async function makeEpub(title, body) {
     "OEBPS/c1.xhtml",
     `<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>One</title></head><body>${body}</body></html>`,
   );
-  return zip.generateAsync({ type: "nodebuffer", mimeType: "application/epub+zip" });
+  return zip.generateAsync({
+    type: "nodebuffer",
+    mimeType: "application/epub+zip",
+  });
 }
 
 const evilEpub = await makeEpub(
@@ -77,13 +80,17 @@ function parseHeaders(file) {
       rules.push(current);
     } else if (current) {
       const i = line.indexOf(":");
-      current.headers[line.slice(0, i).trim().toLowerCase()] = line.slice(i + 1).trim();
+      current.headers[line.slice(0, i).trim().toLowerCase()] = line
+        .slice(i + 1)
+        .trim();
     }
   }
   return rules;
 }
 const headerRules = parseHeaders(join(root, "_headers"));
-const csp = headerRules.find((r) => r.pattern === "/*")?.headers["content-security-policy"];
+const csp = headerRules.find((r) => r.pattern === "/*")?.headers[
+  "content-security-policy"
+];
 if (!csp) throw new Error("No CSP in dist/client/_headers");
 
 const TYPES = {
@@ -108,16 +115,25 @@ function relay(req, res, target) {
   const u = new URL(target);
   if (u.host === "catalog.test") {
     if (u.pathname === "/root.xml") {
-      res.writeHead(200, { "content-type": "application/atom+xml;profile=opds-catalog", "x-final-url": target });
+      res.writeHead(200, {
+        "content-type": "application/atom+xml;profile=opds-catalog",
+        "x-final-url": target,
+      });
       return res.end(opdsFeed);
     }
     if (u.pathname === "/download/1") {
-      res.writeHead(200, { "content-type": "application/epub+zip", "x-final-url": target });
+      res.writeHead(200, {
+        "content-type": "application/epub+zip",
+        "x-final-url": target,
+      });
       return res.end(catalogEpub);
     }
   }
   if (u.host === "dav.test" && u.pathname === "/Aurum/aurum-sync.aurum") {
-    if (req.headers.authorization !== `Basic ${Buffer.from("reader:secret").toString("base64")}`) {
+    if (
+      req.headers.authorization !==
+      `Basic ${Buffer.from("reader:secret").toString("base64")}`
+    ) {
       res.writeHead(401, { "x-final-url": target });
       return res.end();
     }
@@ -126,7 +142,11 @@ function relay(req, res, target) {
         res.writeHead(404, { "x-final-url": target });
         return res.end();
       }
-      res.writeHead(200, { "content-type": "application/octet-stream", etag: dav.etag, "x-final-url": target });
+      res.writeHead(200, {
+        "content-type": "application/octet-stream",
+        etag: dav.etag,
+        "x-final-url": target,
+      });
       return res.end(dav.body);
     }
     if (req.method === "PUT") {
@@ -142,7 +162,10 @@ function relay(req, res, target) {
         dav.body = Buffer.concat(chunks).toString();
         dav.puts += 1;
         dav.etag = `"v${dav.puts}"`;
-        res.writeHead(dav.puts === 1 ? 201 : 204, { etag: dav.etag, "x-final-url": target });
+        res.writeHead(dav.puts === 1 ? 201 : 204, {
+          etag: dav.etag,
+          "x-final-url": target,
+        });
         res.end();
       });
       return;
@@ -154,12 +177,18 @@ function relay(req, res, target) {
 
 const server = createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
-  if (url.pathname === "/api/fetch") return relay(req, res, url.searchParams.get("url"));
+  if (url.pathname === "/api/fetch")
+    return relay(req, res, url.searchParams.get("url"));
   let file = join(root, decodeURIComponent(url.pathname));
-  if (!existsSync(file) || statSync(file).isDirectory()) file = join(root, "index.html");
-  const headers = { "content-type": TYPES[extname(file)] ?? "application/octet-stream" };
+  if (!existsSync(file) || statSync(file).isDirectory())
+    file = join(root, "index.html");
+  const headers = {
+    "content-type": TYPES[extname(file)] ?? "application/octet-stream",
+  };
   for (const rule of headerRules) {
-    const re = new RegExp(`^${rule.pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`);
+    const re = new RegExp(
+      `^${rule.pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`,
+    );
     if (re.test(url.pathname)) Object.assign(headers, rule.headers);
   }
   res.writeHead(200, headers);
@@ -170,7 +199,9 @@ const BASE = "http://localhost:4173";
 
 // ------------------------------------------------------------- browser
 const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 400, height: 860 } });
+const context = await browser.newContext({
+  viewport: { width: 400, height: 860 },
+});
 const page = await context.newPage();
 const problems = [];
 page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
@@ -181,7 +212,9 @@ page.on("console", (m) => {
 });
 await context.addInitScript(() => {
   document.addEventListener("securitypolicyviolation", (e) =>
-    console.log(`CSP-VIOLATION ${e.violatedDirective} ${e.blockedURI} ${e.sourceFile}:${e.lineNumber}`),
+    console.log(
+      `CSP-VIOLATION ${e.violatedDirective} ${e.blockedURI} ${e.sourceFile}:${e.lineNumber}`,
+    ),
   );
 });
 
@@ -194,8 +227,12 @@ async function step(name, fn) {
     console.log(`✓ ${name}`);
   } catch (e) {
     failed = true;
-    console.log(`✗ ${name}\n  ${e.message.split("\n").slice(0, 6).join("\n  ")}`);
-    await page.screenshot({ path: `${shots}/${name.replace(/\W+/g, "-")}.png` }).catch(() => {});
+    console.log(
+      `✗ ${name}\n  ${e.message.split("\n").slice(0, 6).join("\n  ")}`,
+    );
+    await page
+      .screenshot({ path: `${shots}/${name.replace(/\W+/g, "-")}.png` })
+      .catch(() => {});
   }
 }
 
@@ -233,8 +270,12 @@ async function bookIdByTitle(title) {
       new Promise((resolve) => {
         const open = indexedDB.open("aurum");
         open.onsuccess = () => {
-          const req = open.result.transaction("books").objectStore("books").getAll();
-          req.onsuccess = () => resolve(req.result.find((b) => b.title === t)?.id ?? null);
+          const req = open.result
+            .transaction("books")
+            .objectStore("books")
+            .getAll();
+          req.onsuccess = () =>
+            resolve(req.result.find((b) => b.title === t)?.id ?? null);
         };
       }),
     title,
@@ -243,7 +284,11 @@ async function bookIdByTitle(title) {
 
 await step("imports and renders an EPUB; its script does not run", async () => {
   const input = page.locator('input[type="file"][accept*=".epub"]').first();
-  await input.setInputFiles({ name: "script-test.epub", mimeType: "application/epub+zip", buffer: evilEpub });
+  await input.setInputFiles({
+    name: "script-test.epub",
+    mimeType: "application/epub+zip",
+    buffer: evilEpub,
+  });
   let id = null;
   for (let i = 0; i < 40 && !id; i += 1) {
     await page.waitForTimeout(250);
@@ -253,14 +298,29 @@ await step("imports and renders an EPUB; its script does not run", async () => {
   await page.goto(`${BASE}/read/${id}`);
   const frame = page.frameLocator("iframe").first();
   await frame.locator("#marker").waitFor({ timeout: 15000 });
-  expect((await frame.locator("#marker").innerText()).includes("Ishmael"), "chapter text missing");
+  expect(
+    (await frame.locator("#marker").innerText()).includes("Ishmael"),
+    "chapter text missing",
+  );
   await page.waitForTimeout(1000);
-  expect((await page.title()) !== "PWNED", "EPUB script changed the page title");
-  expect((await page.evaluate(() => localStorage.getItem("pwned"))) === null, "EPUB script wrote to storage");
+  expect(
+    (await page.title()) !== "PWNED",
+    "EPUB script changed the page title",
+  );
+  expect(
+    (await page.evaluate(() => localStorage.getItem("pwned"))) === null,
+    "EPUB script wrote to storage",
+  );
   const sandbox = await page.locator("iframe").first().getAttribute("sandbox");
-  expect(sandbox !== null && !sandbox.includes("allow-scripts"), `iframe sandbox is "${sandbox}"`);
+  expect(
+    sandbox !== null && !sandbox.includes("allow-scripts"),
+    `iframe sandbox is "${sandbox}"`,
+  );
   const appProblems = problems.filter((p) => !p.includes("blob:"));
-  expect(appProblems.length === 0, `problems while reading:\n${appProblems.join("\n")}`);
+  expect(
+    appProblems.length === 0,
+    `problems while reading:\n${appProblems.join("\n")}`,
+  );
 });
 
 await step("browses an OPDS catalog and downloads a book", async () => {
@@ -277,7 +337,10 @@ await step("browses an OPDS catalog and downloads a book", async () => {
     await page.waitForTimeout(250);
     id = await bookIdByTitle("Catalog Book");
   }
-  expect(id, `catalog book was not imported (relay saw: ${relayLog.join(", ")})`);
+  expect(
+    id,
+    `catalog book was not imported (relay saw: ${relayLog.join(", ")})`,
+  );
   await page.keyboard.press("Escape");
 });
 
@@ -289,11 +352,18 @@ await step("syncs to WebDAV (first upload, then an ETag update)", async () => {
   await page.fill("#sync-pw", "secret");
   await page.fill("#sync-phrase", "correct horse battery");
   await page.getByRole("button", { name: /Turn on & sync/ }).click();
-  await page.getByText(/Synced ·/).first().waitFor({ timeout: 20000 });
-  expect(dav.puts === 1 && dav.body?.startsWith("AURUM1."), "first upload missing or not encrypted");
+  await page
+    .getByText(/Synced ·/)
+    .first()
+    .waitFor({ timeout: 20000 });
+  expect(
+    dav.puts === 1 && dav.body?.startsWith("AURUM1."),
+    "first upload missing or not encrypted",
+  );
   expect(!dav.body.includes("Script Test"), "sync file contains plaintext");
   await page.getByRole("button", { name: /Sync now/ }).click();
-  for (let i = 0; i < 40 && dav.puts < 2; i += 1) await page.waitForTimeout(250);
+  for (let i = 0; i < 40 && dav.puts < 2; i += 1)
+    await page.waitForTimeout(250);
   expect(dav.puts === 2, `second sync did not upload (puts=${dav.puts})`);
 });
 
