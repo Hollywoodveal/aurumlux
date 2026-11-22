@@ -14,7 +14,7 @@ const STEPS = [
   {
     icon: BookOpen,
     title: "Fill your shelf",
-    body: "Tap Import to add EPUB, PDF, CBZ or TXT files. Covers, titles and page counts are detected automatically.",
+    body: "Tap Add to bring in EPUB, PDF, CBZ or TXT files, or browse free catalogs in Settings → Library. Covers, titles and page counts are detected automatically.",
   },
   {
     icon: Hand,
@@ -29,7 +29,7 @@ const STEPS = [
   {
     icon: BookOpen,
     title: "In the reader",
-    body: "Tap the edges to turn pages, tap the middle for controls, and use Read aloud for lifelike narration. Your progress, goals and streaks update as you read.",
+    body: "Tap the edges to turn pages. Use the top bar for contents, search and bookmarks, and Read aloud for lifelike narration. Your progress, goals and streaks update as you read.",
   },
 ];
 

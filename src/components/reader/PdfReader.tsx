@@ -202,13 +202,20 @@ export function PdfReader({
 
   return (
     <div
+      id="main-content"
+      role="main"
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex flex-col"
       style={{
         background: THEME_BG[readerTheme],
         viewTransitionName: BOOK_OPEN,
       }}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
+      <div
+        role="toolbar"
+        aria-label="Reader controls"
+        className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm"
+      >
         <button
           onClick={onBack}
           aria-label="Back to library"
@@ -249,7 +256,7 @@ export function PdfReader({
             <Bookmark className="size-[18px]" />
           </button>
         </div>
-      </header>
+      </div>
 
       <div ref={scrollRef} className="px-safe-sm flex-1 overflow-y-auto py-3">
         {Array.from({ length: numPages }, (_, i) => i + 1).map((n) => (
@@ -268,7 +275,11 @@ export function PdfReader({
         ) : null}
       </div>
 
-      <footer className="pb-safe-sm flex flex-wrap items-center gap-2 border-t border-gold/15 bg-background/95 px-safe py-2">
+      <footer
+        role="group"
+        aria-label="Page navigation"
+        className="pb-safe-sm flex flex-wrap items-center gap-2 border-t border-gold/15 bg-background/95 px-safe py-2"
+      >
         <div className="flex w-full items-center gap-3">
           <button
             onClick={() => setPanel("notes")}

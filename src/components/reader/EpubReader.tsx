@@ -571,6 +571,8 @@ export function EpubReader({
 
       // Taps inside the book document: used to jump to the spoken word.
       rendition.on("rendered", (_section: unknown, view: any) => {
+        // Name the book frame for screen readers.
+        view?.iframe?.setAttribute?.("title", `${book.title} — book text`);
         const doc: Document | undefined =
           view?.document ?? view?.contents?.document;
         doc?.addEventListener(
@@ -1043,13 +1045,20 @@ export function EpubReader({
 
   return (
     <div
+      id="main-content"
+      role="main"
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex flex-col"
       style={{
         background: THEME_COLORS[readerTheme].bg,
         viewTransitionName: BOOK_OPEN,
       }}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
+      <div
+        role="toolbar"
+        aria-label="Reader controls"
+        className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm"
+      >
         <button
           onClick={onBack}
           aria-label="Back to library"
@@ -1091,7 +1100,7 @@ export function EpubReader({
             <Palette className="size-[18px]" />
           </button>
         </div>
-      </header>
+      </div>
 
       <div className="relative flex-1 overflow-hidden">
         <div ref={hostRef} className="h-full w-full" />
@@ -1122,7 +1131,11 @@ export function EpubReader({
         <TapZoneHint />
       </div>
 
-      <footer className="flex items-center gap-3 border-t border-gold/15 bg-background/95 px-safe py-2">
+      <footer
+        role="group"
+        aria-label="Page navigation"
+        className="flex items-center gap-3 border-t border-gold/15 bg-background/95 px-safe py-2"
+      >
         <button
           onClick={() => renditionRef.current?.prev()}
           aria-label="Previous"

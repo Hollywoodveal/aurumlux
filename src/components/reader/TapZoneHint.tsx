@@ -27,7 +27,6 @@ export function TapZoneHint() {
     <button
       type="button"
       onClick={() => setShow(false)}
-      aria-label="Dismiss page-turn hint"
       className="animate-in fade-in absolute inset-0 z-20 flex bg-black/45 text-left"
     >
       <span className="flex w-[18%] flex-col items-center justify-center gap-2 border-r border-dashed border-gold/50 bg-gold/10 text-gold">

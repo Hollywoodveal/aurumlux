@@ -46,6 +46,7 @@ export function BookBadge({
 }) {
   const status = useBookStatus(book);
   if (!status) return null;
+  if (compact && status !== "missing") return null;
   if (compact) {
     return (
       <span

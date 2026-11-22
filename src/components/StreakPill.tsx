@@ -31,7 +31,6 @@ export function StreakPill({ books, dailyGoal, recoveries }: Props) {
   return (
     <Link
       to="/stats"
-      aria-label={`Reading streak: ${label}. ${streak.todayMinutes} of ${dailyGoal} minutes today. View statistics.`}
       className={cn(
         "mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border px-4 py-2 text-xs",
         streak.atRisk
@@ -56,6 +55,7 @@ export function StreakPill({ books, dailyGoal, recoveries }: Props) {
       <span className={streak.todayHit ? "text-gold" : "text-muted-foreground"}>
         {streak.todayMinutes}/{dailyGoal} min today
       </span>
+      <span className="sr-only"> — view statistics</span>
     </Link>
   );
 }

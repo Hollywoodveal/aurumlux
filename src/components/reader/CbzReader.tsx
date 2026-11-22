@@ -194,10 +194,17 @@ export function CbzReader({
 
   return (
     <div
+      id="main-content"
+      role="main"
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex h-dvh flex-col"
       style={{ background: theme.bg, viewTransitionName: BOOK_OPEN }}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
+      <div
+        role="toolbar"
+        aria-label="Reader controls"
+        className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm"
+      >
         <button
           onClick={onBack}
           aria-label="Back to library"
@@ -228,7 +235,7 @@ export function CbzReader({
             <Bookmark className="size-[18px]" />
           </button>
         </div>
-      </header>
+      </div>
 
       <div className="relative flex-1 overflow-hidden">
         {error ? (
@@ -269,7 +276,11 @@ export function CbzReader({
         )}
       </div>
 
-      <footer className="flex items-center gap-3 border-t border-gold/15 bg-background/95 px-safe pb-safe-sm py-2">
+      <footer
+        role="group"
+        aria-label="Page navigation"
+        className="flex items-center gap-3 border-t border-gold/15 bg-background/95 px-safe pb-safe-sm py-2"
+      >
         <button
           onClick={goPrev}
           aria-label="Previous"

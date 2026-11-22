@@ -770,7 +770,12 @@ function StatsPage() {
             {stats.best} · {stats.activeDays} active days
           </p>
         </div>
-        <div className="no-scrollbar mt-3 overflow-x-auto rounded-xl border border-gold/15 bg-card p-3">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Reading activity heat map (scrolls sideways)"
+          className="no-scrollbar mt-3 overflow-x-auto rounded-xl border border-gold/15 bg-card p-3 focus-visible:outline-2 focus-visible:outline-gold"
+        >
           <div className="min-w-max">
             <div className="mb-1 flex gap-[3px] pl-[22px]">
               {monthLabels.map((m, i) => (
@@ -936,7 +941,9 @@ function StatsPage() {
                   className="font-display leading-none transition-opacity hover:opacity-70"
                   style={{
                     fontSize: `${0.95 + (n / maxAuthor) * 1.5}rem`,
-                    color: `oklch(${0.7 + (n / maxAuthor) * 0.15} ${0.05 + (n / maxAuthor) * 0.09} 87)`,
+                    // Theme-aware: blends the theme's gold (readable on every
+                    // background) with muted text, stronger for frequent authors.
+                    color: `color-mix(in oklab, var(--gold) ${Math.round(45 + (n / maxAuthor) * 55)}%, var(--color-muted-foreground))`,
                   }}
                 >
                   {a}

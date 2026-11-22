@@ -1,4 +1,4 @@
-import JSZip from "jszip";
+import type JSZip from "jszip";
 import {
   allTextIndexes,
   getFile,
@@ -8,6 +8,9 @@ import {
   type BookMeta,
   type TextIndex,
 } from "./db";
+
+/** JSZip loads on first use, so it isn't part of the library's first download. */
+const loadJSZip = () => import("jszip").then((m) => m.default);
 
 const MAX_SECTION_CHARS = 60000;
 
@@ -39,7 +42,7 @@ function chunk(
 }
 
 async function epubSections(blob: Blob): Promise<TextIndex["sections"]> {
-  const zip = await JSZip.loadAsync(blob);
+  const zip = await (await loadJSZip()).loadAsync(blob);
   const containerFile = zip.file("META-INF/container.xml");
   if (!containerFile) return [];
   const container = new DOMParser().parseFromString(
@@ -108,7 +111,7 @@ async function pdfSections(blob: Blob): Promise<TextIndex["sections"]> {
 
 async function cbzSections(blob: Blob): Promise<TextIndex["sections"]> {
   // Comics carry no extractable text; the page list still makes search useful.
-  const zip = await JSZip.loadAsync(blob);
+  const zip = await (await loadJSZip()).loadAsync(blob);
   const names = Object.keys(zip.files).filter((n) =>
     /\.(jpe?g|png|webp|gif|avif)$/i.test(n),
   );
