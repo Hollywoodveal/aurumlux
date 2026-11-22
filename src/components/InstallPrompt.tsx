@@ -66,7 +66,7 @@ export function InstallPrompt() {
   };
 
   return (
-    <div className="fixed inset-x-3 z-40 bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] mx-auto max-w-md rounded-2xl border border-gold/30 bg-card/95 p-4 shadow-lux backdrop-blur">
+    <div className="fixed inset-x-3 z-40 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] mx-auto max-w-md rounded-2xl border border-gold/30 bg-card/95 p-4 shadow-lux backdrop-blur">
       <div className="flex items-start gap-3">
         <div className="rounded-full border border-gold/30 p-2 text-gold">
           <Download className="size-4" />

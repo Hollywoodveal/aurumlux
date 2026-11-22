@@ -45,6 +45,7 @@ export function StreakPill({ books, dailyGoal, recoveries }: Props) {
           streak.current > 0 || streak.atRisk
             ? "text-gold"
             : "text-muted-foreground",
+          streak.current > 0 && "animate-flicker",
         )}
         aria-hidden
       />

@@ -643,3 +643,169 @@
     color: var(--color-gold);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Polish: foil, shelf lighting, celebrations, book-opening transition */
+
+/* A slow light sweep across gold text, like foil catching the light. Runs once. */
+@keyframes foil-sweep {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+@utility foil-shine {
+  background-image:
+    linear-gradient(
+      100deg,
+      transparent 35%,
+      oklch(1 0.03 90 / 75%) 50%,
+      transparent 65%
+    ),
+    var(--gradient-gold);
+  background-size:
+    250% 100%,
+    100% 100%;
+  background-repeat: no-repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: foil-sweep 2.4s 0.4s ease-in-out 1 both;
+}
+
+/* The same sheen across a spine while it's pressed or focused. */
+@keyframes sheen-pass {
+  from {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+  to {
+    transform: translateX(220%) skewX(-12deg);
+  }
+}
+@utility spine-sheen {
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 60%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(0.95 0.06 88 / 35%),
+      transparent
+    );
+    transform: translateX(-120%);
+    pointer-events: none;
+  }
+  &:active::after,
+  &:focus-visible::after {
+    animation: sheen-pass 0.7s ease-out;
+  }
+}
+
+/* Spines tip back a little when pressed, for depth without heavy 3D. */
+@utility spine-press {
+  transform-origin: bottom center;
+  &:active {
+    transform: perspective(500px) rotateY(-10deg) translateY(-4px);
+  }
+}
+
+/* Warm overhead light on each shelf. */
+@utility shelf-spotlight {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -12px 8% auto;
+    height: 70%;
+    background: radial-gradient(
+      ellipse at top,
+      oklch(0.85 0.12 85 / 16%),
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+/* Streak flame flicker. */
+@keyframes flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1.08, 0.95) rotate(-3deg);
+    opacity: 0.9;
+  }
+  60% {
+    transform: scale(0.96, 1.06) rotate(2deg);
+  }
+}
+@utility animate-flicker {
+  transform-origin: 50% 90%;
+  animation: flicker 1.6s ease-in-out infinite;
+}
+
+/* Gold flecks for celebrations. --dx / --dy / --r set per fleck. */
+@keyframes fleck-burst {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(0.4);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(1);
+    opacity: 0;
+  }
+}
+@utility animate-fleck {
+  animation: fleck-burst 1.6s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+
+/* Book-opening transition: the tapped cover grows into the reader. */
+::view-transition-group(book-open) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foil-shine {
+    animation: none;
+    background-position: -50% 0;
+  }
+  .animate-flicker,
+  .animate-fleck {
+    animation: none;
+  }
+  .spine-sheen::after {
+    display: none;
+  }
+  .spine-press:active {
+    transform: none;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* Cormorant's old-style figures make "1" read like a Roman "I"; prefer
+   lining figures wherever the display face shows numbers. */
+.font-display,
+h1,
+h2,
+h3 {
+  font-variant-numeric: lining-nums proportional-nums;
+}

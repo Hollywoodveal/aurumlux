@@ -15,6 +15,7 @@ import { ReadAloudBar } from "./ReadAloudBar";
 import { NoteComposer } from "./NoteComposer";
 import { resolveReaderTheme } from "@/lib/reader-prefs";
 import { useAppTheme } from "@/hooks/useAppTheme";
+import { BOOK_OPEN } from "@/lib/transitions";
 
 const THEME_BG: Record<string, string> = {
   light: "#faf8f4",
@@ -201,8 +202,11 @@ export function PdfReader({
 
   return (
     <div
-      className="fixed inset-0 flex flex-col"
-      style={{ background: THEME_BG[readerTheme] }}
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{
+        background: THEME_BG[readerTheme],
+        viewTransitionName: BOOK_OPEN,
+      }}
     >
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
         <button

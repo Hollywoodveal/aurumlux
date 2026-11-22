@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useAnnotations, useBooks } from "@/hooks/useLibrary";
 import { deleteAnnotation, type Annotation } from "@/lib/db";
 import { BrandMark } from "@/components/BrandMark";
+import { EmptyArt } from "@/components/EmptyArt";
 import {
   buildNotesMarkdown,
   notesFileName,
@@ -206,10 +207,16 @@ function NotesPage() {
       ) : null}
 
       {rows.length === 0 ? (
-        <p className="mt-10 text-center text-sm text-muted-foreground">
-          Nothing here yet. Highlights, bookmarks and notes you make while
-          reading collect on this page.
-        </p>
+        <div className="mt-10 text-center">
+          <EmptyArt
+            variant={query || annotations.length ? "search" : "notes"}
+          />
+          <p className="mx-auto mt-3 max-w-xs text-sm text-muted-foreground">
+            {annotations.length
+              ? "Nothing matches that filter."
+              : "Nothing here yet. Highlights, bookmarks and notes you make while reading collect on this page."}
+          </p>
+        </div>
       ) : (
         <ul className="mt-5 space-y-3">
           {rows.map((a) => (

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Flame, ShieldCheck, Target } from "lucide-react";
 import { RECOVERY_MIN_MINUTES, bookGoalStatus } from "@/lib/goals";
 import type { BookMeta } from "@/lib/db";
+import { celebrate } from "@/lib/celebrate";
 
 type Props = {
   book: BookMeta;
@@ -40,6 +41,16 @@ export function ReaderGoalHud({
   const minutesToday = baseMinutesToday + sessionMinutes;
   const goalPct = Math.min(100, (minutesToday / Math.max(1, dailyGoal)) * 100);
   const hit = minutesToday >= dailyGoal;
+  // Celebrate the moment today's goal is reached (not if it already was).
+  const wasHit = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (wasHit.current === false && hit && dailyGoal > 0)
+      celebrate({
+        title: "Daily goal reached",
+        subtitle: `${dailyGoal} minutes of reading today`,
+      });
+    wasHit.current = hit;
+  }, [hit, dailyGoal]);
   const breakDayDone = minutesToday >= RECOVERY_MIN_MINUTES;
 
   const goal = bookGoalStatus({ ...book, progress }, now);

@@ -320,6 +320,10 @@ await step("imports and renders an EPUB; its script does not run", async () => {
   await frame.locator("#marker").waitFor({ timeout: 15000 });
   await page.screenshot({ path: `${shots}/reader.png` });
   expect(
+    (await page.getByRole("navigation", { name: "Main" }).count()) === 0,
+    "tab bar is rendered on the reader route",
+  );
+  expect(
     (await frame.locator("#marker").innerText()).includes("Ishmael"),
     "chapter text missing",
   );
@@ -449,6 +453,43 @@ await step("library header shows the sync status", async () => {
     path: `${shots}/library-synced.png`,
     clip: { x: 0, y: 0, width: 400, height: 200 },
   });
+});
+
+await step("finishing a book celebrates", async () => {
+  await page.goto(BASE);
+  await page.waitForLoadState("networkidle");
+  const hero = page.getByRole("region", { name: "Continue reading" });
+  await hero.getByRole("button", { name: /Details for Script Test/ }).click();
+  const sheet = page.getByRole("dialog", { name: /Details for Script Test/ });
+  await sheet.getByRole("button", { name: "Finished", exact: true }).click();
+  await page.getByText("Book finished").first().waitFor();
+  await page.waitForTimeout(450);
+  await page.screenshot({ path: `${shots}/celebration.png` });
+  await page.waitForTimeout(3200);
+  await page.getByRole("button", { name: "Close details" }).click({
+    position: { x: 10, y: 10 },
+  });
+});
+
+await step("tab bar navigates; the year-in-review story plays", async () => {
+  const tabs = page.getByRole("navigation", { name: "Main" });
+  await tabs.getByRole("link", { name: "Stats" }).click();
+  await page.waitForURL(/\/stats$/);
+  await page
+    .getByRole("button", { name: "Play your year" })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${shots}/stats.png` });
+  await page.getByRole("button", { name: "Play your year" }).click();
+  const story = page.getByRole("dialog", { name: /in reading/ });
+  await story.getByText("Your year in reading").waitFor();
+  await story.getByRole("button", { name: "Next card" }).click();
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: `${shots}/year-story.png` });
+  await story.getByRole("button", { name: "Close" }).click();
+  await tabs.getByRole("link", { name: "Notes" }).click();
+  await page.waitForURL(/\/notes$/);
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${shots}/notes-empty.png` });
 });
 
 await step("no CSP violations or page errors overall", async () => {

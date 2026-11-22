@@ -25,6 +25,7 @@ import {
   withPrefDefaults,
 } from "@/lib/reader-prefs";
 import { useAppTheme } from "@/hooks/useAppTheme";
+import { BOOK_OPEN } from "@/lib/transitions";
 
 type ComicPage = { name: string; entry: any };
 
@@ -193,8 +194,8 @@ export function CbzReader({
 
   return (
     <div
-      className="fixed inset-0 flex h-dvh flex-col"
-      style={{ background: theme.bg }}
+      className="fixed inset-0 z-50 flex h-dvh flex-col"
+      style={{ background: theme.bg, viewTransitionName: BOOK_OPEN }}
     >
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
         <button
