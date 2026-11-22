@@ -1043,7 +1043,7 @@ export function EpubReader({
 
   return (
     <div
-      className="fixed inset-0 flex flex-col"
+      className="fixed inset-0 z-50 flex flex-col"
       style={{
         background: THEME_COLORS[readerTheme].bg,
         viewTransitionName: BOOK_OPEN,

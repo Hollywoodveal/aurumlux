@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { BarChart3, Library, NotebookPen, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,7 @@ export const TAB_BAR_SPACE = "calc(4.25rem + env(safe-area-inset-bottom, 0px))";
  * to the active tab. Hidden in the reader.
  */
 export function BottomNav() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = useLocation({ select: (l) => l.pathname });
   const active = TABS.findIndex((t) => t.to === pathname);
   if (active < 0) return null;
 
@@ -65,7 +65,7 @@ export function BottomNav() {
 
 /** Empty space at the end of a page so the tab bar never covers content. */
 export function TabBarSpacer() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = useLocation({ select: (l) => l.pathname });
   if (!TAB_ROUTES.includes(pathname)) return null;
   return <div aria-hidden style={{ height: TAB_BAR_SPACE }} />;
 }
