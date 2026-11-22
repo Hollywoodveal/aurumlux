@@ -1,3 +1,4 @@
+import { fetchExternal } from "./net";
 import JSZip from "jszip";
 import {
   getFile,
@@ -8,6 +9,7 @@ import {
   putFile,
   setSetting,
   uid,
+  updateBook,
   type BookFormat,
   type BookMeta,
 } from "./db";
@@ -39,9 +41,15 @@ export async function hashFile(file: Blob): Promise<string> {
  * Looks for a book already in the library with the same bytes. Falls back to a
  * title + size match for books imported before hashing existed.
  */
+/**
+ * Look for this file already on the shelf. When the match is a placeholder
+ * (a book synced from another device whose file isn't here yet), the file is
+ * stored into it and `restored` is true — the book becomes readable with its
+ * synced position, notes and history intact.
+ */
 export async function findDuplicate(
   file: File,
-): Promise<{ hash: string; existing: BookMeta | null }> {
+): Promise<{ hash: string; existing: BookMeta | null; restored: boolean }> {
   const hash = await hashFile(file);
   const books = await listBooks();
   const title = file.name
@@ -58,7 +66,38 @@ export async function findDuplicate(
         b.title.toLowerCase() === title,
     ) ??
     null;
-  return { hash, existing };
+  if (existing && !(await getFile(existing.id))) {
+    await putFile(existing.id, file);
+    let hasCover = existing.hasCover;
+    if (!hasCover) {
+      // Parse into a throwaway record just to store the embedded cover.
+      const probe = {
+        ...emptyBook(),
+        id: existing.id,
+        format: existing.format,
+      };
+      await parseInto(file, probe).catch(() => undefined);
+      hasCover = probe.hasCover;
+    }
+    await updateBook(existing.id, {
+      fileHash: hash,
+      fileSize: file.size,
+      hasCover,
+    });
+    return { hash, existing, restored: true };
+  }
+  return { hash, existing, restored: false };
+}
+
+/** Read metadata (and the embedded cover, stored under book.id) from a file. */
+async function parseInto(file: File, book: BookMeta) {
+  const format = book.format;
+  if (format === "epub") await parseEpub(file, book);
+  else if (format === "pdf") await parsePdf(file, book);
+  else if (format === "cbz" || format === "cbr")
+    await parseComicArchive(file, book);
+  else if (format === "txt") await parseTxt(file, book);
+  else book.pageCount = Math.round(file.size / 2200);
 }
 
 export function emptyBook(): BookMeta {
@@ -670,12 +709,7 @@ export async function importFile(
     .replace(/[_]+/g, " ")
     .trim();
 
-  if (format === "epub") await parseEpub(file, book);
-  else if (format === "pdf") await parsePdf(file, book);
-  else if (format === "cbz" || format === "cbr")
-    await parseComicArchive(file, book);
-  else if (format === "txt") await parseTxt(file, book);
-  else book.pageCount = Math.round(file.size / 2200);
+  await parseInto(file, book);
 
   // metadata provider fallback for missing (never locked at import) fields.
   // Only when the reader has opted in: otherwise imports stay fully offline.
@@ -887,6 +921,16 @@ export async function recountPages(book: BookMeta): Promise<number | null> {
 
 const LINK_EXT = /\.(epub|pdf|cbz|txt)(\?|#|$)/i;
 
+/** File extension for a book MIME type, or null when it isn't one Aurum reads. */
+export function extensionForType(contentType: string): string | null {
+  const t = contentType.toLowerCase();
+  if (t.includes("epub")) return "epub";
+  if (t.includes("pdf")) return "pdf";
+  if (t.includes("comicbook+zip") || t.includes("cbz")) return "cbz";
+  if (t.startsWith("text/plain")) return "txt";
+  return null;
+}
+
 /** Filename for a downloaded book, from the response headers or the URL path. */
 function nameFromResponse(url: string, response: Response): string {
   const disposition = response.headers.get("content-disposition") ?? "";
@@ -897,27 +941,31 @@ function nameFromResponse(url: string, response: Response): string {
   return decodeURIComponent(path);
 }
 
+export type UrlImportResult = {
+  added: BookMeta[];
+  duplicates: BookMeta[];
+  /** Set when the link was an OPDS catalog: open it in the catalog browser. */
+  catalogUrl?: string;
+};
+
 /**
- * Imports a book straight from a web link, including download links found in an
- * OPDS catalog feed. Returns the books that were added and any duplicates skipped.
+ * Imports a book straight from a web link. A link to an OPDS catalog isn't
+ * imported; its URL comes back as `catalogUrl` so it can be browsed instead.
  */
 export async function importFromUrl(
   rawUrl: string,
-): Promise<{ added: BookMeta[]; duplicates: BookMeta[] }> {
+  options: { authorization?: string; filename?: string } = {},
+): Promise<UrlImportResult> {
   const url = rawUrl.trim();
   if (!/^https?:\/\//i.test(url))
     throw new Error("Enter a link starting with http:// or https://");
 
-  let response: Response;
-  try {
-    response = await fetch(url);
-  } catch {
-    // fetch only rejects outright when the request never completed: the site
-    // blocked a cross-app download (the common case), the device is offline,
-    // or the address can't be reached. Say which problem this most likely is
-    // and give the workaround instead of surfacing a raw "Failed to fetch".
+  const { response, finalUrl } = await fetchExternal(url, {
+    ...(options.authorization ? { authorization: options.authorization } : {}),
+  });
+  if (response.status === 401 || response.status === 403) {
     throw new Error(
-      "That site wouldn't hand the file to Aurum. Many sites block downloads started by another app, or need you signed in first. Open the link in your browser, download the book file there, then import it from your device.",
+      "That site needs you to sign in. If it's an OPDS catalog, add it in Browse catalogs with your username and password.",
     );
   }
   if (!response.ok) {
@@ -934,35 +982,25 @@ export async function importFromUrl(
     );
   }
 
-  // OPDS / Atom catalog feed: collect the direct book download links inside it.
-  if (type.includes("xml") || type.includes("atom") || type.includes("opds")) {
-    const xml = new DOMParser().parseFromString(
-      await response.text(),
-      "application/xml",
-    );
-    const hrefs = [...xml.querySelectorAll("link")]
-      .map((link) => link.getAttribute("href") ?? "")
-      .filter((href) => LINK_EXT.test(href))
-      .map((href) => new URL(href, url).toString());
-    const unique = [...new Set(hrefs)].slice(0, 25);
-    if (unique.length === 0)
-      throw new Error("No downloadable books found in that catalog");
-    const added: BookMeta[] = [];
-    const duplicates: BookMeta[] = [];
-    for (const href of unique) {
-      try {
-        const result = await importFromUrl(href);
-        added.push(...result.added);
-        duplicates.push(...result.duplicates);
-      } catch {
-        /* skip entries that fail so the rest of the catalog still imports */
-      }
-    }
-    return { added, duplicates };
+  if (
+    type.includes("atom") ||
+    type.includes("opds") ||
+    type.includes("xml") ||
+    (type.includes("json") && !LINK_EXT.test(finalUrl))
+  ) {
+    void response.body?.cancel();
+    return { added: [], duplicates: [], catalogUrl: finalUrl };
   }
 
   const blob = await response.blob();
-  const name = nameFromResponse(url, response);
+  let name = options.filename ?? nameFromResponse(finalUrl, response);
+  // Catalog download links often have no file extension
+  // (e.g. /ebooks/1342.epub3.images); fall back to the content type.
+  if (!detectFormat(name)) {
+    const ext = extensionForType(type);
+    if (ext)
+      name = `${name.replace(/[^\w\s.-]+/g, "").trim() || "book"}.${ext}`;
+  }
   const fmt = detectFormat(name);
   if (/\.(mobi|azw3?)$/i.test(name)) {
     throw new Error(
@@ -978,7 +1016,8 @@ export async function importFromUrl(
     throw new Error("That link is not an EPUB, PDF, CBZ or TXT file");
   }
   const file = new File([blob], name, { type: blob.type });
-  const { hash, existing } = await findDuplicate(file);
+  const { hash, existing, restored } = await findDuplicate(file);
+  if (existing && restored) return { added: [existing], duplicates: [] };
   if (existing) return { added: [], duplicates: [existing] };
   return { added: [await importFile(file, hash)], duplicates: [] };
 }

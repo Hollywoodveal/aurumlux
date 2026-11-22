@@ -111,6 +111,6 @@ const csp = [
 
 appendFileSync(
   join(clientDir, "_headers"),
-  `\n/*\n  Content-Security-Policy: ${csp}\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n`,
+  `\n/*\n  Content-Security-Policy: ${csp}\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: same-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n`,
 );
 console.log(`CSP written with ${inlineHashes.length} inline script hash(es)`);

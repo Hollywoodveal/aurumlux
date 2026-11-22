@@ -1,26 +1,35 @@
 import { useState } from "react";
-import { Link2, Loader2 } from "lucide-react";
+import { Library, Link2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { OpdsBrowser } from "@/components/OpdsBrowser";
 import { importFromUrl } from "@/lib/importer";
 import { indexLibrary } from "@/lib/textindex";
 import { useBookMutations } from "@/hooks/useLibrary";
 
 /**
- * Imports a book from a direct web link, or every download link inside an
- * OPDS catalog feed. Duplicates already on the shelf are skipped.
+ * Imports a book from a direct web link. A catalog link opens the catalog
+ * browser instead. Duplicates already on the shelf are skipped.
  */
 export function ImportFromUrl() {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
+  const [catalogUrl, setCatalogUrl] = useState<string | undefined>();
   const { invalidate } = useBookMutations();
 
   const run = async () => {
     if (!url.trim() || busy) return;
     setBusy(true);
     try {
-      const { added, duplicates } = await importFromUrl(url);
+      const { added, duplicates, catalogUrl: feed } = await importFromUrl(url);
+      if (feed) {
+        setCatalogUrl(feed);
+        setBrowsing(true);
+        setUrl("");
+        return;
+      }
       invalidate();
       if (added.length > 0) {
         toast.success(
@@ -48,30 +57,47 @@ export function ImportFromUrl() {
   };
 
   return (
-    <div className="mt-3 flex gap-2">
-      <Input
-        value={url}
-        inputMode="url"
-        onChange={(e) => setUrl(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") void run();
-        }}
-        aria-label="Book or catalog link"
-        placeholder="https://…/book.epub or an OPDS catalog"
-        className="border-gold/25 bg-secondary/50 text-sm"
-      />
+    <>
+      <div className="mt-3 flex gap-2">
+        <Input
+          value={url}
+          inputMode="url"
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void run();
+          }}
+          aria-label="Book or catalog link"
+          placeholder="https://…/book.epub or an OPDS catalog"
+          className="border-gold/25 bg-secondary/50 text-sm"
+        />
+        <Button
+          onClick={() => void run()}
+          disabled={busy || !url.trim()}
+          className="shrink-0 bg-gradient-gold text-primary-foreground"
+        >
+          {busy ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Link2 className="size-4" />
+          )}
+          Fetch
+        </Button>
+      </div>
       <Button
-        onClick={() => void run()}
-        disabled={busy || !url.trim()}
-        className="shrink-0 bg-gradient-gold text-primary-foreground"
+        variant="outline"
+        onClick={() => {
+          setCatalogUrl(undefined);
+          setBrowsing(true);
+        }}
+        className="mt-2 w-full border-gold/30 text-sm"
       >
-        {busy ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Link2 className="size-4" />
-        )}
-        Fetch
+        <Library className="size-4" /> Browse book catalogs
       </Button>
-    </div>
+      <OpdsBrowser
+        open={browsing}
+        onOpenChange={setBrowsing}
+        initialUrl={catalogUrl}
+      />
+    </>
   );
 }

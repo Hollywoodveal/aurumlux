@@ -10,6 +10,7 @@ import { PdfReader } from "@/components/reader/PdfReader";
 import { CbzReader } from "@/components/reader/CbzReader";
 import { TxtReader } from "@/components/reader/TxtReader";
 import { BrandMark } from "@/components/BrandMark";
+import { ImportButton } from "@/components/ImportButton";
 import { ReaderGoalHud } from "@/components/reader/ReaderGoalHud";
 import { useDailyGoal } from "@/hooks/useSettings";
 import {
@@ -23,6 +24,7 @@ import { announce } from "@/lib/announce";
 import { clearLastRead, rememberLastRead } from "@/lib/resume";
 import {
   getBook,
+  getFile,
   getSetting,
   listAnnotations,
   listBooks,
@@ -60,6 +62,7 @@ function ReaderPage() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [prefs, setPrefs] = useState<ReaderPrefs>(DEFAULT_PREFS);
   const [loaded, setLoaded] = useState(false);
+  const [missingFile, setMissingFile] = useState(false);
   const [liveProgress, setLiveProgress] = useState(0);
   const [dayContext, setDayContext] = useState({
     baseMinutesToday: 0,
@@ -82,11 +85,13 @@ function ReaderPage() {
 
   useEffect(() => {
     (async () => {
-      const [b, a, p] = await Promise.all([
+      const [b, a, p, file] = await Promise.all([
         getBook(bookId),
         listAnnotations(bookId),
         getSetting<ReaderPrefs>("readerPrefs", DEFAULT_PREFS),
+        getFile(bookId),
       ]);
+      setMissingFile(!file);
       setBook(b ?? null);
       baseReadingTime.current = b?.readingTime ?? 0;
       setAnnotations(a);
@@ -172,7 +177,8 @@ function ReaderPage() {
   );
 
   const persist = useCallback(async () => {
-    if (!book) return;
+    // Nothing was read while the book's file was missing.
+    if (!book || missingFile) return;
     const now = Date.now();
     const activeMs = timer.current.elapsed(now);
     const today = new Date(now).setHours(0, 0, 0, 0);
@@ -217,7 +223,7 @@ function ReaderPage() {
     // Keep library/stats queries in sync so the stats page is current the moment
     // the reader is closed.
     void qc.invalidateQueries({ queryKey: ["books"] });
-  }, [book, qc]);
+  }, [book, missingFile, qc]);
 
   // Taps, keys and scrolling count as reading; hiding the app pauses the clock.
   useEffect(() => {
@@ -256,7 +262,11 @@ function ReaderPage() {
     // Leaving on purpose means the next launch should open the library, not this book.
     void persist()
       .then(clearLastRead)
-      .then(() => navigate({ to: "/" }));
+      .then(() => {
+        // Share the new position with other devices, if sync is set up.
+        void import("@/lib/sync").then((m) => m.autoSync());
+        return navigate({ to: "/" });
+      });
   };
 
   if (!loaded) {
@@ -277,6 +287,37 @@ function ReaderPage() {
         <button
           onClick={() => void navigate({ to: "/" })}
           className="text-gold underline"
+        >
+          Back to library
+        </button>
+      </div>
+    );
+  }
+
+  if (missingFile) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <BrandMark size={48} label="Aurum logo" />
+        <p className="font-display text-2xl text-ivory">{book.title}</p>
+        <p className="max-w-xs text-sm text-muted-foreground">
+          This book was synced from another device, but its file isn&apos;t on
+          this one yet. Import the same file here and it opens at your synced
+          place, with your notes.
+        </p>
+        <ImportButton
+          label="Import the book file"
+          onDone={() =>
+            void getFile(bookId).then((f) => {
+              if (f) {
+                timer.current = new ActiveTimer(Date.now());
+                setMissingFile(false);
+              }
+            })
+          }
+        />
+        <button
+          onClick={() => void navigate({ to: "/" })}
+          className="text-sm text-gold underline"
         >
           Back to library
         </button>

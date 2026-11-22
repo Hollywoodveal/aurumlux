@@ -163,6 +163,17 @@ function RootComponent() {
     registerServiceWorker();
   }, []);
 
+  // Optional WebDAV sync (off unless set up in Settings). Loaded lazily so the
+  // library screen doesn't pay for it.
+  useEffect(() => {
+    void import("@/lib/sync")
+      .then((m) => m.autoSync())
+      .then((r) => {
+        if (r && r.positions + r.added + r.removed + r.annotations > 0)
+          void queryClient.invalidateQueries();
+      });
+  }, [queryClient]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <a href="#main-content" className="skip-link">

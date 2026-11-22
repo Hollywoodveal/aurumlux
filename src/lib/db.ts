@@ -222,8 +222,29 @@ export async function updateBook(
   await tx.done;
 }
 
+/** A record that something was deleted, so sync doesn't bring it back. */
+export type Tombstone = { id: string; at: number };
+export const DELETED_BOOKS_KEY = "deletedBooks";
+export const DELETED_ANNOTATIONS_KEY = "deletedAnnotations";
+const MAX_TOMBSTONES = 2000;
+
+export async function addTombstones(key: string, ids: string[]) {
+  if (ids.length === 0) return;
+  const now = Date.now();
+  const existing = await getSetting<Tombstone[]>(key, []);
+  const fresh = new Set(ids);
+  const next = [
+    ...existing.filter((t) => !fresh.has(t.id)),
+    ...ids.map((id) => ({ id, at: now })),
+  ].slice(-MAX_TOMBSTONES);
+  await setSetting(key, next);
+}
+
 export async function deleteBook(id: string) {
   const db = await getDB();
+  const annotationIds = (await listAnnotations(id)).map((a) => a.id);
+  await addTombstones(DELETED_BOOKS_KEY, [id]);
+  await addTombstones(DELETED_ANNOTATIONS_KEY, annotationIds);
   await db.delete("books", id);
   await db.delete("files", id);
   await db.delete("covers", id);
@@ -279,6 +300,7 @@ export async function putAnnotation(a: Annotation) {
 
 export async function deleteAnnotation(id: string) {
   const db = await getDB();
+  await addTombstones(DELETED_ANNOTATIONS_KEY, [id]);
   await db.delete("annotations", id);
 }
 
