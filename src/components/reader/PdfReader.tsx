@@ -3,7 +3,13 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bookmark, ChevronLeft, Minus, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
-import { getFile, putAnnotation, uid, type Annotation, type BookMeta } from "@/lib/db";
+import {
+  getFile,
+  putAnnotation,
+  uid,
+  type Annotation,
+  type BookMeta,
+} from "@/lib/db";
 import { ReaderSettings, type ReaderPrefs } from "./EpubReader";
 import { ReadAloudBar } from "./ReadAloudBar";
 import { NoteComposer } from "./NoteComposer";
@@ -37,7 +43,11 @@ export function PdfReader({
   onPrefs: (p: ReaderPrefs) => void;
   annotations: Annotation[];
   onAnnotationsChanged: () => void;
-  onProgress: (p: { progress: number; location: string; chapter: string }) => void;
+  onProgress: (p: {
+    progress: number;
+    location: string;
+    chapter: string;
+  }) => void;
   onBack: () => void;
   /** Live daily-target control, docked into the bottom bar. */
   goalHud?: React.ReactNode;
@@ -49,9 +59,13 @@ export function PdfReader({
   const [numPages, setNumPages] = useState(0);
   const [page, setPage] = useState(Number(book.location) || 1);
   const [zoom, setZoom] = useState(1);
-  const [panel, setPanel] = useState<null | "settings" | "search" | "notes">(null);
+  const [panel, setPanel] = useState<null | "settings" | "search" | "notes">(
+    null,
+  );
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ page: number; excerpt: string }[]>([]);
+  const [results, setResults] = useState<{ page: number; excerpt: string }[]>(
+    [],
+  );
   const pageRef = useRef(page);
   /** Page narration is currently reading, so pages turn as the voice advances. */
   const narratedPage = useRef<number | null>(null);
@@ -68,7 +82,11 @@ export function PdfReader({
     if (!doc || pageNumber < 1 || pageNumber > doc.numPages) return null;
     const p = await doc.getPage(pageNumber);
     const content = await p.getTextContent();
-    const text = content.items.map((it: any) => it.str).join(" ").replace(/\s+/g, " ").trim();
+    const text = content.items
+      .map((it: any) => it.str)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
     return text || null;
   }, []);
 
@@ -93,16 +111,18 @@ export function PdfReader({
     return true;
   }, [goto]);
 
-
   useEffect(() => {
     let destroyed = false;
     (async () => {
       const blob = await getFile(book.id);
       if (!blob) return;
       const pdfjs = await import("pdfjs-dist");
-      const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+      const workerUrl = (
+        await import("pdfjs-dist/build/pdf.worker.min.mjs?url")
+      ).default;
       pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-      const doc = await pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise;
+      const doc = await pdfjs.getDocument({ data: await blob.arrayBuffer() })
+        .promise;
       if (destroyed) return;
       docRef.current = doc;
       setNumPages(doc.numPages);
@@ -133,7 +153,6 @@ export function PdfReader({
     [zoom],
   );
 
-
   async function runSearch(term: string) {
     const doc = docRef.current;
     if (!doc || term.trim().length < 3) return;
@@ -143,7 +162,11 @@ export function PdfReader({
       const content = await p.getTextContent();
       const text = content.items.map((it: any) => it.str).join(" ");
       const idx = text.toLowerCase().indexOf(term.toLowerCase());
-      if (idx >= 0) found.push({ page: i, excerpt: text.slice(Math.max(0, idx - 50), idx + 90) });
+      if (idx >= 0)
+        found.push({
+          page: i,
+          excerpt: text.slice(Math.max(0, idx - 50), idx + 90),
+        });
     }
     setResults(found);
   }
@@ -177,25 +200,48 @@ export function PdfReader({
   }, [page, numPages]);
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ background: THEME_BG[readerTheme] }}>
+    <div
+      className="fixed inset-0 flex flex-col"
+      style={{ background: THEME_BG[readerTheme] }}
+    >
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
-        <button onClick={onBack} aria-label="Back to library" className="p-2 text-gold">
+        <button
+          onClick={onBack}
+          aria-label="Back to library"
+          className="p-2 text-gold"
+        >
           <ChevronLeft className="size-5" />
         </button>
         <h1 className="min-w-0 flex-1 truncate text-center text-xs font-normal uppercase tracking-[0.14em] text-muted-foreground">
           {book.title}
         </h1>
         <div className="flex items-center gap-1 text-gold">
-          <button onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))} aria-label="Zoom out" className="p-2">
+          <button
+            onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))}
+            aria-label="Zoom out"
+            className="p-2"
+          >
             <Minus className="size-[18px]" />
           </button>
-          <button onClick={() => setZoom((z) => Math.min(3, z + 0.2))} aria-label="Zoom in" className="p-2">
+          <button
+            onClick={() => setZoom((z) => Math.min(3, z + 0.2))}
+            aria-label="Zoom in"
+            className="p-2"
+          >
             <Plus className="size-[18px]" />
           </button>
-          <button onClick={() => setPanel("search")} aria-label="Search in PDF" className="p-2">
+          <button
+            onClick={() => setPanel("search")}
+            aria-label="Search in PDF"
+            className="p-2"
+          >
             <Search className="size-[18px]" />
           </button>
-          <button onClick={() => void addBookmark()} aria-label="Add bookmark" className="p-2">
+          <button
+            onClick={() => void addBookmark()}
+            aria-label="Add bookmark"
+            className="p-2"
+          >
             <Bookmark className="size-[18px]" />
           </button>
         </div>
@@ -212,7 +258,9 @@ export function PdfReader({
           />
         ))}
         {numPages === 0 ? (
-          <p className="py-20 text-center text-sm text-muted-foreground">Opening document…</p>
+          <p className="py-20 text-center text-sm text-muted-foreground">
+            Opening document…
+          </p>
         ) : null}
       </div>
 
@@ -225,7 +273,10 @@ export function PdfReader({
             Notes ({annotations.length})
           </button>
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
-            <div className="h-full bg-gradient-gold" style={{ width: `${percent}%` }} />
+            <div
+              className="h-full bg-gradient-gold"
+              style={{ width: `${percent}%` }}
+            />
           </div>
           <span className="text-[11px] text-gold/80">
             {page}/{numPages || "?"}
@@ -243,7 +294,6 @@ export function PdfReader({
         </div>
       </footer>
 
-
       {panel === "settings" ? (
         <ReaderSettings
           prefs={prefs}
@@ -255,10 +305,16 @@ export function PdfReader({
 
       {panel === "search" || panel === "notes" ? (
         <div className="fixed inset-0 z-50 flex">
-          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-scrim" />
+          <button
+            aria-label="Close panel"
+            onClick={() => setPanel(null)}
+            className="absolute inset-0 bg-scrim"
+          />
           <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-xl capitalize text-gold">{panel}</h3>
+              <h3 className="font-display text-xl capitalize text-gold">
+                {panel}
+              </h3>
               <button onClick={() => setPanel(null)} aria-label="Close">
                 <X className="size-5 text-muted-foreground" />
               </button>
@@ -290,7 +346,8 @@ export function PdfReader({
                         }}
                         className="w-full rounded-lg border border-border/60 p-2.5 text-left text-xs text-muted-foreground"
                       >
-                        <span className="text-gold">p.{r.page}</span> {r.excerpt}
+                        <span className="text-gold">p.{r.page}</span>{" "}
+                        {r.excerpt}
                       </button>
                     </li>
                   ))}
@@ -305,25 +362,35 @@ export function PdfReader({
                   onAdded={onAnnotationsChanged}
                 />
                 <ul className="space-y-2">
-                {annotations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No bookmarks or notes yet.</p>
-                ) : null}
-                {annotations.map((a) => (
-                  <li key={a.id}>
-                    <button
-                      onClick={() => {
-                        goto(Number(a.location) || 1);
-                        setPanel(null);
-                      }}
-                      className="w-full rounded-lg border-l-2 bg-secondary/50 p-3 text-left"
-                      style={{ borderColor: a.color }}
-                    >
-                      <p className="text-[10px] uppercase tracking-widest text-gold/70">{a.label}</p>
-                      {a.text ? <p className="mt-1 text-sm">{a.text}</p> : null}
-                      {a.note ? <p className="mt-1 text-sm italic text-muted-foreground">{a.note}</p> : null}
-                    </button>
-                  </li>
-                ))}
+                  {annotations.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No bookmarks or notes yet.
+                    </p>
+                  ) : null}
+                  {annotations.map((a) => (
+                    <li key={a.id}>
+                      <button
+                        onClick={() => {
+                          goto(Number(a.location) || 1);
+                          setPanel(null);
+                        }}
+                        className="w-full rounded-lg border-l-2 bg-secondary/50 p-3 text-left"
+                        style={{ borderColor: a.color }}
+                      >
+                        <p className="text-[10px] uppercase tracking-widest text-gold/70">
+                          {a.label}
+                        </p>
+                        {a.text ? (
+                          <p className="mt-1 text-sm">{a.text}</p>
+                        ) : null}
+                        {a.note ? (
+                          <p className="mt-1 text-sm italic text-muted-foreground">
+                            {a.note}
+                          </p>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
@@ -371,8 +438,16 @@ function PdfPage({
   }, [rendered, pageNumber]);
 
   return (
-    <div ref={ref} data-page={pageNumber} className="mx-auto mb-3 flex min-h-[40vh] justify-center">
-      <canvas ref={canvasRef} className="max-w-full rounded shadow-lux" style={{ filter }} />
+    <div
+      ref={ref}
+      data-page={pageNumber}
+      className="mx-auto mb-3 flex min-h-[40vh] justify-center"
+    >
+      <canvas
+        ref={canvasRef}
+        className="max-w-full rounded shadow-lux"
+        style={{ filter }}
+      />
     </div>
   );
 }

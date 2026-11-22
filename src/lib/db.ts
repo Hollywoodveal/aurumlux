@@ -1,6 +1,6 @@
 import { openDB, type IDBPDatabase } from "idb";
 
-export type BookFormat = "epub" | "pdf" | "cbz" | "cbr" | "mobi" | "azw3" | "txt";
+export type BookFormat = "epub" | "pdf" | "cbz" | "cbr" | "txt";
 export type ReadingStatus = "want" | "reading" | "finished";
 export type ReadingSession = {
   id: string;
@@ -9,8 +9,12 @@ export type ReadingSession = {
   progressStart: number;
   progressEnd: number;
   chapter: string;
+  /**
+   * Time actually spent reading (pauses while the app is hidden or idle).
+   * Older sessions and manually logged ones don't have it; use end - start.
+   */
+  activeMs?: number;
 };
-
 
 export type BookMeta = {
   id: string;
@@ -56,14 +60,11 @@ export type BookMeta = {
    */
   locationsIndex?: string;
 
-
   hasCover: boolean;
   /** SHA-256 of the imported file, used to spot duplicate imports. */
   fileHash?: string;
   /** User-named collections this book belongs to. */
   collections?: string[];
-
-
 };
 
 export type Annotation = {
@@ -84,20 +85,26 @@ const DB_VERSION = 3;
 let dbp: Promise<IDBPDatabase> | null = null;
 
 function getDB() {
-  if (typeof indexedDB === "undefined") throw new Error("IndexedDB unavailable");
+  if (typeof indexedDB === "undefined")
+    throw new Error("IndexedDB unavailable");
   if (!dbp) {
     dbp = openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
-        if (!db.objectStoreNames.contains("books")) db.createObjectStore("books", { keyPath: "id" });
-        if (!db.objectStoreNames.contains("files")) db.createObjectStore("files");
-        if (!db.objectStoreNames.contains("covers")) db.createObjectStore("covers");
+        if (!db.objectStoreNames.contains("books"))
+          db.createObjectStore("books", { keyPath: "id" });
+        if (!db.objectStoreNames.contains("files"))
+          db.createObjectStore("files");
+        if (!db.objectStoreNames.contains("covers"))
+          db.createObjectStore("covers");
         if (!db.objectStoreNames.contains("annotations")) {
           const s = db.createObjectStore("annotations", { keyPath: "id" });
           s.createIndex("bookId", "bookId");
         }
-        if (!db.objectStoreNames.contains("settings")) db.createObjectStore("settings");
+        if (!db.objectStoreNames.contains("settings"))
+          db.createObjectStore("settings");
         // v2: plain-text index per book, powering library-wide full-text search.
-        if (!db.objectStoreNames.contains("texts")) db.createObjectStore("texts");
+        if (!db.objectStoreNames.contains("texts"))
+          db.createObjectStore("texts");
         // v3: downloaded narration audio, so streaming voices can read offline.
         if (!db.objectStoreNames.contains("voices")) {
           const s = db.createObjectStore("voices", { keyPath: "key" });
@@ -123,7 +130,9 @@ export async function putVoiceClip(clip: VoiceClip) {
   await db.put("voices", clip);
 }
 
-export async function getVoiceClip(key: string): Promise<VoiceClip | undefined> {
+export async function getVoiceClip(
+  key: string,
+): Promise<VoiceClip | undefined> {
   const db = await getDB();
   return (await db.get("voices", key)) as VoiceClip | undefined;
 }
@@ -153,8 +162,6 @@ export async function deleteVoiceClipKeys(keys: string[]) {
   await tx.done;
 }
 
-
-
 /** Sections of a book's plain text, used for full-text search. */
 export type TextIndex = {
   bookId: string;
@@ -167,7 +174,9 @@ export async function putTextIndex(idx: TextIndex) {
   await db.put("texts", idx, idx.bookId);
 }
 
-export async function getTextIndex(bookId: string): Promise<TextIndex | undefined> {
+export async function getTextIndex(
+  bookId: string,
+): Promise<TextIndex | undefined> {
   const db = await getDB();
   return (await db.get("texts", bookId)) as TextIndex | undefined;
 }
@@ -176,7 +185,6 @@ export async function allTextIndexes(): Promise<TextIndex[]> {
   const db = await getDB();
   return (await db.getAll("texts")) as TextIndex[];
 }
-
 
 export async function listBooks(): Promise<BookMeta[]> {
   const db = await getDB();
@@ -193,14 +201,50 @@ export async function putBook(book: BookMeta) {
   await db.put("books", book);
 }
 
-export async function updateBook(id: string, patch: Partial<BookMeta>) {
-  const existing = await getBook(id);
-  if (!existing) return;
-  await putBook({ ...existing, ...patch });
+/**
+ * Merge a patch into a stored book. The read and the write share one
+ * transaction, so two updates that overlap (a progress save and the EPUB
+ * locations index, say) can't silently undo each other.
+ */
+export async function updateBook(
+  id: string,
+  patch:
+    | Partial<BookMeta>
+    | ((existing: BookMeta) => Partial<BookMeta> | null | undefined),
+) {
+  const db = await getDB();
+  const tx = db.transaction("books", "readwrite");
+  const existing = (await tx.store.get(id)) as BookMeta | undefined;
+  if (existing) {
+    const changes = typeof patch === "function" ? patch(existing) : patch;
+    if (changes) await tx.store.put({ ...existing, ...changes });
+  }
+  await tx.done;
+}
+
+/** A record that something was deleted, so sync doesn't bring it back. */
+export type Tombstone = { id: string; at: number };
+export const DELETED_BOOKS_KEY = "deletedBooks";
+export const DELETED_ANNOTATIONS_KEY = "deletedAnnotations";
+const MAX_TOMBSTONES = 2000;
+
+export async function addTombstones(key: string, ids: string[]) {
+  if (ids.length === 0) return;
+  const now = Date.now();
+  const existing = await getSetting<Tombstone[]>(key, []);
+  const fresh = new Set(ids);
+  const next = [
+    ...existing.filter((t) => !fresh.has(t.id)),
+    ...ids.map((id) => ({ id, at: now })),
+  ].slice(-MAX_TOMBSTONES);
+  await setSetting(key, next);
 }
 
 export async function deleteBook(id: string) {
   const db = await getDB();
+  const annotationIds = (await listAnnotations(id)).map((a) => a.id);
+  await addTombstones(DELETED_BOOKS_KEY, [id]);
+  await addTombstones(DELETED_ANNOTATIONS_KEY, annotationIds);
   await db.delete("books", id);
   await db.delete("files", id);
   await db.delete("covers", id);
@@ -237,7 +281,11 @@ export async function getCover(id: string): Promise<Blob | undefined> {
 
 export async function listAnnotations(bookId: string): Promise<Annotation[]> {
   const db = await getDB();
-  return (await db.getAllFromIndex("annotations", "bookId", bookId)) as Annotation[];
+  return (await db.getAllFromIndex(
+    "annotations",
+    "bookId",
+    bookId,
+  )) as Annotation[];
 }
 
 export async function allAnnotations(): Promise<Annotation[]> {
@@ -252,6 +300,7 @@ export async function putAnnotation(a: Annotation) {
 
 export async function deleteAnnotation(id: string) {
   const db = await getDB();
+  await addTombstones(DELETED_ANNOTATIONS_KEY, [id]);
   await db.delete("annotations", id);
 }
 

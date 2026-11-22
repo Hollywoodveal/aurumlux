@@ -4,6 +4,7 @@ import { ImportFromUrl } from "@/components/ImportFromUrl";
 import { BrandMark } from "@/components/BrandMark";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { Switch } from "@/components/settings/Switch";
+import { SyncSettings } from "@/components/settings/SyncSettings";
 import { ThemePicker } from "@/components/settings/ThemePicker";
 
 import {
@@ -13,6 +14,7 @@ import {
   Lock,
   SearchCheck,
   Palette,
+  RefreshCw,
   ShieldCheck,
   Trash2,
   TriangleAlert,
@@ -280,8 +282,9 @@ function SettingsPage() {
         className="mt-4"
       >
         <p className="mt-1 text-sm text-muted-foreground">
-          Paste a direct EPUB, PDF, CBZ or TXT link, or an OPDS catalog feed,
-          and Aurum will download it straight onto your device.
+          Paste a direct EPUB, PDF, CBZ or TXT link and Aurum will download it
+          straight onto your device, or browse OPDS catalogs such as Project
+          Gutenberg, Standard Ebooks or your own Calibre server.
         </p>
         <ImportFromUrl />
       </SettingsSection>
@@ -407,6 +410,15 @@ function SettingsPage() {
             onChange={(e) => void mergeSync(e.target.files?.[0])}
           />
         </div>
+      </SettingsSection>
+
+      <SettingsSection
+        id="webdav-sync"
+        title="Sync across devices"
+        icon={<RefreshCw className="size-4 text-gold" aria-hidden />}
+        className="mt-3"
+      >
+        <SyncSettings />
       </SettingsSection>
 
       <SettingsSection
@@ -543,8 +555,8 @@ function SettingsPage() {
             · Books, covers, notes and progress stored in on-device storage.
           </li>
           <li>
-            · No cloud sync — moving data between devices is a manual encrypted
-            file transfer you start yourself.
+            · No Aurum cloud. Moving data between devices is an encrypted file
+            you transfer yourself, or optional sync to your own WebDAV storage.
           </li>
         </ul>
         <p className="mt-3 text-sm text-muted-foreground">

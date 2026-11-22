@@ -33,7 +33,12 @@ export function CoverEditor({
   const { save } = useBookMutations();
   const pickRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
-  const dragRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+  const dragRef = useRef<{
+    x: number;
+    y: number;
+    ox: number;
+    oy: number;
+  } | null>(null);
 
   const [img, setImg] = useState<Loaded | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -74,7 +79,9 @@ export function CoverEditor({
     el.src = url;
   }
 
-  const base = img ? Math.max(BOX_W / img.el.naturalWidth, BOX_H / img.el.naturalHeight) : 1;
+  const base = img
+    ? Math.max(BOX_W / img.el.naturalWidth, BOX_H / img.el.naturalHeight)
+    : 1;
   const drawW = img ? img.el.naturalWidth * base * zoom : 0;
   const drawH = img ? img.el.naturalHeight * base * zoom : 0;
 
@@ -95,13 +102,20 @@ export function CoverEditor({
   function onPointerDown(e: React.PointerEvent) {
     if (!img) return;
     (e.target as Element).setPointerCapture?.(e.pointerId);
-    dragRef.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
+    dragRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      ox: offset.x,
+      oy: offset.y,
+    };
   }
 
   function onPointerMove(e: React.PointerEvent) {
     const d = dragRef.current;
     if (!d) return;
-    setOffset(clamp({ x: d.ox + (e.clientX - d.x), y: d.oy + (e.clientY - d.y) }));
+    setOffset(
+      clamp({ x: d.ox + (e.clientX - d.x), y: d.oy + (e.clientY - d.y) }),
+    );
   }
 
   async function commit() {
@@ -143,7 +157,9 @@ export function CoverEditor({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90svh] overflow-y-auto border-gold/25 bg-card sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl text-gold">Cover image</DialogTitle>
+          <DialogTitle className="font-display text-2xl text-gold">
+            Cover image
+          </DialogTitle>
           <DialogDescription>
             Choose a photo, then drag to reposition and pinch or slide to zoom.
           </DialogDescription>
@@ -210,7 +226,10 @@ export function CoverEditor({
                 No image selected yet
               </p>
             )}
-            <span aria-hidden className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-gold/25" />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-gold/25"
+            />
           </div>
         </div>
 

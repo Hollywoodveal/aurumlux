@@ -1,12 +1,29 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, Maximize2, Minimize2, X } from "lucide-react";
+import {
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
-import { getFile, putAnnotation, uid, type Annotation, type BookMeta } from "@/lib/db";
+import {
+  getFile,
+  putAnnotation,
+  uid,
+  type Annotation,
+  type BookMeta,
+} from "@/lib/db";
 import { ReaderSettings, type ReaderPrefs } from "./EpubReader";
 import { NoteComposer } from "./NoteComposer";
-import { THEME_COLORS, resolveReaderTheme, withPrefDefaults } from "@/lib/reader-prefs";
+import {
+  THEME_COLORS,
+  resolveReaderTheme,
+  withPrefDefaults,
+} from "@/lib/reader-prefs";
 import { useAppTheme } from "@/hooks/useAppTheme";
 
 type ComicPage = { name: string; entry: any };
@@ -26,7 +43,11 @@ export function CbzReader({
   onPrefs: (p: ReaderPrefs) => void;
   annotations: Annotation[];
   onAnnotationsChanged: () => void;
-  onProgress: (p: { progress: number; location: string; chapter: string }) => void;
+  onProgress: (p: {
+    progress: number;
+    location: string;
+    chapter: string;
+  }) => void;
   onBack: () => void;
   /** Live daily-target control, docked into the bottom bar. */
   goalHud?: React.ReactNode;
@@ -39,7 +60,9 @@ export function CbzReader({
   const [url, setUrl] = useState<string | null>(null);
   const urlCache = useRef<Map<number, string>>(new Map());
 
-  const theme = THEME_COLORS[resolveReaderTheme(prefs.theme, useAppTheme())] ?? THEME_COLORS.dark;
+  const theme =
+    THEME_COLORS[resolveReaderTheme(prefs.theme, useAppTheme())] ??
+    THEME_COLORS.dark;
 
   useEffect(() => {
     let destroyed = false;
@@ -51,7 +74,9 @@ export function CbzReader({
         const zip = await JSZip.loadAsync(blob);
         const entries = Object.values(zip.files)
           .filter((f: any) => !f.dir && /\.(jpe?g|png|gif|webp)$/i.test(f.name))
-          .sort((a: any, b: any) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+          .sort((a: any, b: any) =>
+            a.name.localeCompare(b.name, undefined, { numeric: true }),
+          );
         if (destroyed) return;
         if (entries.length === 0) {
           setError("No readable images found in this archive.");
@@ -78,7 +103,9 @@ export function CbzReader({
     if (pages.length === 0) return;
     let cancelled = false;
     const cache = urlCache.current;
-    const keep = new Set([page - 1, page, page + 1].filter((n) => n >= 1 && n <= pages.length));
+    const keep = new Set(
+      [page - 1, page, page + 1].filter((n) => n >= 1 && n <= pages.length),
+    );
 
     (async () => {
       const target = pages[page - 1];
@@ -123,12 +150,19 @@ export function CbzReader({
   useEffect(() => {
     if (pages.length === 0) return;
     const pct = Math.round((page / pages.length) * 100);
-    onProgress({ progress: pct, location: String(page), chapter: `Page ${page} of ${pages.length}` });
+    onProgress({
+      progress: pct,
+      location: String(page),
+      chapter: `Page ${page} of ${pages.length}`,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pages.length]);
 
   const goPrev = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
-  const goNext = useCallback(() => setPage((p) => Math.min(pages.length || 1, p + 1)), [pages.length]);
+  const goNext = useCallback(
+    () => setPage((p) => Math.min(pages.length || 1, p + 1)),
+    [pages.length],
+  );
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -158,7 +192,10 @@ export function CbzReader({
   const percent = pages.length ? Math.round((page / pages.length) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 flex h-dvh flex-col" style={{ background: theme.bg }}>
+    <div
+      className="fixed inset-0 flex h-dvh flex-col"
+      style={{ background: theme.bg }}
+    >
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
         <button
           onClick={onBack}
@@ -176,9 +213,17 @@ export function CbzReader({
             aria-label={fit === "width" ? "Fit to screen" : "Fit to width"}
             className="flex size-11 items-center justify-center"
           >
-            {fit === "width" ? <Maximize2 className="size-[18px]" /> : <Minimize2 className="size-[18px]" />}
+            {fit === "width" ? (
+              <Maximize2 className="size-[18px]" />
+            ) : (
+              <Minimize2 className="size-[18px]" />
+            )}
           </button>
-          <button onClick={() => void addBookmark()} aria-label="Add bookmark" className="flex size-11 items-center justify-center">
+          <button
+            onClick={() => void addBookmark()}
+            aria-label="Add bookmark"
+            className="flex size-11 items-center justify-center"
+          >
             <Bookmark className="size-[18px]" />
           </button>
         </div>
@@ -200,15 +245,25 @@ export function CbzReader({
                 <img
                   src={url}
                   alt={`Page ${page} of ${book.title}`}
-                  className={fit === "width" ? "w-full" : "max-h-full max-w-full"}
+                  className={
+                    fit === "width" ? "w-full" : "max-h-full max-w-full"
+                  }
                   draggable={false}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">Loading page…</p>
               )}
             </div>
-            <button aria-label="Previous page" onClick={goPrev} className="absolute inset-y-0 left-0 w-1/3" />
-            <button aria-label="Next page" onClick={goNext} className="absolute inset-y-0 right-0 w-1/3" />
+            <button
+              aria-label="Previous page"
+              onClick={goPrev}
+              className="absolute inset-y-0 left-0 w-1/3"
+            />
+            <button
+              aria-label="Next page"
+              onClick={goNext}
+              className="absolute inset-y-0 right-0 w-1/3"
+            />
           </>
         )}
       </div>
@@ -222,7 +277,10 @@ export function CbzReader({
           <ChevronLeft className="size-4" />
         </button>
         <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
-          <div className="h-full bg-gradient-gold" style={{ width: `${percent}%` }} />
+          <div
+            className="h-full bg-gradient-gold"
+            style={{ width: `${percent}%` }}
+          />
         </div>
         <span className="min-w-[3.5rem] text-center text-[11px] text-gold/80">
           {pages.length ? `${page}/${pages.length}` : "—"}
@@ -254,7 +312,11 @@ export function CbzReader({
 
       {panel === "notes" ? (
         <div className="fixed inset-0 z-50 flex">
-          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-scrim" />
+          <button
+            aria-label="Close panel"
+            onClick={() => setPanel(null)}
+            className="absolute inset-0 bg-scrim"
+          />
           <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-xl text-gold">Notes</h3>
@@ -270,25 +332,33 @@ export function CbzReader({
                 onAdded={onAnnotationsChanged}
               />
               <ul className="space-y-2">
-              {annotations.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No bookmarks or notes yet.</p>
-              ) : null}
-              {annotations.map((a) => (
-                <li key={a.id}>
-                  <button
-                    onClick={() => {
-                      setPage(Number(a.location) || 1);
-                      setPanel(null);
-                    }}
-                    className="w-full rounded-lg border-l-2 bg-secondary/50 p-3 text-left"
-                    style={{ borderColor: a.color }}
-                  >
-                    <p className="text-[10px] uppercase tracking-widest text-gold/70">{a.label}</p>
-                    {a.text ? <p className="mt-1 text-sm">{a.text}</p> : null}
-                    {a.note ? <p className="mt-1 text-sm italic text-muted-foreground">{a.note}</p> : null}
-                  </button>
-                </li>
-              ))}
+                {annotations.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No bookmarks or notes yet.
+                  </p>
+                ) : null}
+                {annotations.map((a) => (
+                  <li key={a.id}>
+                    <button
+                      onClick={() => {
+                        setPage(Number(a.location) || 1);
+                        setPanel(null);
+                      }}
+                      className="w-full rounded-lg border-l-2 bg-secondary/50 p-3 text-left"
+                      style={{ borderColor: a.color }}
+                    >
+                      <p className="text-[10px] uppercase tracking-widest text-gold/70">
+                        {a.label}
+                      </p>
+                      {a.text ? <p className="mt-1 text-sm">{a.text}</p> : null}
+                      {a.note ? (
+                        <p className="mt-1 text-sm italic text-muted-foreground">
+                          {a.note}
+                        </p>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

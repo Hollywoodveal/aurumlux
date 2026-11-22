@@ -20,7 +20,9 @@ function SelectMark({ selected }: { selected: boolean }) {
       aria-hidden
       className={cn(
         "flex size-5 shrink-0 items-center justify-center rounded-full border",
-        selected ? "border-gold bg-gold text-background" : "border-gold/50 text-transparent",
+        selected
+          ? "border-gold bg-gold text-background"
+          : "border-gold/50 text-transparent",
       )}
     >
       <Check className="size-3.5" />
@@ -30,11 +32,17 @@ function SelectMark({ selected }: { selected: boolean }) {
 
 function chunk<T>(items: T[], size: number) {
   const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  for (let i = 0; i < items.length; i += size)
+    out.push(items.slice(i, i + size));
   return out;
 }
 
-export function SpineShelf({ books, onSelect, selectable, selectedIds }: ShelfProps) {
+export function SpineShelf({
+  books,
+  onSelect,
+  selectable,
+  selectedIds,
+}: ShelfProps) {
   return (
     <div className="space-y-5">
       {chunk(books, 12).map((row, i) => (
@@ -57,7 +65,12 @@ export function SpineShelf({ books, onSelect, selectable, selectedIds }: ShelfPr
   );
 }
 
-export function GridShelf({ books, onSelect, selectable, selectedIds }: ShelfProps) {
+export function GridShelf({
+  books,
+  onSelect,
+  selectable,
+  selectedIds,
+}: ShelfProps) {
   return (
     <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
       {books.map((book) => (
@@ -85,14 +98,21 @@ export function GridShelf({ books, onSelect, selectable, selectedIds }: ShelfPro
           <p className="mt-2 line-clamp-2 font-display text-sm leading-tight text-ivory">
             {book.title}
           </p>
-          <p className="line-clamp-1 text-[11px] text-muted-foreground">{book.author}</p>
+          <p className="line-clamp-1 text-[11px] text-muted-foreground">
+            {book.author}
+          </p>
         </button>
       ))}
     </div>
   );
 }
 
-export function ListShelf({ books, onSelect, selectable, selectedIds }: ShelfProps) {
+export function ListShelf({
+  books,
+  onSelect,
+  selectable,
+  selectedIds,
+}: ShelfProps) {
   return (
     <ul className="divide-y divide-border/60">
       {books.map((book) => (
@@ -102,17 +122,28 @@ export function ListShelf({ books, onSelect, selectable, selectedIds }: ShelfPro
             onClick={() => onSelect(book)}
             className="flex w-full items-center gap-3 py-3 text-left"
           >
-            {selectable ? <SelectMark selected={selectedIds?.has(book.id) ?? false} /> : null}
+            {selectable ? (
+              <SelectMark selected={selectedIds?.has(book.id) ?? false} />
+            ) : null}
             <div className="h-16 w-11 shrink-0 overflow-hidden rounded hairline-gold">
               <CoverImage book={book} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-base text-ivory">{book.title}</p>
-              <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+              <p className="truncate font-display text-base text-ivory">
+                {book.title}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {book.author}
+              </p>
               {/* Read-only: the whole row is already a button, so no nested controls. */}
-              {book.rating ? <StarRating value={book.rating} size="sm" className="mt-1" /> : null}
+              {book.rating ? (
+                <StarRating value={book.rating} size="sm" className="mt-1" />
+              ) : null}
               <div className="mt-1.5 h-[2px] w-full overflow-hidden rounded bg-secondary">
-                <div className="h-full bg-gradient-gold" style={{ width: `${book.progress}%` }} />
+                <div
+                  className="h-full bg-gradient-gold"
+                  style={{ width: `${book.progress}%` }}
+                />
               </div>
             </div>
             <span className="text-[10px] uppercase tracking-widest text-gold/70">
@@ -125,7 +156,12 @@ export function ListShelf({ books, onSelect, selectable, selectedIds }: ShelfPro
   );
 }
 
-export function CompactShelf({ books, onSelect, selectable, selectedIds }: ShelfProps) {
+export function CompactShelf({
+  books,
+  onSelect,
+  selectable,
+  selectedIds,
+}: ShelfProps) {
   return (
     <div className="space-y-4">
       {chunk(books, 12).map((row, i) => (
@@ -171,7 +207,9 @@ export function ViewSwitcher({
           onClick={() => onChange(o.value)}
           className={cn(
             "rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.12em] transition-colors",
-            value === o.value ? "bg-gold/15 text-gold" : "text-muted-foreground",
+            value === o.value
+              ? "bg-gold/15 text-gold"
+              : "text-muted-foreground",
           )}
         >
           {o.label}

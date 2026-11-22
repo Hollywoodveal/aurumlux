@@ -22,6 +22,16 @@ export function startOfDay(ms: number) {
   return new Date(ms).setHours(0, 0, 0, 0);
 }
 
+/** Milliseconds a session counts for: active reading time when tracked. */
+export function sessionMs(s: ReadingSession) {
+  return s.activeMs ?? Math.max(0, s.end - s.start);
+}
+
+/** Whole minutes a session counts for (at least 1). */
+export function sessionMinutes(s: ReadingSession) {
+  return Math.max(1, Math.round(sessionMs(s) / 60000));
+}
+
 /** Minutes read on a given day, derived from tracked reading sessions. */
 export function minutesOnDay(books: BookMeta[], day: number) {
   const key = startOfDay(day);
@@ -29,7 +39,7 @@ export function minutesOnDay(books: BookMeta[], day: number) {
   books.forEach((b) =>
     (b.sessions ?? []).forEach((s) => {
       if (startOfDay(s.start) !== key) return;
-      total += Math.max(1, Math.round((s.end - s.start) / 60000));
+      total += sessionMinutes(s);
     }),
   );
   return total;
@@ -139,7 +149,8 @@ export function recoveryState(
       ? 0
       : Math.max(
           0,
-          RECOVERY_COOLDOWN_DAYS - Math.floor((today - startOfDay(lastUsedAt)) / DAY_MS),
+          RECOVERY_COOLDOWN_DAYS -
+            Math.floor((today - startOfDay(lastUsedAt)) / DAY_MS),
         );
 
   const base = {
@@ -159,21 +170,50 @@ export function recoveryState(
   while (counts(missedDay - (streakAtStake + 1) * DAY_MS)) streakAtStake += 1;
 
   if (streakAtStake === 0) {
-    return { ...base, missedDay: null, streakAtStake, eligible: false, reason: "none" };
+    return {
+      ...base,
+      missedDay: null,
+      streakAtStake,
+      eligible: false,
+      reason: "none",
+    };
   }
 
   if (offset > RECOVERY_WINDOW_DAYS) {
-    return { ...base, missedDay, streakAtStake, eligible: false, reason: "too-old" };
+    return {
+      ...base,
+      missedDay,
+      streakAtStake,
+      eligible: false,
+      reason: "too-old",
+    };
   }
   if (cooldownDaysLeft > 0) {
-    return { ...base, missedDay, streakAtStake, eligible: false, reason: "cooldown" };
+    return {
+      ...base,
+      missedDay,
+      streakAtStake,
+      eligible: false,
+      reason: "cooldown",
+    };
   }
   if (minutesToday < minutesNeeded) {
-    return { ...base, missedDay, streakAtStake, eligible: false, reason: "needs-session" };
+    return {
+      ...base,
+      missedDay,
+      streakAtStake,
+      eligible: false,
+      reason: "needs-session",
+    };
   }
-  return { ...base, missedDay, streakAtStake, eligible: true, reason: "eligible" };
+  return {
+    ...base,
+    missedDay,
+    streakAtStake,
+    eligible: true,
+    reason: "eligible",
+  };
 }
-
 
 export type Milestone = {
   id: string;
@@ -194,13 +234,48 @@ type MilestoneTotals = {
   annotations: number;
 };
 
-const TIERS: { group: string; key: keyof MilestoneTotals; unit: string; steps: number[] }[] = [
-  { group: "Finished", key: "finished", unit: "books finished", steps: [1, 5, 10, 25, 50, 100] },
-  { group: "Streak", key: "streak", unit: "day streak", steps: [3, 7, 14, 30, 60, 100] },
-  { group: "Pages", key: "pages", unit: "pages read", steps: [100, 500, 1000, 5000, 10000] },
-  { group: "Time", key: "minutes", unit: "minutes read", steps: [60, 300, 1200, 3000, 12000] },
-  { group: "Devotion", key: "activeDays", unit: "reading days", steps: [5, 25, 60, 150, 365] },
-  { group: "Margins", key: "annotations", unit: "notes & highlights", steps: [10, 50, 150, 500] },
+const TIERS: {
+  group: string;
+  key: keyof MilestoneTotals;
+  unit: string;
+  steps: number[];
+}[] = [
+  {
+    group: "Finished",
+    key: "finished",
+    unit: "books finished",
+    steps: [1, 5, 10, 25, 50, 100],
+  },
+  {
+    group: "Streak",
+    key: "streak",
+    unit: "day streak",
+    steps: [3, 7, 14, 30, 60, 100],
+  },
+  {
+    group: "Pages",
+    key: "pages",
+    unit: "pages read",
+    steps: [100, 500, 1000, 5000, 10000],
+  },
+  {
+    group: "Time",
+    key: "minutes",
+    unit: "minutes read",
+    steps: [60, 300, 1200, 3000, 12000],
+  },
+  {
+    group: "Devotion",
+    key: "activeDays",
+    unit: "reading days",
+    steps: [5, 25, 60, 150, 365],
+  },
+  {
+    group: "Margins",
+    key: "annotations",
+    unit: "notes & highlights",
+    steps: [10, 50, 150, 500],
+  },
 ];
 
 export function evaluateMilestones(totals: MilestoneTotals): Milestone[] {
@@ -223,7 +298,12 @@ export function splitMilestones(all: Milestone[]) {
   const earned = all.filter((m) => m.earned);
   const groups = [...new Set(all.map((m) => m.group))];
   const next = groups
-    .map((g) => all.filter((m) => m.group === g && !m.earned).sort((a, b) => a.target - b.target)[0])
+    .map(
+      (g) =>
+        all
+          .filter((m) => m.group === g && !m.earned)
+          .sort((a, b) => a.target - b.target)[0],
+    )
     .filter((m): m is Milestone => Boolean(m))
     .sort((a, b) => b.pct - a.pct);
   return { earned, next };
@@ -247,7 +327,10 @@ export type BookGoalStatus = {
   done: boolean;
 };
 
-export function bookGoalStatus(book: BookMeta, now = Date.now()): BookGoalStatus {
+export function bookGoalStatus(
+  book: BookMeta,
+  now = Date.now(),
+): BookGoalStatus {
   const targetDate = book.goalTargetDate ?? null;
   const dailyMinutes = book.goalDailyMinutes ?? 0;
   const hasGoal = targetDate !== null || dailyMinutes > 0;
@@ -255,23 +338,32 @@ export function bookGoalStatus(book: BookMeta, now = Date.now()): BookGoalStatus
   const done = book.status === "finished" || book.progress >= 100;
 
   const today = startOfDay(now);
-  const daysLeft = targetDate === null ? null : Math.round((startOfDay(targetDate) - today) / DAY_MS);
+  const daysLeft =
+    targetDate === null
+      ? null
+      : Math.round((startOfDay(targetDate) - today) / DAY_MS);
   // A target date in the past (or today) means the whole remainder is due now.
-  const requiredPerDay = daysLeft === null ? null : remaining / Math.max(1, daysLeft);
+  const requiredPerDay =
+    daysLeft === null ? null : remaining / Math.max(1, daysLeft);
 
   const sessions = book.sessions ?? [];
   const recent = sessions.filter((s) => s.start >= now - 14 * DAY_MS);
   const activeDays = new Set(recent.map((s) => startOfDay(s.start))).size;
-  const gained = recent.reduce((sum, s) => sum + Math.max(0, s.progressEnd - s.progressStart), 0);
+  const gained = recent.reduce(
+    (sum, s) => sum + Math.max(0, s.progressEnd - s.progressStart),
+    0,
+  );
   const pacePerDay = activeDays > 0 ? gained / activeDays : 0;
-  const projectedDays = pacePerDay > 0 ? Math.ceil(remaining / pacePerDay) : null;
+  const projectedDays =
+    pacePerDay > 0 ? Math.ceil(remaining / pacePerDay) : null;
 
   const minutesToday = sessions
     .filter((s) => startOfDay(s.start) === today)
-    .reduce((sum, s) => sum + Math.max(1, Math.round((s.end - s.start) / 60000)), 0);
+    .reduce((sum, s) => sum + sessionMinutes(s), 0);
 
   // Small tolerance so rounded display values don't contradict the on-track badge.
-  const paceOk = requiredPerDay === null ? true : pacePerDay >= requiredPerDay * 0.95;
+  const paceOk =
+    requiredPerDay === null ? true : pacePerDay >= requiredPerDay * 0.95;
   const minutesOk = dailyMinutes === 0 ? true : minutesToday >= dailyMinutes;
 
   return {
@@ -306,7 +398,7 @@ export function estimateMinutesLeft(
   for (const s of book.sessions ?? []) {
     if (s.start < now - 30 * DAY_MS) continue;
     const pct = s.progressEnd - s.progressStart;
-    const min = (s.end - s.start) / 60000;
+    const min = sessionMs(s) / 60000;
     if (pct > 0 && min > 0) {
       minutes += min;
       gained += pct;
@@ -373,7 +465,10 @@ export function buildExternalSessionPatch(
   let progressEnd = book.progress;
   if (book.pageCount > 0 && input.pages !== undefined) {
     const currentPages = (book.progress / 100) * book.pageCount;
-    progressEnd = Math.min(100, ((currentPages + input.pages) / book.pageCount) * 100);
+    progressEnd = Math.min(
+      100,
+      ((currentPages + input.pages) / book.pageCount) * 100,
+    );
   } else if (input.progressTo !== undefined) {
     progressEnd = Math.min(100, Math.max(0, input.progressTo));
   }
@@ -387,7 +482,9 @@ export function buildExternalSessionPatch(
     progressEnd,
     chapter: "",
   };
-  const readDays = book.readDays.includes(day) ? book.readDays : [...book.readDays, day];
+  const readDays = book.readDays.includes(day)
+    ? book.readDays
+    : [...book.readDays, day];
   const patch: Partial<BookMeta> = {
     progress: progressEnd,
     readingTime: book.readingTime + minutes * 60000,

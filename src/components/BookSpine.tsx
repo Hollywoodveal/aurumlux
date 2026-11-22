@@ -4,7 +4,8 @@ import type { BookMeta } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
 export function spineWidth(book: BookMeta) {
-  const basis = book.pageCount > 0 ? book.pageCount : Math.round(book.fileSize / 2200);
+  const basis =
+    book.pageCount > 0 ? book.pageCount : Math.round(book.fileSize / 2200);
   return Math.round(Math.min(52, Math.max(28, 28 + basis / 26)));
 }
 
@@ -116,7 +117,6 @@ export function BookSpine({
           </span>
         </span>
       </span>
-
 
       {selectable ? (
         <span

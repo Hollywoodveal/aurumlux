@@ -27,8 +27,12 @@ export function CoverImage({
         className,
       )}
     >
-      <span className="font-display text-[0.7rem] leading-tight text-gold">{book.title}</span>
-      <span className="text-[0.55rem] text-muted-foreground">{book.author}</span>
+      <span className="font-display text-[0.7rem] leading-tight text-gold">
+        {book.title}
+      </span>
+      <span className="text-[0.55rem] text-muted-foreground">
+        {book.author}
+      </span>
     </div>
   );
 }

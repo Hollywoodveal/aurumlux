@@ -1,6 +1,13 @@
 import JSZip from "jszip";
 import {
+  DELETED_ANNOTATIONS_KEY,
+  DELETED_BOOKS_KEY,
   allAnnotations,
+  deleteAnnotation,
+  deleteBook,
+  getSetting,
+  setSetting,
+  type Tombstone,
   getCover,
   getFile,
   listBooks,
@@ -11,14 +18,18 @@ import {
   type Annotation,
   type BookMeta,
 } from "./db";
+import { planMerge } from "./sync-merge";
 
 export type SyncBundle = {
   app: "aurum";
   kind: "sync";
-  version: 1;
+  /** 2 adds deletion records; version 1 files (no deletions) still merge. */
+  version: 1 | 2;
   exportedAt: string;
   books: BookMeta[];
   annotations: Annotation[];
+  deletedBooks?: Tombstone[];
+  deletedAnnotations?: Tombstone[];
 };
 
 const enc = new TextEncoder();
@@ -65,10 +76,15 @@ export async function buildSyncBundle(): Promise<SyncBundle> {
   return {
     app: "aurum",
     kind: "sync",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     books: await listBooks(),
     annotations: await allAnnotations(),
+    deletedBooks: await getSetting<Tombstone[]>(DELETED_BOOKS_KEY, []),
+    deletedAnnotations: await getSetting<Tombstone[]>(
+      DELETED_ANNOTATIONS_KEY,
+      [],
+    ),
   };
 }
 
@@ -213,47 +229,42 @@ export async function importFullBackup(file: File): Promise<FullBackupReport> {
 export type MergeReport = {
   positions: number;
   added: number;
+  removed: number;
   annotations: number;
 };
 
 /**
- * Merge a bundle from another device: newest reading position wins, unseen books
- * arrive as placeholders (the file itself must be re-imported on this device).
+ * Merge a bundle from another device. Newest reading position wins, reading
+ * history is combined, books deleted on the other device are removed here, and
+ * unseen books arrive as placeholders (the file must be imported on this device
+ * too — importing it fills the placeholder in).
  */
 export async function mergeSyncBundle(
   bundle: SyncBundle,
 ): Promise<MergeReport> {
-  const local = new Map((await listBooks()).map((b) => [b.id, b]));
-  const report: MergeReport = { positions: 0, added: 0, annotations: 0 };
-
-  for (const incoming of bundle.books ?? []) {
-    const mine = local.get(incoming.id);
-    if (!mine) {
-      await putBook({ ...incoming, hasCover: false });
-      report.added += 1;
-      continue;
-    }
-    if ((incoming.lastOpened ?? 0) > (mine.lastOpened ?? 0)) {
-      await putBook({
-        ...mine,
-        progress: incoming.progress,
-        location: incoming.location,
-        chapter: incoming.chapter,
-        lastOpened: incoming.lastOpened,
-        status: incoming.status,
-        sessions: incoming.sessions?.length
-          ? incoming.sessions
-          : (mine.sessions ?? []),
-      });
-      report.positions += 1;
-    }
-  }
-
-  const seen = new Set((await allAnnotations()).map((a) => a.id));
-  for (const a of bundle.annotations ?? []) {
-    if (seen.has(a.id)) continue;
-    await putAnnotation(a);
-    report.annotations += 1;
-  }
-  return report;
+  const plan = planMerge(
+    {
+      books: await listBooks(),
+      annotations: await allAnnotations(),
+      deletedBooks: await getSetting<Tombstone[]>(DELETED_BOOKS_KEY, []),
+      deletedAnnotations: await getSetting<Tombstone[]>(
+        DELETED_ANNOTATIONS_KEY,
+        [],
+      ),
+    },
+    {
+      books: bundle.books ?? [],
+      annotations: bundle.annotations ?? [],
+      deletedBooks: bundle.deletedBooks ?? [],
+      deletedAnnotations: bundle.deletedAnnotations ?? [],
+    },
+  );
+  // Save the combined deletion records first; the deletes below add to them.
+  await setSetting(DELETED_BOOKS_KEY, plan.deletedBooks);
+  await setSetting(DELETED_ANNOTATIONS_KEY, plan.deletedAnnotations);
+  for (const id of plan.deleteBooks) await deleteBook(id);
+  for (const book of plan.putBooks) await putBook(book);
+  for (const id of plan.deleteAnnotations) await deleteAnnotation(id);
+  for (const a of plan.putAnnotations) await putAnnotation(a);
+  return plan.report;
 }

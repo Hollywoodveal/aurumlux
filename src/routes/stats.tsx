@@ -23,6 +23,7 @@ import {
   computeStreak,
   evaluateMilestones,
   recoveryState,
+  sessionMinutes,
   splitMilestones,
 } from "@/lib/goals";
 import type { BookMeta, ReadingSession } from "@/lib/db";
@@ -234,7 +235,7 @@ function StatsPage() {
     books.forEach((b) => {
       (b.sessions ?? []).forEach((s) => {
         if (!inYear(s.start)) return;
-        const m = Math.max(1, Math.round((s.end - s.start) / 60000));
+        const m = sessionMinutes(s);
         minutes += m;
         const month = new Date(s.start).getMonth();
         monthMinutes[month] = (monthMinutes[month] ?? 0) + m;
@@ -963,14 +964,13 @@ function DayPanel({
   sessions: { book: BookMeta; session: ReadingSession }[];
   onClose: () => void;
 }) {
-  const sessionMinutes = sessions.reduce(
-    (s, e) =>
-      s + Math.max(1, Math.round((e.session.end - e.session.start) / 60000)),
+  const trackedMinutes = sessions.reduce(
+    (s, e) => s + sessionMinutes(e.session),
     0,
   );
   const totalMinutes =
     sessions.length > 0
-      ? sessionMinutes
+      ? trackedMinutes
       : entries.reduce((s, e) => s + e.minutes, 0);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -1017,10 +1017,7 @@ function DayPanel({
             </h4>
             <ol className="mt-3 space-y-3 border-l border-gold/20 pl-4">
               {sessions.map(({ book, session }, i) => {
-                const minutes = Math.max(
-                  1,
-                  Math.round((session.end - session.start) / 60000),
-                );
+                const minutes = sessionMinutes(session);
                 const gained = Math.max(
                   0,
                   session.progressEnd - session.progressStart,

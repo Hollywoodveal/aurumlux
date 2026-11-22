@@ -1,14 +1,24 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BookA, Bookmark, ChevronLeft, Palette, Search, X } from "lucide-react";
 import { toast } from "sonner";
-import { getFile, putAnnotation, uid, type Annotation, type BookMeta } from "@/lib/db";
+import {
+  getFile,
+  putAnnotation,
+  uid,
+  type Annotation,
+  type BookMeta,
+} from "@/lib/db";
 import { ReaderSettings, type ReaderPrefs } from "./EpubReader";
 import { ReadAloudBar } from "./ReadAloudBar";
 import { DictionarySheet } from "./DictionarySheet";
 import { NoteComposer } from "./NoteComposer";
-import { THEME_COLORS, resolveFont, resolveReaderTheme, withPrefDefaults } from "@/lib/reader-prefs";
+import {
+  THEME_COLORS,
+  resolveFont,
+  resolveReaderTheme,
+  withPrefDefaults,
+} from "@/lib/reader-prefs";
 import { useAppTheme } from "@/hooks/useAppTheme";
 
 /** Find a whitespace-normalised passage inside the raw text, from `from` onward. */
@@ -23,7 +33,6 @@ function findPassage(hay: string, passage: string, from: number): number {
   const m = re.exec(hay.slice(from));
   return m ? from + m.index : -1;
 }
-
 
 export function TxtReader({
   book,
@@ -40,13 +49,19 @@ export function TxtReader({
   onPrefs: (p: ReaderPrefs) => void;
   annotations: Annotation[];
   onAnnotationsChanged: () => void;
-  onProgress: (p: { progress: number; location: string; chapter: string }) => void;
+  onProgress: (p: {
+    progress: number;
+    location: string;
+    chapter: string;
+  }) => void;
   onBack: () => void;
   /** Live daily-target control, docked into the bottom bar. */
   goalHud?: React.ReactNode;
 }) {
   const [text, setText] = useState<string | null>(null);
-  const [panel, setPanel] = useState<null | "settings" | "notes" | "search">(null);
+  const [panel, setPanel] = useState<null | "settings" | "notes" | "search">(
+    null,
+  );
   const [percent, setPercent] = useState(book.progress);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ at: number; excerpt: string }[]>([]);
@@ -63,7 +78,9 @@ export function TxtReader({
   textRef.current = text;
 
   const fullPrefs = withPrefDefaults(prefs);
-  const theme = THEME_COLORS[resolveReaderTheme(fullPrefs.theme, useAppTheme())] ?? THEME_COLORS.dark;
+  const theme =
+    THEME_COLORS[resolveReaderTheme(fullPrefs.theme, useAppTheme())] ??
+    THEME_COLORS.dark;
   const font = resolveFont(fullPrefs, book.fontOverride);
 
   /** Scroll a character range into comfortable view (auto page-turn while reading). */
@@ -108,7 +125,6 @@ export function TxtReader({
     },
     [revealRange],
   );
-
 
   useEffect(() => {
     let destroyed = false;
@@ -222,7 +238,10 @@ export function TxtReader({
   }, []);
 
   return (
-    <div className="fixed inset-0 flex h-dvh flex-col" style={{ background: theme.bg }}>
+    <div
+      className="fixed inset-0 flex h-dvh flex-col"
+      style={{ background: theme.bg }}
+    >
       <header className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm">
         <button
           onClick={onBack}
@@ -235,21 +254,39 @@ export function TxtReader({
           {book.title}
         </h1>
         <div className="flex items-center gap-1 text-gold">
-          <button onClick={() => void addBookmark()} aria-label="Add bookmark" className="flex size-11 items-center justify-center">
+          <button
+            onClick={() => void addBookmark()}
+            aria-label="Add bookmark"
+            className="flex size-11 items-center justify-center"
+          >
             <Bookmark className="size-[18px]" />
           </button>
-          <button onClick={() => setPanel("search")} aria-label="Search in this book" className="flex size-11 items-center justify-center">
+          <button
+            onClick={() => setPanel("search")}
+            aria-label="Search in this book"
+            className="flex size-11 items-center justify-center"
+          >
             <Search className="size-[18px]" />
           </button>
-          <button onClick={() => setPanel("settings")} aria-label="Reading settings" className="flex size-11 items-center justify-center">
+          <button
+            onClick={() => setPanel("settings")}
+            aria-label="Reading settings"
+            className="flex size-11 items-center justify-center"
+          >
             <Palette className="size-[18px]" />
           </button>
         </div>
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ color: theme.fg }}>
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto"
+        style={{ color: theme.fg }}
+      >
         {text === null ? (
-          <p className="py-20 text-center text-sm text-muted-foreground">Opening text…</p>
+          <p className="py-20 text-center text-sm text-muted-foreground">
+            Opening text…
+          </p>
         ) : (
           <p
             ref={paraRef}
@@ -270,9 +307,14 @@ export function TxtReader({
       <footer className="flex flex-wrap items-center gap-2 border-t border-gold/15 bg-background/95 px-safe pb-safe-sm py-2">
         <div className="flex w-full items-center gap-3">
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
-            <div className="h-full bg-gradient-gold" style={{ width: `${percent}%` }} />
+            <div
+              className="h-full bg-gradient-gold"
+              style={{ width: `${percent}%` }}
+            />
           </div>
-          <span className="w-9 text-right text-[11px] text-gold/80">{percent}%</span>
+          <span className="w-9 text-right text-[11px] text-gold/80">
+            {percent}%
+          </span>
           <button
             onClick={() => setPanel("notes")}
             className="rounded-full border border-gold/25 px-3 py-1 text-[11px] uppercase tracking-widest text-gold/80"
@@ -307,14 +349,21 @@ export function TxtReader({
         </div>
       </footer>
 
-
       {panel === "settings" ? (
-        <ReaderSettings prefs={prefs} onChange={onPrefs} onClose={() => setPanel(null)} />
+        <ReaderSettings
+          prefs={prefs}
+          onChange={onPrefs}
+          onClose={() => setPanel(null)}
+        />
       ) : null}
 
       {panel === "search" ? (
         <div className="fixed inset-0 z-50 flex">
-          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-scrim" />
+          <button
+            aria-label="Close panel"
+            onClick={() => setPanel(null)}
+            className="absolute inset-0 bg-scrim"
+          />
           <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-xl text-gold">Search</h3>
@@ -358,7 +407,11 @@ export function TxtReader({
 
       {panel === "notes" ? (
         <div className="fixed inset-0 z-50 flex">
-          <button aria-label="Close panel" onClick={() => setPanel(null)} className="absolute inset-0 bg-scrim" />
+          <button
+            aria-label="Close panel"
+            onClick={() => setPanel(null)}
+            className="absolute inset-0 bg-scrim"
+          />
           <div className="pt-safe-sm pb-safe px-safe-sm pr-safe relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto border-l border-gold/25 bg-card">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-xl text-gold">Notes</h3>
@@ -374,25 +427,33 @@ export function TxtReader({
                 onAdded={onAnnotationsChanged}
               />
               <ul className="space-y-2">
-              {annotations.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No bookmarks or notes yet.</p>
-              ) : null}
-              {annotations.map((a) => (
-                <li key={a.id}>
-                  <button
-                    onClick={() => {
-                      jumpTo(Number(a.location) || 0);
-                      setPanel(null);
-                    }}
-                    className="w-full rounded-lg border-l-2 bg-secondary/50 p-3 text-left"
-                    style={{ borderColor: a.color }}
-                  >
-                    <p className="text-[10px] uppercase tracking-widest text-gold/70">{a.label}</p>
-                    {a.text ? <p className="mt-1 text-sm">{a.text}</p> : null}
-                    {a.note ? <p className="mt-1 text-sm italic text-muted-foreground">{a.note}</p> : null}
-                  </button>
-                </li>
-              ))}
+                {annotations.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No bookmarks or notes yet.
+                  </p>
+                ) : null}
+                {annotations.map((a) => (
+                  <li key={a.id}>
+                    <button
+                      onClick={() => {
+                        jumpTo(Number(a.location) || 0);
+                        setPanel(null);
+                      }}
+                      className="w-full rounded-lg border-l-2 bg-secondary/50 p-3 text-left"
+                      style={{ borderColor: a.color }}
+                    >
+                      <p className="text-[10px] uppercase tracking-widest text-gold/70">
+                        {a.label}
+                      </p>
+                      {a.text ? <p className="mt-1 text-sm">{a.text}</p> : null}
+                      {a.note ? (
+                        <p className="mt-1 text-sm italic text-muted-foreground">
+                          {a.note}
+                        </p>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

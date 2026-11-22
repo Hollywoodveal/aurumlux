@@ -417,7 +417,11 @@ function LibraryPage() {
         </nav>
       </header>
 
-      <StreakPill books={books} dailyGoal={dailyGoal} recoveries={recoveries.list} />
+      <StreakPill
+        books={books}
+        dailyGoal={dailyGoal}
+        recoveries={recoveries.list}
+      />
 
       <div className="mt-5 flex items-center gap-2">
         <div className="relative flex-1">

@@ -50,7 +50,10 @@ export function VoicePickerSheet({
 
   const rows: { id: string; label: string }[] = [
     { id: "", label: "Default device voice" },
-    ...deviceVoices.map((v) => ({ id: v.voiceURI, label: `${v.name} (${v.lang})` })),
+    ...deviceVoices.map((v) => ({
+      id: v.voiceURI,
+      label: `${v.name} (${v.lang})`,
+    })),
   ];
 
   return (
@@ -62,7 +65,9 @@ export function VoicePickerSheet({
       />
       <div className="pb-safe px-safe relative w-full max-h-[88svh] overflow-y-auto rounded-t-2xl border-t border-gold/25 bg-card">
         <div className="flex items-center justify-between px-4 pt-4">
-          <h2 className="font-display text-lg text-gradient-gold">Narration voice</h2>
+          <h2 className="font-display text-lg text-gradient-gold">
+            Narration voice
+          </h2>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -115,17 +120,27 @@ export function VoicePickerSheet({
                     className="flex min-h-11 flex-1 items-center gap-2 text-left"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs text-foreground">{row.label}</span>
+                      <span className="block truncate text-xs text-foreground">
+                        {row.label}
+                      </span>
                     </span>
                     {selected ? <Check className="size-4 text-gold" /> : null}
                   </button>
 
                   <button
                     onClick={() => (playing ? stopPreview() : preview(row.id))}
-                    aria-label={playing ? `Stop preview of ${row.label}` : `Preview ${row.label}`}
+                    aria-label={
+                      playing
+                        ? `Stop preview of ${row.label}`
+                        : `Preview ${row.label}`
+                    }
                     className="flex size-11 items-center justify-center rounded-full border border-gold/30 text-gold"
                   >
-                    {playing ? <Square className="size-4" /> : <Play className="size-4" />}
+                    {playing ? (
+                      <Square className="size-4" />
+                    ) : (
+                      <Play className="size-4" />
+                    )}
                   </button>
                 </li>
               );

@@ -32,8 +32,12 @@ import {
 } from "@/lib/importer";
 import { cn } from "@/lib/utils";
 
-
-const FIELDS: { key: keyof BookMeta; label: string; area?: boolean; numeric?: boolean }[] = [
+const FIELDS: {
+  key: keyof BookMeta;
+  label: string;
+  area?: boolean;
+  numeric?: boolean;
+}[] = [
   { key: "title", label: "Title" },
   { key: "subtitle", label: "Subtitle" },
   { key: "author", label: "Author" },
@@ -63,7 +67,9 @@ export function MetadataDialog({
   const [busy, setBusy] = useState<"meta" | "cover" | "pages" | null>(null);
   const [coverOpen, setCoverOpen] = useState(false);
   const [candidates, setCandidates] = useState<RemoteCandidate[] | null>(null);
-  const [coverOptions, setCoverOptions] = useState<RemoteCandidate[] | null>(null);
+  const [coverOptions, setCoverOptions] = useState<RemoteCandidate[] | null>(
+    null,
+  );
 
   /** Search providers and show a ranked pick-list instead of blindly taking the first hit. */
   async function findCandidates() {
@@ -72,7 +78,9 @@ export function MetadataDialog({
       const list = await searchMetadataCandidates(draft);
       setCandidates(list);
       if (!list.length) {
-        toast.info("No matches found — try refining the title or adding an ISBN");
+        toast.info(
+          "No matches found — try refining the title or adding an ISBN",
+        );
       }
     } catch {
       toast.error("Could not reach metadata providers");
@@ -81,7 +89,7 @@ export function MetadataDialog({
     }
   }
 
-  async function useCandidate(c: RemoteCandidate) {
+  async function applyCandidate(c: RemoteCandidate) {
     const patch = applyRemotePatch(draft, c);
     const keys = Object.keys(patch);
     if (!keys.length) {
@@ -90,7 +98,9 @@ export function MetadataDialog({
     }
     setDraft((d) => ({ ...d, ...patch }));
     setCandidates(null);
-    toast.success(`Updated ${keys.length} field${keys.length > 1 ? "s" : ""} — press Save to keep`);
+    toast.success(
+      `Updated ${keys.length} field${keys.length > 1 ? "s" : ""} — press Save to keep`,
+    );
     // Take the match's cover too, unless the cover field is locked.
     if (c.coverUrl && !(draft.locked ?? []).includes("cover")) {
       try {
@@ -124,7 +134,9 @@ export function MetadataDialog({
       });
       setCoverOptions(covers);
       if (!covers.length) {
-        toast.info("No covers found — try refining the title or adding an ISBN");
+        toast.info(
+          "No covers found — try refining the title or adding an ISBN",
+        );
       }
     } catch {
       toast.error("Could not reach metadata providers");
@@ -133,7 +145,7 @@ export function MetadataDialog({
     }
   }
 
-  async function useCover(c: RemoteCandidate) {
+  async function applyCover(c: RemoteCandidate) {
     if (!c.coverUrl || (draft.locked ?? []).includes("cover")) return;
     setBusy("cover");
     try {
@@ -187,17 +199,18 @@ export function MetadataDialog({
   const toggleLock = (key: string) =>
     setDraft((d) => ({
       ...d,
-      locked: d.locked.includes(key) ? d.locked.filter((k) => k !== key) : [...d.locked, key],
+      locked: d.locked.includes(key)
+        ? d.locked.filter((k) => k !== key)
+        : [...d.locked, key],
     }));
-
-
-
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] overflow-y-auto border-gold/25 bg-card sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl text-gold">Edit metadata</DialogTitle>
+          <DialogTitle className="font-display text-2xl text-gold">
+            Edit metadata
+          </DialogTitle>
           <DialogDescription>
             Lock a field to protect it from any automatic update.
           </DialogDescription>
@@ -270,13 +283,19 @@ export function MetadataDialog({
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{c.title ?? "Unknown title"}</p>
+                    <p className="truncate text-sm font-medium">
+                      {c.title ?? "Unknown title"}
+                    </p>
                     {c.author && (
-                      <p className="truncate text-xs text-muted-foreground">{c.author}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {c.author}
+                      </p>
                     )}
                     {(c.publisher || c.publishedDate) && (
                       <p className="truncate text-[11px] text-muted-foreground">
-                        {[c.publisher, c.publishedDate].filter(Boolean).join(" · ")}
+                        {[c.publisher, c.publishedDate]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     )}
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -291,7 +310,9 @@ export function MetadataDialog({
                         {c.matchLabel}
                       </span>
                       <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                        {c.provider === "google" ? "Google Books" : "Open Library"}
+                        {c.provider === "google"
+                          ? "Google Books"
+                          : "Open Library"}
                       </span>
                     </div>
                   </div>
@@ -300,7 +321,7 @@ export function MetadataDialog({
                     variant="outline"
                     className="shrink-0 border-gold/30 text-xs"
                     disabled={busy !== null}
-                    onClick={() => void useCandidate(c)}
+                    onClick={() => void applyCandidate(c)}
                   >
                     Use this
                   </Button>
@@ -321,7 +342,7 @@ export function MetadataDialog({
                   key={`${c.provider}-${c.coverUrl}-${i}`}
                   type="button"
                   disabled={busy !== null}
-                  onClick={() => void useCover(c)}
+                  onClick={() => void applyCover(c)}
                   className="group relative overflow-hidden rounded-lg border border-gold/20 transition-transform active:scale-95"
                   title={`${c.title ?? "Unknown title"} — ${c.matchLabel} (${c.provider === "google" ? "Google Books" : "Open Library"})`}
                 >
@@ -370,7 +391,9 @@ export function MetadataDialog({
                 <Textarea
                   rows={3}
                   value={String(draft[f.key] ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, [f.key]: e.target.value }))
+                  }
                 />
               ) : f.numeric ? (
                 <Input
@@ -379,13 +402,18 @@ export function MetadataDialog({
                   inputMode="numeric"
                   value={Number(draft[f.key] ?? 0) || ""}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, [f.key]: Math.max(0, Number(e.target.value) || 0) }))
+                    setDraft((d) => ({
+                      ...d,
+                      [f.key]: Math.max(0, Number(e.target.value) || 0),
+                    }))
                   }
                 />
               ) : (
                 <Input
                   value={String(draft[f.key] ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, [f.key]: e.target.value }))
+                  }
                 />
               )}
             </div>
@@ -459,7 +487,6 @@ export function MetadataDialog({
               <ImagePlus className="size-4" />
               Replace &amp; crop cover
             </Button>
-
           </div>
         </div>
 
@@ -483,6 +510,5 @@ export function MetadataDialog({
         <CoverEditor book={book} open={coverOpen} onOpenChange={setCoverOpen} />
       </DialogContent>
     </Dialog>
-
   );
 }

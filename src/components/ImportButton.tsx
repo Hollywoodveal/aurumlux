@@ -11,9 +11,12 @@ const SUPPORTED = ["epub", "pdf", "cbz", "txt"] as const;
 export function ImportButton({
   className,
   label = "Add books",
+  onDone,
 }: {
   className?: string;
   label?: string;
+  /** Called after a batch of files has been processed. */
+  onDone?: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -38,7 +41,12 @@ export function ImportButton({
       }
       try {
         // Skip books already on the shelf so re-importing never creates a twin.
-        const { hash, existing } = await findDuplicate(file);
+        const { hash, existing, restored } = await findDuplicate(file);
+        if (existing && restored) {
+          ok += 1;
+          toast.success(`"${existing.title}" is ready to read on this device`);
+          continue;
+        }
         if (existing) {
           duplicates += 1;
           toast.info(`"${existing.title}" is already in your library`);
@@ -60,6 +68,7 @@ export function ImportButton({
     setBusy(false);
     if (inputRef.current) inputRef.current.value = "";
     invalidate();
+    onDone?.();
     if (ok > 0) {
       toast.success(
         `${ok} book${ok > 1 ? "s" : ""} added to your library` +

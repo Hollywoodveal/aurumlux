@@ -36,7 +36,8 @@ export function useBookMutations() {
     qc.invalidateQueries({ queryKey: ["annotations"] });
   };
   const save = useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: Partial<BookMeta> }) => updateBook(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<BookMeta> }) =>
+      updateBook(id, patch),
     onSuccess: invalidate,
   });
   const remove = useMutation({
@@ -48,7 +49,9 @@ export function useBookMutations() {
 
 const urlCache = new Map<string, string>();
 
-export function useCoverUrl(book: Pick<BookMeta, "id" | "hasCover"> | undefined) {
+export function useCoverUrl(
+  book: Pick<BookMeta, "id" | "hasCover"> | undefined,
+) {
   const [url, setUrl] = useState<string | null>(() =>
     book ? (urlCache.get(book.id) ?? null) : null,
   );
