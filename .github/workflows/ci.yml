@@ -89,8 +89,6 @@ jobs:
           npm install --no-audit --no-fund playwright@1 axe-core@4
           npx playwright install --with-deps chromium
       - run: node tests/e2e/audit.mjs dist/client /tmp/pw/node_modules/playwright "$PWD/node_modules/jszip" /tmp/pw/node_modules/axe-core/axe.min.js
-      - if: always()
-        run: for f in audit-shots/*.png; do echo "SHOT $(basename "$f") $(base64 -w0 "$f")"; done
 
   deploy:
     name: Deploy to Cloudflare Pages

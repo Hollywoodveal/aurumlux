@@ -179,7 +179,7 @@
   --input: oklch(0.55 0.04 80 / 42%);
   --ring: oklch(0.52 0.11 80 / 60%);
 
-  --gold: oklch(0.47 0.1 76);
+  --gold: oklch(0.43 0.095 75);
   --gold-dim: oklch(0.62 0.085 80);
   --gold-deep: oklch(0.38 0.075 72);
   --ivory: oklch(0.24 0.018 58);
@@ -813,7 +813,7 @@ h3 {
 
 /* Small gold text needs full strength on the paper themes to stay readable
    (WCAG AA 4.5:1). */
-:root[data-theme="light"] .eyebrow,
-:root[data-theme="neutral"] .eyebrow {
+:root[data-theme="light"] :is(.eyebrow, .text-gold\/50, .text-gold\/60, .text-gold\/70, .text-gold\/75, .text-gold\/80, .text-gold\/85, .text-gold\/90),
+:root[data-theme="neutral"] :is(.eyebrow, .text-gold\/50, .text-gold\/60, .text-gold\/70, .text-gold\/75, .text-gold\/80, .text-gold\/85, .text-gold\/90) {
   color: var(--gold);
 }

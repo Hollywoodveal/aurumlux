@@ -1045,6 +1045,9 @@ export function EpubReader({
 
   return (
     <div
+      id="main-content"
+      role="main"
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex flex-col"
       style={{
         background: THEME_COLORS[readerTheme].bg,

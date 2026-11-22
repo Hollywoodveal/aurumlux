@@ -61,10 +61,10 @@ export function ContinueReading({
             ref={coverRef}
             type="button"
             onClick={() => onOpenDetails(hero)}
-            aria-label={`${hero.title} ${hero.author} — details`}
             className="h-[150px] w-[100px] shrink-0 overflow-hidden rounded-md hairline-gold shadow-lux"
           >
             <CoverImage book={hero} />
+            <span className="sr-only">Details for {hero.title}</span>
           </button>
           <div className="flex min-w-0 flex-1 flex-col">
             <button

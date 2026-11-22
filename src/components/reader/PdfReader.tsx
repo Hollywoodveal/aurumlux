@@ -202,6 +202,9 @@ export function PdfReader({
 
   return (
     <div
+      id="main-content"
+      role="main"
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex flex-col"
       style={{
         background: THEME_BG[readerTheme],

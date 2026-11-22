@@ -194,6 +194,9 @@ export function CbzReader({
 
   return (
     <div
+      id="main-content"
+      role="main"
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex h-dvh flex-col"
       style={{ background: theme.bg, viewTransitionName: BOOK_OPEN }}
     >
