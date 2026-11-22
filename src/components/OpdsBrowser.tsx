@@ -82,6 +82,9 @@ export function OpdsBrowser({ open, onOpenChange, initialUrl }: Props) {
     setError(null);
     try {
       const feed = await task();
+      // A pasted link has no saved name yet; use the catalog's own title.
+      if (catalog.id === "pasted" && mode === "push" && stack.length === 0)
+        catalog = { ...catalog, title: feed.title };
       setStack((s) => {
         if (mode === "push") return [...s, { feed, catalog }];
         const last = s[s.length - 1];

@@ -14,8 +14,6 @@ jobs:
   check:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
@@ -39,14 +37,6 @@ jobs:
           name: site
           path: dist/client
           retention-days: 7
-      - name: TEMP publish build to a scratch branch
-        if: github.event_name == 'pull_request'
-        run: |
-          cd dist/client
-          git init -q -b tmp-site
-          git -c user.name=ci -c user.email=ci@example.com add -A
-          git -c user.name=ci -c user.email=ci@example.com commit -qm "build"
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" tmp-site
 
   e2e:
     name: Browser smoke test
@@ -72,7 +62,7 @@ jobs:
       - timeout-minutes: 5
         run: node tests/e2e/smoke.mjs dist/client /tmp/pw/node_modules/playwright "$PWD/node_modules/jszip"
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: e2e-screenshots
           path: e2e-screenshots

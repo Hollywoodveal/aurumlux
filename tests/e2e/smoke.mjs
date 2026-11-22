@@ -241,18 +241,6 @@ const expect = (cond, msg) => {
   if (!cond) throw new Error(msg);
 };
 
-await step("app boots under the CSP", async () => {
-  await page.goto(BASE);
-  await page.waitForLoadState("networkidle");
-  // Skip the first-run tour.
-  await putSetting("onboardingSeen", true);
-  await page.reload();
-  await page.waitForLoadState("networkidle");
-  const text = await page.locator("body").innerText();
-  expect(/Aurum|shelves|library/i.test(text), "library screen did not render");
-  expect(problems.length === 0, `problems on boot:\n${problems.join("\n")}`);
-});
-
 /**
  * Read or write the app's IndexedDB once the app has created it (version 3),
  * always closing the connection so the app is never blocked. (No eval: the
@@ -297,6 +285,18 @@ function withDb(op, arg) {
 const putSetting = (key, value) => withDb("putSetting", { key, value });
 const bookIdByTitle = (title) => withDb("findBook", title);
 
+await step("app boots under the CSP", async () => {
+  await page.goto(BASE);
+  await page.waitForLoadState("networkidle");
+  // Skip the first-run tour.
+  await putSetting("onboardingSeen", true);
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  const text = await page.locator("body").innerText();
+  expect(/Aurum|shelves|library/i.test(text), "library screen did not render");
+  expect(problems.length === 0, `problems on boot:\n${problems.join("\n")}`);
+});
+
 await step("imports and renders an EPUB; its script does not run", async () => {
   const input = page.locator('input[type="file"][accept*=".epub"]').first();
   await input.setInputFiles({
@@ -313,6 +313,7 @@ await step("imports and renders an EPUB; its script does not run", async () => {
   await page.goto(`${BASE}/read/${id}`);
   const frame = page.frameLocator("iframe").first();
   await frame.locator("#marker").waitFor({ timeout: 15000 });
+  await page.screenshot({ path: `${shots}/reader.png` });
   expect(
     (await frame.locator("#marker").innerText()).includes("Ishmael"),
     "chapter text missing",
@@ -346,6 +347,8 @@ await step("browses an OPDS catalog and downloads a book", async () => {
   await link.press("Enter");
   const dialog = page.getByRole("dialog");
   await dialog.getByText("Catalog Book").first().waitFor({ timeout: 10000 });
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: `${shots}/opds-browser.png` });
   await dialog.getByRole("button", { name: /EPUB/ }).first().click();
   let id = null;
   for (let i = 0; i < 40 && !id; i += 1) {
@@ -371,6 +374,8 @@ await step("syncs to WebDAV (first upload, then an ETag update)", async () => {
     .getByText(/Synced ·/)
     .first()
     .waitFor({ timeout: 20000 });
+  await page.locator("#sync-phrase").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${shots}/sync-settings.png` });
   expect(
     dav.puts === 1 && dav.body?.startsWith("AURUM1."),
     "first upload missing or not encrypted",

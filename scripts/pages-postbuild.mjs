@@ -82,7 +82,10 @@ const html = readFileSync(join(clientDir, "index.html"), "utf8");
 const inlineHashes = [
   ...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi),
 ]
-  .map((m) => m[1] ?? "")
+  // Hash the text as the browser's HTML parser sees it: newlines normalized,
+  // and NUL characters (TanStack's router state contains some) replaced with
+  // U+FFFD. Otherwise the hash doesn't match and the script is blocked.
+  .map((m) => (m[1] ?? "").replace(/\r\n?/g, "\n").replace(/\u0000/g, "\uFFFD"))
   .filter((body) => body.trim().length > 0)
   .map(
     (body) => `'sha256-${createHash("sha256").update(body).digest("base64")}'`,
