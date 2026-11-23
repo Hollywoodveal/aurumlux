@@ -1,4 +1,5 @@
 import type JSZip from "jszip";
+import { elementsNamed } from "./epub-cover";
 import {
   allTextIndexes,
   getFile,
@@ -50,7 +51,7 @@ async function epubSections(blob: Blob): Promise<TextIndex["sections"]> {
     "application/xml",
   );
   const opfPath =
-    container.querySelector("rootfile")?.getAttribute("full-path") ?? "";
+    elementsNamed(container, "rootfile")[0]?.getAttribute("full-path") ?? "";
   const opfFile = zip.file(opfPath);
   if (!opfFile) return [];
   const opf = new DOMParser().parseFromString(
@@ -60,8 +61,8 @@ async function epubSections(blob: Blob): Promise<TextIndex["sections"]> {
   const dir = opfPath.includes("/")
     ? opfPath.slice(0, opfPath.lastIndexOf("/") + 1)
     : "";
-  const items = Array.from(opf.getElementsByTagName("item"));
-  const spine = Array.from(opf.getElementsByTagName("itemref")).map((r) =>
+  const items = elementsNamed(opf, "item");
+  const spine = elementsNamed(opf, "itemref").map((r) =>
     r.getAttribute("idref"),
   );
 
