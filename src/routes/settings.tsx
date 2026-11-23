@@ -365,14 +365,15 @@ function SettingsPage() {
           </SettingsSection>
           <SettingsSection
             id="covers"
-            title="Book covers"
+            title="Book covers and details"
             icon={<ImageIcon className="size-4 text-gold" aria-hidden />}
             className="mt-3"
           >
             <p className="mt-1 text-sm text-muted-foreground">
-              Some books were imported without the cover their file contains.
-              Aurum can look inside those files again. Nothing leaves your
-              device.
+              Some books were imported without the cover their file contains,
+              with the wrong page count, or with missing details. Aurum can look
+              inside those files again and fix what it finds. Nothing leaves
+              your device.
             </p>
             <CoverRescanButton />
           </SettingsSection>

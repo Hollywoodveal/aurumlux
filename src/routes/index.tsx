@@ -47,7 +47,12 @@ import {
   useFileIds,
 } from "@/hooks/useLibrary";
 import type { BookMeta } from "@/lib/db";
-import { recountPages, refetchCover, refetchMetadata } from "@/lib/importer";
+import {
+  isFallbackPageCount,
+  recountPages,
+  refetchCover,
+  refetchMetadata,
+} from "@/lib/importer";
 import { resolveLaunchResume } from "@/lib/resume";
 import { searchText } from "@/lib/textindex";
 
@@ -807,7 +812,14 @@ function LibraryPage() {
           <BookDetails book={current} onClose={() => setSelected(null)} />
         ) : null}
         <Onboarding />
-        <AutoCoverRescan enabled={books.some((b) => !b.hasCover)} />
+        <AutoCoverRescan
+          enabled={books.some(
+            (b) =>
+              !b.hasCover ||
+              !b.author ||
+              isFallbackPageCount(b.pageCount, b.fileSize),
+          )}
+        />
       </main>
     </MissingFilesContext.Provider>
   );

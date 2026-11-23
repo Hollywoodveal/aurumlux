@@ -912,17 +912,106 @@ export async function recountPages(book: BookMeta): Promise<number | null> {
 const LINK_EXT = /\.(epub|pdf|cbz|txt)(\?|#|$)/i;
 
 /**
+ * True when a book's page count is exactly what the old size-based estimate
+ * (file bytes / 2200) would produce. Those counts came from imports that
+ * never actually counted the text, so a recount from the file is safe to
+ * apply; a real count is only ever replaced when the recount differs, and
+ * the repair below only writes when the stored count carries this signature.
+ */
+export function isFallbackPageCount(
+  pageCount: number,
+  fileSize: number,
+): boolean {
+  return (
+    pageCount > 0 && fileSize > 0 && pageCount === Math.round(fileSize / 2200)
+  );
+}
+
+export type RepairPatchResult = {
+  /** Fields to write back to the book. Empty when nothing needs fixing. */
+  patch: Partial<BookMeta>;
+  /** The probe found a cover the book is missing. */
+  cover: boolean;
+  /** The probe recounts the pages to a different number. */
+  pages: boolean;
+  /** The probe fills in a blank metadata field. */
+  details: boolean;
+};
+
+/**
+ * Compare a book against a fresh parse of its own file and work out what the
+ * file can repair. Pure: it never writes, so it is easy to test.
+ *
+ * It only ever fills in blanks and fixes counts that carry the old fallback
+ * signature. It never overwrites a value the book already has, never touches
+ * a locked field, and never writes a recount that matches the stored count.
+ */
+export function repairPatch(
+  book: BookMeta,
+  probe: BookMeta,
+): RepairPatchResult {
+  const patch: Partial<BookMeta> = {};
+  const locked = new Set(book.locked ?? []);
+  let cover = false;
+  let pages = false;
+  let details = false;
+
+  if (probe.hasCover && !book.hasCover) {
+    patch.hasCover = true;
+    cover = true;
+  }
+  if (
+    probe.pageCount > 0 &&
+    probe.pageCount !== book.pageCount &&
+    isFallbackPageCount(book.pageCount, book.fileSize)
+  ) {
+    patch.pageCount = probe.pageCount;
+    pages = true;
+  }
+  const fill = <K extends keyof BookMeta>(key: K, value: BookMeta[K]) => {
+    if (locked.has(key as string)) return;
+    const current = book[key];
+    const empty = current === "" || current === undefined || current === null;
+    if (empty && value !== "" && value !== undefined && value !== null) {
+      patch[key] = value;
+      details = true;
+    }
+  };
+  fill("title", probe.title);
+  fill("author", probe.author);
+  fill("publisher", probe.publisher);
+  fill("isbn", probe.isbn);
+  fill("language", probe.language);
+  fill("publishedDate", probe.publishedDate);
+  fill("genre", probe.genre);
+  fill("description", probe.description);
+  fill("series", probe.series);
+  return { patch, cover, pages, details };
+}
+
+export type RepairSummary = {
+  covers: number;
+  pages: number;
+  details: number;
+};
+
+/**
  * Look again inside stored book files for covers that weren't found at import
- * (older imports only recognised the simplest cover markings). Local only.
- * Returns how many books gained a cover.
+ * (older imports only recognised the simplest cover markings), and repair
+ * what else the file can fix: page counts that were only ever a size-based
+ * estimate, and blank author, publisher, ISBN and other details the file
+ * actually contains. Local only. Returns how many books gained each fix.
  */
 export async function restoreMissingCovers(
   onProgress?: (done: number, total: number) => void,
-): Promise<number> {
-  const missing = (await listBooks()).filter((b) => !b.hasCover);
-  let found = 0;
-  for (const [i, book] of missing.entries()) {
-    onProgress?.(i, missing.length);
+): Promise<RepairSummary> {
+  const summary: RepairSummary = { covers: 0, pages: 0, details: 0 };
+  const needsWork = (await listBooks()).filter(
+    (b) =>
+      !b.hasCover || !b.author || isFallbackPageCount(b.pageCount, b.fileSize),
+  );
+  for (const [i, book] of needsWork.entries()) {
+    onProgress?.(i, needsWork.length);
     const file = await getFile(book.id);
     if (!file) continue;
     const probe = { ...emptyBook(), id: book.id, format: book.format };
@@ -936,13 +1025,15 @@ export async function restoreMissingCovers(
     } catch {
       continue;
     }
-    if (probe.hasCover) {
-      await updateBook(book.id, { hasCover: true });
-      found += 1;
-    }
+    const { patch, cover, pages, details } = repairPatch(book, probe);
+    if (Object.keys(patch).length === 0) continue;
+    await updateBook(book.id, patch);
+    if (cover) summary.covers += 1;
+    if (pages) summary.pages += 1;
+    if (details) summary.details += 1;
   }
-  onProgress?.(missing.length, missing.length);
-  return found;
+  onProgress?.(needsWork.length, needsWork.length);
+  return summary;
 }
 
 /** File extension for a book MIME type, or null when it isn't one Aurum reads. */
