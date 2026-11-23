@@ -7,7 +7,7 @@ import { restoreMissingCovers, type RepairSummary } from "@/lib/importer";
 
 const DONE_KEY = "coverRescanVersion";
 /** Bump when the repair improves, to re-check older imports once. */
-const VERSION = 2;
+const VERSION = 3;
 
 /** One line per kind of fix, only for the kinds that actually fixed something. */
 function describeRepair(summary: RepairSummary): string | null {
@@ -24,7 +24,13 @@ function describeRepair(summary: RepairSummary): string | null {
     parts.push(
       `filled in details for ${summary.details} book${summary.details === 1 ? "" : "s"}`,
     );
-  if (parts.length === 0) return null;
+  if (parts.length === 0) {
+    // Say how many books were checked, so a run that finds nothing is not
+    // mistaken for a run that never looked.
+    if (summary.checked > 0)
+      return `Checked ${summary.checked} book${summary.checked === 1 ? "" : "s"}, nothing could be fixed from their files`;
+    return null;
+  }
   const joined = parts.join(", ");
   return joined[0]?.toUpperCase() + joined.slice(1);
 }

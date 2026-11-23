@@ -1,4 +1,9 @@
-import { coverBlob, findEpubCover, mimeForPath } from "./epub-cover";
+import {
+  coverBlob,
+  elementsNamed,
+  findEpubCover,
+  mimeForPath,
+} from "./epub-cover";
 import { fetchExternal, friendlyHttpError } from "./net";
 import type JSZip from "jszip";
 import {
@@ -161,7 +166,7 @@ async function parseEpub(file: File, book: BookMeta) {
     "application/xml",
   );
   const opfPath =
-    container.querySelector("rootfile")?.getAttribute("full-path") ?? "";
+    elementsNamed(container, "rootfile")[0]?.getAttribute("full-path") ?? "";
   const opfFile = zip.file(opfPath);
   if (!opfFile) return;
   const opf = new DOMParser().parseFromString(
@@ -186,13 +191,13 @@ async function parseEpub(file: File, book: BookMeta) {
     .replace(/[-\s]/g, "")
     .match(/(97[89]\d{10}|\d{9}[\dXx])/);
   book.isbn = isbnMatch ? isbnMatch[0] : "";
-  const series = Array.from(opf.getElementsByTagName("meta")).find(
+  const series = elementsNamed(opf, "meta").find(
     (m) => m.getAttribute("name") === "calibre:series",
   );
   book.series = series?.getAttribute("content") ?? "";
 
   // Page count: trust publisher metadata, else count the real text in the spine.
-  const metas = Array.from(opf.getElementsByTagName("meta"));
+  const metas = elementsNamed(opf, "meta");
   const declaredPages = metas
     .map((m) => {
       const name = (
@@ -215,8 +220,8 @@ async function parseEpub(file: File, book: BookMeta) {
   if (declaredPages) {
     book.pageCount = declaredPages;
   } else {
-    const manifestItems = Array.from(opf.getElementsByTagName("item"));
-    const spineIds = Array.from(opf.getElementsByTagName("itemref")).map((r) =>
+    const manifestItems = elementsNamed(opf, "item");
+    const spineIds = elementsNamed(opf, "itemref").map((r) =>
       r.getAttribute("idref"),
     );
     const hrefs = spineIds
@@ -803,7 +808,7 @@ async function countEpubPages(file: File): Promise<number> {
     "application/xml",
   );
   const opfPath =
-    container.querySelector("rootfile")?.getAttribute("full-path") ?? "";
+    elementsNamed(container, "rootfile")[0]?.getAttribute("full-path") ?? "";
   const opfFile = zip.file(opfPath);
   if (!opfFile) return 0;
   const opf = new DOMParser().parseFromString(
@@ -814,7 +819,7 @@ async function countEpubPages(file: File): Promise<number> {
     ? opfPath.slice(0, opfPath.lastIndexOf("/") + 1)
     : "";
 
-  const declared = Array.from(opf.getElementsByTagName("meta"))
+  const declared = elementsNamed(opf, "meta")
     .map((m) => {
       const name = (
         m.getAttribute("name") ??
@@ -834,8 +839,8 @@ async function countEpubPages(file: File): Promise<number> {
     .find((n) => n > 0);
   if (declared) return declared;
 
-  const manifestItems = Array.from(opf.getElementsByTagName("item"));
-  const hrefs = Array.from(opf.getElementsByTagName("itemref"))
+  const manifestItems = elementsNamed(opf, "item");
+  const hrefs = elementsNamed(opf, "itemref")
     .map((r) => r.getAttribute("idref"))
     .map(
       (id) =>
@@ -993,6 +998,8 @@ export type RepairSummary = {
   covers: number;
   pages: number;
   details: number;
+  /** Books the rescan looked inside, even when nothing could be fixed. */
+  checked: number;
 };
 
 /**
@@ -1005,11 +1012,17 @@ export type RepairSummary = {
 export async function restoreMissingCovers(
   onProgress?: (done: number, total: number) => void,
 ): Promise<RepairSummary> {
-  const summary: RepairSummary = { covers: 0, pages: 0, details: 0 };
+  const summary: RepairSummary = {
+    covers: 0,
+    pages: 0,
+    details: 0,
+    checked: 0,
+  };
   const needsWork = (await listBooks()).filter(
     (b) =>
       !b.hasCover || !b.author || isFallbackPageCount(b.pageCount, b.fileSize),
   );
+  summary.checked = needsWork.length;
   for (const [i, book] of needsWork.entries()) {
     onProgress?.(i, needsWork.length);
     const file = await getFile(book.id);

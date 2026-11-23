@@ -17,6 +17,16 @@ type ZipEntry = JSZip.JSZipObject;
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp|svg)$/i;
 
+/**
+ * Elements with this local name, whatever namespace prefix the file uses.
+ * EPUB files often bind the OPF namespace to a prefix (ns0:item) instead of
+ * the default namespace, and getElementsByTagName("item") then finds nothing,
+ * so the cover, the spine and the page count all silently come back empty.
+ */
+export function elementsNamed(doc: Document, tag: string): Element[] {
+  return Array.from(doc.getElementsByTagNameNS("*", tag));
+}
+
 /** Resolve an href against a directory inside the zip ("a/b/" + "../c.png" → "a/c.png"). */
 export function resolveZipPath(dir: string, href: string): string {
   let clean = href.split("#")[0]?.split("?")[0] ?? "";
@@ -78,10 +88,10 @@ async function imageInPage(
     await page.async("string"),
     "application/xhtml+xml",
   );
-  const body = doc.getElementsByTagName("body")[0] ?? doc.documentElement;
+  const body = elementsNamed(doc, "body")[0] ?? doc.documentElement;
   if ((body?.textContent ?? "").trim().length > maxText) return null;
-  const img = doc.getElementsByTagName("img")[0];
-  const svgImage = doc.getElementsByTagName("image")[0];
+  const img = elementsNamed(doc, "img")[0];
+  const svgImage = elementsNamed(doc, "image")[0];
   const src =
     img?.getAttribute("src") ??
     svgImage?.getAttribute("href") ??
@@ -96,7 +106,7 @@ export async function findEpubCover(
   opf: Document,
   opfDir: string,
 ): Promise<{ entry: ZipEntry; path: string } | null> {
-  const items = Array.from(opf.getElementsByTagName("item"));
+  const items = elementsNamed(opf, "item");
   const hrefOf = (el: Element | undefined) =>
     el ? resolveZipPath(opfDir, el.getAttribute("href") ?? "") : "";
   const isImage = (el: Element) =>
@@ -108,7 +118,7 @@ export async function findEpubCover(
   };
 
   // 1. <meta name="cover">
-  const metaCover = Array.from(opf.getElementsByTagName("meta")).find(
+  const metaCover = elementsNamed(opf, "meta").find(
     (m) => (m.getAttribute("name") ?? "").toLowerCase() === "cover",
   );
   const metaContent = metaCover?.getAttribute("content")?.trim() ?? "";
@@ -134,7 +144,7 @@ export async function findEpubCover(
   if (propHit) return propHit;
 
   // 3. <guide><reference type="cover">
-  const refs = Array.from(opf.getElementsByTagName("reference"));
+  const refs = elementsNamed(opf, "reference");
   const guide =
     refs.find(
       (r) => (r.getAttribute("type") ?? "").toLowerCase() === "cover",
@@ -149,9 +159,7 @@ export async function findEpubCover(
   }
 
   // 4. First page in reading order, if it's essentially a single picture.
-  const firstRef = opf
-    .getElementsByTagName("itemref")[0]
-    ?.getAttribute("idref");
+  const firstRef = elementsNamed(opf, "itemref")[0]?.getAttribute("idref");
   const firstItem = items.find((i) => i.getAttribute("id") === firstRef);
   if (firstItem && !isImage(firstItem)) {
     const hit = found((await imageInPage(zip, hrefOf(firstItem), 200)) ?? "");

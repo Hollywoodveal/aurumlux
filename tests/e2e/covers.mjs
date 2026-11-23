@@ -73,12 +73,14 @@ async function epub(title, kind, color) {
     metahref: ["images/img001.png", "OEBPS/images/img001.png"],
     guide: ["images/img002.png", "OEBPS/images/img002.png"],
     titlepage: ["images/pic.png", "OEBPS/images/pic.png"],
+    prefixed: ["images/cover.png", "OEBPS/images/cover.png"],
   }[kind];
   const meta =
     {
       epub2: `<meta name="cover" content="cimg"/>`,
       subdir: `<meta name="cover" content="cimg"/>`,
       metahref: `<meta name="cover" content="images/img001.png"/>`,
+      prefixed: `<ns0:meta name="cover" content="cimg"/>`,
     }[kind] ?? "";
   const props = kind === "epub3" ? ` properties="cover-image"` : "";
   const guide =
@@ -86,10 +88,14 @@ async function epub(title, kind, color) {
       ? `<guide><reference type="cover" title="Cover" href="Text/cover.xhtml"/></guide>`
       : "";
   const firstPage = kind === "titlepage" ? `<itemref idref="tp"/>` : "";
-  zip.file(
-    "OEBPS/content.opf",
-    `<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="id">urn:c:${title}</dc:identifier><dc:title>${title}</dc:title><dc:creator>Cover Tester</dc:creator><dc:language>en</dc:language>${meta}</metadata><manifest><item id="cimg" href="${img[0]}" media-type="image/png"${props}/><item id="tp" href="Text/title.xhtml" media-type="application/xhtml+xml"/><item id="cv" href="Text/cover.xhtml" media-type="application/xhtml+xml"/><item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/></manifest><spine>${firstPage}<itemref idref="c1"/></spine>${guide}</package>`,
-  );
+  // The prefixed variant binds the OPF namespace to a prefix (ns0:item)
+  // instead of the default namespace, the way several real publisher EPUBs
+  // do. getElementsByTagName("item") finds nothing in such a file.
+  const opf =
+    kind === "prefixed"
+      ? `<?xml version="1.0"?><ns0:package xmlns:ns0="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id"><ns0:metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="id">urn:c:${title}</dc:identifier><dc:title>${title}</dc:title><dc:creator>Cover Tester</dc:creator><dc:language>en</dc:language>${meta}</ns0:metadata><ns0:manifest><ns0:item id="cimg" href="${img[0]}" media-type="image/png"/><ns0:item id="tp" href="Text/title.xhtml" media-type="application/xhtml+xml"/><ns0:item id="cv" href="Text/cover.xhtml" media-type="application/xhtml+xml"/><ns0:item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/><ns0:item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/></ns0:manifest><ns0:spine><ns0:itemref idref="c1"/></ns0:spine></ns0:package>`
+      : `<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="id">urn:c:${title}</dc:identifier><dc:title>${title}</dc:title><dc:creator>Cover Tester</dc:creator><dc:language>en</dc:language>${meta}</metadata><manifest><item id="cimg" href="${img[0]}" media-type="image/png"${props}/><item id="tp" href="Text/title.xhtml" media-type="application/xhtml+xml"/><item id="cv" href="Text/cover.xhtml" media-type="application/xhtml+xml"/><item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/></manifest><spine>${firstPage}<itemref idref="c1"/></spine>${guide}</package>`;
+  zip.file("OEBPS/content.opf", opf);
   zip.file(
     "OEBPS/Text/cover.xhtml",
     `<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:xlink="http://www.w3.org/1999/xlink"><head><title>Cover</title></head><body><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450"><image xlink:href="../${img[0]}" width="300" height="450"/></svg></body></html>`,
@@ -126,9 +132,9 @@ const palette = [
   [20, 100, 110],
 ];
 const files = [];
-const kinds = ["epub2", "epub3", "subdir", "metahref", "guide", "titlepage"];
+const kinds = ["epub2", "epub3", "subdir", "prefixed"];
 for (let i = 0; i < 66; i++) {
-  const kind = kinds[i % 3];
+  const kind = kinds[i % kinds.length];
   const title = `Cover ${String(i + 1).padStart(2, "0")} ${kind}`;
   files.push({
     name: `${title}.epub`,
