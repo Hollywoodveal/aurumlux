@@ -53,6 +53,8 @@ export type ReaderPrefs = {
   bookTypography: boolean;
   /** Show the book's cover when it opens; tap to open it to your page. */
   showCover: boolean;
+  /** Settings version; 2 = the "turn" page animation exists. */
+  prefsVersion?: number;
 };
 
 export const DEFAULT_PREFS: ReaderPrefs = {
@@ -71,6 +73,7 @@ export const DEFAULT_PREFS: ReaderPrefs = {
   tapToRead: true,
   bookTypography: true,
   showCover: true,
+  prefsVersion: 2,
 };
 
 /** Highlight colours for the spoken word and its passage at a given intensity. */
@@ -105,5 +108,12 @@ export function resolveFont(prefs: ReaderPrefs, fontOverride?: string | null) {
 export function withPrefDefaults(
   p: Partial<ReaderPrefs> | undefined | null,
 ): ReaderPrefs {
-  return { ...DEFAULT_PREFS, ...(p ?? {}) };
+  const merged = { ...DEFAULT_PREFS, ...(p ?? {}) };
+  // Settings saved before the page-turn animation existed still carry the
+  // old default ("slide"); move them onto the new default once.
+  if (p && !p.prefsVersion) {
+    if (p.pageAnim === "slide") merged.pageAnim = "turn";
+    merged.prefsVersion = 2;
+  }
+  return merged;
 }

@@ -7,6 +7,7 @@ import {
   type ReaderPrefs,
 } from "@/components/reader/EpubReader";
 import { PdfReader } from "@/components/reader/PdfReader";
+import { withPrefDefaults } from "@/lib/reader-prefs";
 import { CbzReader } from "@/components/reader/CbzReader";
 import { TxtReader } from "@/components/reader/TxtReader";
 import { BrandMark } from "@/components/BrandMark";
@@ -97,7 +98,7 @@ function ReaderPage() {
       setBook(b ?? null);
       baseReadingTime.current = b?.readingTime ?? 0;
       setAnnotations(a);
-      setPrefs({ ...DEFAULT_PREFS, ...p });
+      setPrefs(withPrefDefaults(p));
       setLiveProgress(b?.progress ?? 0);
       setLoaded(true);
       if (b) {
