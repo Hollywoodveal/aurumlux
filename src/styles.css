@@ -445,6 +445,179 @@
   animation: page-turn-settle 0.24s ease-out both;
 }
 
+/* Two-page spread: a soft gutter down the middle and page edges at the
+   sides, so a wide screen reads as an open book. */
+.book-gutter {
+  pointer-events: none;
+  position: absolute;
+  inset-block: 0;
+  left: calc(50% - 36px);
+  width: 72px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgb(0 0 0 / 18%) 40%,
+    rgb(0 0 0 / 38%) 50%,
+    rgb(0 0 0 / 18%) 60%,
+    transparent
+  );
+}
+
+.book-edge {
+  pointer-events: none;
+  position: absolute;
+  inset-block: 6px;
+  width: 6px;
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    to right,
+    rgb(255 255 255 / 10%) 0 1px,
+    rgb(0 0 0 / 25%) 1px 2px
+  );
+}
+
+.book-edge-left {
+  left: 0;
+  border-radius: 3px 0 0 3px;
+}
+
+.book-edge-right {
+  right: 0;
+  border-radius: 0 3px 3px 0;
+}
+
+/* The leaf that turns over a spread. It hinges on the gutter: forward it
+   lifts off the right page and lands on the left, back the reverse. The
+   spread changes underneath while the leaf is edge-on. */
+.page-sheet {
+  pointer-events: none;
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: 50%;
+  transform-origin: left center;
+  visibility: hidden;
+  background: linear-gradient(
+    to right,
+    rgb(0 0 0 / 30%),
+    rgb(0 0 0 / 6%) 25%,
+    rgb(255 255 255 / 7%) 70%,
+    rgb(0 0 0 / 22%)
+  );
+  box-shadow: 0 0 30px rgb(0 0 0 / 35%);
+}
+
+@keyframes sheet-lift-next {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-90deg);
+  }
+}
+
+@keyframes sheet-land-next {
+  from {
+    transform: rotateY(-90deg);
+    opacity: 1;
+  }
+  to {
+    transform: rotateY(-180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-lift-prev {
+  from {
+    transform: rotateY(-180deg);
+  }
+  to {
+    transform: rotateY(-90deg);
+  }
+}
+
+@keyframes sheet-land-prev {
+  from {
+    transform: rotateY(-90deg);
+    opacity: 1;
+  }
+  to {
+    transform: rotateY(0deg);
+    opacity: 0;
+  }
+}
+
+@utility sheet-lift-next {
+  visibility: visible;
+  animation: sheet-lift-next 0.23s cubic-bezier(0.45, 0, 0.75, 0.4) forwards;
+}
+
+@utility sheet-land-next {
+  visibility: visible;
+  animation: sheet-land-next 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@utility sheet-lift-prev {
+  visibility: visible;
+  animation: sheet-lift-prev 0.23s cubic-bezier(0.45, 0, 0.75, 0.4) forwards;
+}
+
+@utility sheet-land-prev {
+  visibility: visible;
+  animation: sheet-land-prev 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+/* Cover shown when a book opens; tapping swings it open on its spine. */
+.book-endpaper {
+  display: flex;
+  width: 50%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  background: linear-gradient(to right, transparent 85%, rgb(0 0 0 / 35%));
+}
+
+.book-cover {
+  transform-origin: left center;
+  backface-visibility: hidden;
+}
+
+@keyframes book-cover-open {
+  to {
+    transform: rotateY(-165deg);
+  }
+}
+
+@keyframes book-cover-stage-fade {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.book-cover-opening {
+  animation: book-cover-open 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.book-cover-stage.is-opening {
+  animation: book-cover-stage-fade 0.8s ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-lift-next,
+  .sheet-land-next,
+  .sheet-lift-prev,
+  .sheet-land-prev {
+    visibility: hidden !important;
+    animation: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-turn-away,
   .page-turn-back,

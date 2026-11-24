@@ -51,6 +51,8 @@ export type ReaderPrefs = {
   tapToRead: boolean;
   /** Gold drop cap on chapter openings and small-caps chapter titles (EPUB). */
   bookTypography: boolean;
+  /** Show the book's cover when it opens; tap to open it to your page. */
+  showCover: boolean;
 };
 
 export const DEFAULT_PREFS: ReaderPrefs = {
@@ -68,6 +70,7 @@ export const DEFAULT_PREFS: ReaderPrefs = {
   highlightIntensity: 42,
   tapToRead: true,
   bookTypography: true,
+  showCover: true,
 };
 
 /** Highlight colours for the spoken word and its passage at a given intensity. */
