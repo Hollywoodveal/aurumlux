@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { BookBadge } from "@/components/BookBadge";
-import { BookSpine } from "@/components/BookSpine";
+import { BookSpine, spineWidth } from "@/components/BookSpine";
 import { CoverImage } from "@/components/CoverImage";
 import { StarRating } from "@/components/StarRating";
 import type { BookMeta } from "@/lib/db";
+import { packShelves } from "@/lib/shelf-pack";
 import { cn } from "@/lib/utils";
 
 export type ViewMode = "spine" | "grid" | "list" | "compact";
@@ -32,11 +33,21 @@ function SelectMark({ selected }: { selected: boolean }) {
   );
 }
 
-function chunk<T>(items: T[], size: number) {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size)
-    out.push(items.slice(i, i + size));
-  return out;
+/** Width of the element's content box, kept current as the screen changes
+ *  (rotation, unfolding, split view). 0 until it has been measured. */
+function useContentWidth<E extends HTMLElement>() {
+  const ref = useRef<E>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([entry]) => {
+      setWidth(Math.floor(entry.contentRect.width));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width] as const;
 }
 
 export function SpineShelf({
@@ -45,9 +56,12 @@ export function SpineShelf({
   selectable,
   selectedIds,
 }: ShelfProps) {
+  const [ref, width] = useContentWidth<HTMLDivElement>();
+  // Each shelf has 12px padding on both sides; spines sit 3px apart.
+  const rows = packShelves(books, width - 24, spineWidth, 3);
   return (
-    <div className="space-y-5">
-      {chunk(books, 12).map((row, i) => (
+    <div ref={ref} className="space-y-5">
+      {rows.map((row, i) => (
         <div
           key={i}
           className="shelf-spotlight rounded-xl shelf-plank px-3 pt-4"
@@ -172,9 +186,12 @@ export function CompactShelf({
   selectable,
   selectedIds,
 }: ShelfProps) {
+  const [ref, width] = useContentWidth<HTMLDivElement>();
+  // Each shelf has 8px padding on both sides; spines sit 4px apart.
+  const rows = packShelves(books, width - 16, spineWidth, 4);
   return (
-    <div className="space-y-4">
-      {chunk(books, 12).map((row, i) => (
+    <div ref={ref} className="space-y-4">
+      {rows.map((row, i) => (
         <div
           key={i}
           className="shelf-spotlight rounded-lg shelf-plank px-2 pt-3"
