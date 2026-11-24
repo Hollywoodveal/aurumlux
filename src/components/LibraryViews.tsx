@@ -42,7 +42,7 @@ function useContentWidth<E extends HTMLElement>() {
     const el = ref.current;
     if (!el || typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(([entry]) => {
-      setWidth(Math.floor(entry.contentRect.width));
+      if (entry) setWidth(Math.floor(entry.contentRect.width));
     });
     ro.observe(el);
     return () => ro.disconnect();
