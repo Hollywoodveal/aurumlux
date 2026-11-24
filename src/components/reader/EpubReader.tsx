@@ -45,6 +45,7 @@ import {
 import { DictionarySheet } from "@/components/reader/DictionarySheet";
 import { NoteComposer } from "@/components/reader/NoteComposer";
 import { SpokenHighlighter } from "@/lib/spoken-highlight";
+import { useCoverUrl } from "@/hooks/useLibrary";
 
 export { DEFAULT_PREFS };
 export type { ReaderPrefs, ReaderTheme, ReaderThemeChoice };
@@ -268,6 +269,30 @@ export function ReaderSettings({
         <div className="mt-6 flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              Cover on open
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Start at the cover, then tap to open the book
+            </p>
+          </div>
+          <button
+            onClick={() => onChange({ ...prefs, showCover: !prefs.showCover })}
+            aria-pressed={prefs.showCover}
+            aria-label="Toggle cover on open"
+            className={cn(
+              "min-h-11 min-w-11 rounded-full border px-4 text-xs uppercase tracking-widest",
+              prefs.showCover
+                ? "border-gold/60 bg-gold/10 text-gold"
+                : "border-border text-muted-foreground",
+            )}
+          >
+            {prefs.showCover ? "On" : "Off"}
+          </button>
+        </div>
+
+        <div className="mt-6 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
               Readable font
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">
@@ -395,6 +420,16 @@ const PAGE_ANIM_CLASSES = [
 ];
 /** Matches the page-turn-away animation in styles.css. */
 const PAGE_TURN_MS = 260;
+/** The turning leaf over a two-page spread, and its lift time (styles.css). */
+const SHEET_CLASSES = [
+  "sheet-lift-next",
+  "sheet-land-next",
+  "sheet-lift-prev",
+  "sheet-land-prev",
+];
+const SHEET_LIFT_MS = 230;
+/** Reader width at which pages show side by side, like an open book. */
+const MIN_SPREAD_WIDTH = 700;
 
 export function EpubReader({
   book,
@@ -446,6 +481,14 @@ export function EpubReader({
   /** Direction of a page-turn animation waiting for its page to render. */
   const pendingTurnRef = useRef<"next" | "prev" | null>(null);
   const turnRef = useRef<(dir: "next" | "prev") => void>(() => undefined);
+  /** Two pages side by side (wide screens), and the leaf that turns over them. */
+  const [spread, setSpread] = useState(false);
+  const spreadRef = useRef(false);
+  spreadRef.current = spread;
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const coverUrl = useCoverUrl(book);
+  const [coverShown, setCoverShown] = useState(() => prefs.showCover);
+  const [coverOpening, setCoverOpening] = useState(false);
   /** Follow-along narration state: word highlighter, its document, page-turn lock. */
   const spokenRef = useRef<SpokenHighlighter | null>(null);
   const spokenDocRef = useRef<Document | null>(null);
@@ -492,7 +535,10 @@ export function EpubReader({
         width: "100%",
         height: "100%",
         flow: "paginated",
-        spread: "none",
+        // Wide screens (an unfolded phone, landscape, a tablet) show two pages
+        // side by side like an open book; narrow ones show one.
+        spread: "auto",
+        minSpreadWidth: MIN_SPREAD_WIDTH,
         // Books are untrusted input (especially ones imported from a link). With
         // scripts allowed, epub.js gives the iframe both allow-scripts and
         // allow-same-origin, so a book's JavaScript could read every book, note
@@ -509,7 +555,11 @@ export function EpubReader({
           /* rebuilt below */
         }
       }
+      rendition.on("layout", (layout: any) => {
+        if (!destroyed) setSpread(Boolean(layout?.spread));
+      });
       await rendition.display(book.location || undefined);
+      setSpread(rendition._layout?.divisor === 2);
 
       if (destroyed) return;
       setReady(true);
@@ -571,12 +621,22 @@ export function EpubReader({
         const el = hostRef.current;
         const turned = pendingTurnRef.current;
         pendingTurnRef.current = null;
+        const sheet = sheetRef.current;
+        if (turned && spreadRef.current && sheet) {
+          // Over a spread the leaf finishes turning onto the other page.
+          sheet.classList.remove(...SHEET_CLASSES);
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          sheet.offsetWidth;
+          sheet.classList.add(
+            turned === "next" ? "sheet-land-next" : "sheet-land-prev",
+          );
+        }
         if (el && anim !== "none" && !reduceMotion) {
           // A tapped page turn finishes here: the new page settles into view
           // (forward) or swings back down onto the stack (back). Jumps from the
           // contents, search or read-aloud just fade in.
           const cls = turned
-            ? turned === "next"
+            ? turned === "next" || spreadRef.current
               ? "page-turn-settle"
               : "page-turn-back"
             : anim === "slide"
@@ -862,7 +922,16 @@ export function EpubReader({
     }
     pendingTurnRef.current = dir;
     el.classList.remove(...PAGE_ANIM_CLASSES);
-    if (dir === "next") {
+    const sheet = sheetRef.current;
+    if (spreadRef.current && sheet) {
+      // Two pages: a leaf lifts off one page, the spread changes while it is
+      // edge-on, and it lands on the other page (see the relocated handler).
+      sheet.classList.remove(...SHEET_CLASSES);
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      sheet.offsetWidth;
+      sheet.classList.add(dir === "next" ? "sheet-lift-next" : "sheet-lift-prev");
+      window.setTimeout(go, SHEET_LIFT_MS);
+    } else if (dir === "next") {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       el.offsetWidth;
       el.classList.add("page-turn-away");
@@ -875,6 +944,7 @@ export function EpubReader({
       if (pendingTurnRef.current !== dir) return;
       pendingTurnRef.current = null;
       el.classList.remove(...PAGE_ANIM_CLASSES);
+      sheetRef.current?.classList.remove(...SHEET_CLASSES);
     }, 1500);
   }, []);
   turnRef.current = turnPage;
@@ -1176,6 +1246,15 @@ export function EpubReader({
 
       <div className="relative flex-1 overflow-hidden [perspective:1800px]">
         <div ref={hostRef} className="page-stage h-full w-full" />
+        {spread ? (
+          <>
+            {/* Gutter shadow and page edges so a spread reads as an open book. */}
+            <div aria-hidden="true" className="book-gutter" />
+            <div aria-hidden="true" className="book-edge book-edge-left" />
+            <div aria-hidden="true" className="book-edge book-edge-right" />
+          </>
+        ) : null}
+        <div ref={sheetRef} aria-hidden="true" className="page-sheet" />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
@@ -1201,6 +1280,52 @@ export function EpubReader({
           className="absolute inset-y-0 right-0 w-[18%]"
         />
         <TapZoneHint />
+        {coverShown && prefs.showCover && coverUrl ? (
+          <button
+            type="button"
+            aria-label={`Open ${book.title}`}
+            onClick={() => {
+              const reduce = window.matchMedia?.(
+                "(prefers-reduced-motion: reduce)",
+              ).matches;
+              if (reduce) setCoverShown(false);
+              else setCoverOpening(true);
+            }}
+            onAnimationEnd={(e) => {
+              if (e.target === e.currentTarget) setCoverShown(false);
+            }}
+            className={cn(
+              "book-cover-stage absolute inset-0 z-20 flex [perspective:2000px]",
+              spread ? "justify-end" : "justify-center",
+              coverOpening && "is-opening",
+            )}
+            style={{ background: THEME_COLORS[readerTheme].bg }}
+          >
+            {spread ? (
+              <span aria-hidden="true" className="book-endpaper">
+                <span className="font-display text-2xl text-gold/80">
+                  {book.title}
+                </span>
+                <span className="mt-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  {book.author}
+                </span>
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                "book-cover flex h-full items-center justify-center p-4",
+                spread ? "w-1/2" : "w-full",
+                coverOpening && "book-cover-opening",
+              )}
+            >
+              <img
+                src={coverUrl}
+                alt=""
+                className="max-h-full max-w-full rounded-r-md object-contain shadow-[0_20px_50px_-12px_rgb(0_0_0/0.8)]"
+              />
+            </span>
+          </button>
+        ) : null}
       </div>
 
       <footer
