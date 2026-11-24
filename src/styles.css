@@ -500,8 +500,9 @@
   background: linear-gradient(
     to right,
     rgb(0 0 0 / 30%),
-    rgb(0 0 0 / 6%) 25%,
-    rgb(255 255 255 / 7%) 70%,
+    rgb(255 255 255 / 8%) 25%,
+    rgb(255 255 255 / 16%) 75%,
+    rgb(255 255 255 / 30%) 98%,
     rgb(0 0 0 / 22%)
   );
   box-shadow: 0 0 30px rgb(0 0 0 / 35%);
@@ -565,6 +566,15 @@
 @utility sheet-land-prev {
   visibility: visible;
   animation: sheet-land-prev 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+/* Holds the photographed leaf while a spread turns (iOS app). */
+.flip-layer {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  perspective: 2200px;
 }
 
 /* Cover shown when a book opens; tapping swings it open on its spine. */

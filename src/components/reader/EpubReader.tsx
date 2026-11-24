@@ -46,6 +46,13 @@ import { DictionarySheet } from "@/components/reader/DictionarySheet";
 import { NoteComposer } from "@/components/reader/NoteComposer";
 import { SpokenHighlighter } from "@/lib/spoken-highlight";
 import { useCoverUrl } from "@/hooks/useLibrary";
+import {
+  canSnapshot,
+  prepareSpreadFlip,
+  snapshotElement,
+  type Flip,
+  type Snapshot,
+} from "@/lib/page-flip";
 
 export { DEFAULT_PREFS };
 export type { ReaderPrefs, ReaderTheme, ReaderThemeChoice };
@@ -460,6 +467,39 @@ export function EpubReader({
   const renditionRef = useRef<any>(null);
   // Page colour actually painted: the per-book override, or the app theme when "auto".
   const readerTheme = resolveReaderTheme(prefs.theme, useAppTheme());
+  const readerThemeRef = useRef(readerTheme);
+  readerThemeRef.current = readerTheme;
+
+  /** What a photo of the spread depends on: the page, the size and the look. */
+  const snapKey = useCallback(() => {
+    const r = stageRef.current?.getBoundingClientRect();
+    const cfi = renditionRef.current?.location?.start?.cfi ?? "";
+    return `${cfi}|${r?.width}x${r?.height}|${readerThemeRef.current}|${JSON.stringify(prefsRef.current)}`;
+  }, []);
+
+  /** Photograph the spread shortly after it settles, so a tap turns at once. */
+  const snapTimerRef = useRef<number | undefined>(undefined);
+  const scheduleSnapRef = useRef<() => void>(() => undefined);
+  scheduleSnapRef.current = () => {
+    window.clearTimeout(snapTimerRef.current);
+    if (!canSnapshot()) return;
+    snapTimerRef.current = window.setTimeout(async () => {
+      const stage = stageRef.current;
+      const busy =
+        pendingTurnRef.current ||
+        flipRef.current ||
+        activeFlipRef.current ||
+        coverShownRef.current ||
+        flipLayerRef.current?.style.visibility === "visible";
+      if (!stage || !spreadRef.current || busy) return;
+      const key = snapKey();
+      const snap = await snapshotElement(stage);
+      if (snap && key === snapKey() && !pendingTurnRef.current) {
+        snapRef.current = { key, snap };
+      }
+    }, 700);
+  };
+  useEffect(() => () => window.clearTimeout(snapTimerRef.current), []);
   const [toc, setToc] = useState<{ label: string; href: string }[]>([]);
   const [panel, setPanel] = useState<
     null | "toc" | "settings" | "search" | "notes"
@@ -486,9 +526,19 @@ export function EpubReader({
   const spreadRef = useRef(false);
   spreadRef.current = spread;
   const sheetRef = useRef<HTMLDivElement>(null);
+  /** The page stage, the layer the photographed leaf turns on, and the flip
+   *  waiting for its new pages. */
+  const stageRef = useRef<HTMLDivElement>(null);
+  const flipLayerRef = useRef<HTMLDivElement>(null);
+  const flipRef = useRef<Flip | null>(null);
+  const activeFlipRef = useRef<Flip | null>(null);
+  /** Photo of the spread as it is now, taken ahead of the next tap. */
+  const snapRef = useRef<{ key: string; snap: Snapshot } | null>(null);
+  const coverShownRef = useRef(false);
   const coverUrl = useCoverUrl(book);
   const [coverShown, setCoverShown] = useState(() => prefs.showCover);
   const [coverOpening, setCoverOpening] = useState(false);
+  coverShownRef.current = coverShown && prefs.showCover && Boolean(coverUrl);
   /** Follow-along narration state: word highlighter, its document, page-turn lock. */
   const spokenRef = useRef<SpokenHighlighter | null>(null);
   const spokenDocRef = useRef<Document | null>(null);
@@ -622,7 +672,16 @@ export function EpubReader({
         const turned = pendingTurnRef.current;
         pendingTurnRef.current = null;
         const sheet = sheetRef.current;
-        if (turned && spreadRef.current && sheet) {
+        const flip = flipRef.current;
+        flipRef.current = null;
+        if (turned && flip) {
+          // The new pages are in place under the photo: turn the leaf.
+          activeFlipRef.current = flip;
+          void flip.start().then(() => {
+            if (activeFlipRef.current === flip) activeFlipRef.current = null;
+            scheduleSnapRef.current();
+          });
+        } else if (turned && spreadRef.current && sheet) {
           // Over a spread the leaf finishes turning onto the other page.
           sheet.classList.remove(...SHEET_CLASSES);
           // eslint-disable-next-line @typescript-eslint/no-unused-expressions
@@ -631,7 +690,7 @@ export function EpubReader({
             turned === "next" ? "sheet-land-next" : "sheet-land-prev",
           );
         }
-        if (el && anim !== "none" && !reduceMotion) {
+        if (el && anim !== "none" && !reduceMotion && !(turned && flip)) {
           // A tapped page turn finishes here: the new page settles into view
           // (forward) or swings back down onto the stack (back). Jumps from the
           // contents, search or read-aloud just fade in.
@@ -647,6 +706,7 @@ export function EpubReader({
           el.offsetWidth;
           el.classList.add(cls);
         }
+        if (!(turned && flip)) scheduleSnapRef.current();
         relocatedResolveRef.current?.();
         relocatedResolveRef.current = null;
       });
@@ -899,56 +959,88 @@ export function EpubReader({
    * the current page lifts off its left edge and turns away before the next
    * one is shown; going back, the previous page swings down onto the stack.
    */
-  const turnPage = useCallback((dir: "next" | "prev") => {
-    const rendition = renditionRef.current;
-    if (!rendition) return;
-    const go = () =>
-      void (dir === "next" ? rendition.next() : rendition.prev());
-    const el = hostRef.current;
-    const reduceMotion = window.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const loc = rendition.location;
-    const atEdge = dir === "next" ? loc?.atEnd : loc?.atStart;
-    if (
-      prefsRef.current.pageAnim !== "turn" ||
-      reduceMotion ||
-      !el ||
-      atEdge ||
-      pendingTurnRef.current
-    ) {
-      go();
-      return;
-    }
-    pendingTurnRef.current = dir;
-    el.classList.remove(...PAGE_ANIM_CLASSES);
-    const sheet = sheetRef.current;
-    if (spreadRef.current && sheet) {
-      // Two pages: a leaf lifts off one page, the spread changes while it is
-      // edge-on, and it lands on the other page (see the relocated handler).
-      sheet.classList.remove(...SHEET_CLASSES);
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      sheet.offsetWidth;
-      sheet.classList.add(
-        dir === "next" ? "sheet-lift-next" : "sheet-lift-prev",
-      );
-      window.setTimeout(go, SHEET_LIFT_MS);
-    } else if (dir === "next") {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      el.offsetWidth;
-      el.classList.add("page-turn-away");
-      window.setTimeout(go, PAGE_TURN_MS);
-    } else {
-      go();
-    }
-    // If the page never moves (end of the book, a load error), put it back.
-    window.setTimeout(() => {
-      if (pendingTurnRef.current !== dir) return;
-      pendingTurnRef.current = null;
+  const turnPage = useCallback(
+    async (dir: "next" | "prev") => {
+      const rendition = renditionRef.current;
+      if (!rendition) return;
+      const go = () =>
+        void (dir === "next" ? rendition.next() : rendition.prev());
+      const el = hostRef.current;
+      const reduceMotion = window.matchMedia?.(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      const loc = rendition.location;
+      const atEdge = dir === "next" ? loc?.atEnd : loc?.atStart;
+      // Tapping again mid-turn: finish that turn and move on straight away.
+      const turning = activeFlipRef.current;
+      if (turning) {
+        turning.cancel();
+        activeFlipRef.current = null;
+      }
+      if (
+        turning ||
+        prefsRef.current.pageAnim !== "turn" ||
+        reduceMotion ||
+        !el ||
+        atEdge ||
+        pendingTurnRef.current
+      ) {
+        go();
+        return;
+      }
+      pendingTurnRef.current = dir;
       el.classList.remove(...PAGE_ANIM_CLASSES);
-      sheetRef.current?.classList.remove(...SHEET_CLASSES);
-    }, 1500);
-  }, []);
+      const sheet = sheetRef.current;
+      const stage = stageRef.current;
+      const layer = flipLayerRef.current;
+      if (spreadRef.current && canSnapshot() && stage && layer) {
+        // In the app: lay a photo of the spread over it, render the new pages
+        // underneath, then turn the photographed leaf (relocated handler).
+        const key = snapKey();
+        const snap =
+          snapRef.current?.key === key
+            ? snapRef.current.snap
+            : await snapshotElement(stage);
+        snapRef.current = null;
+        if (snap && pendingTurnRef.current === dir) {
+          flipRef.current = prepareSpreadFlip(
+            layer,
+            snap,
+            dir,
+            THEME_COLORS[readerThemeRef.current].bg,
+          );
+        }
+        go();
+      } else if (spreadRef.current && sheet) {
+        // Two pages: a leaf lifts off one page, the spread changes while it is
+        // edge-on, and it lands on the other page (see the relocated handler).
+        sheet.classList.remove(...SHEET_CLASSES);
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        sheet.offsetWidth;
+        sheet.classList.add(
+          dir === "next" ? "sheet-lift-next" : "sheet-lift-prev",
+        );
+        window.setTimeout(go, SHEET_LIFT_MS);
+      } else if (dir === "next") {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        el.offsetWidth;
+        el.classList.add("page-turn-away");
+        window.setTimeout(go, PAGE_TURN_MS);
+      } else {
+        go();
+      }
+      // If the page never moves (end of the book, a load error), put it back.
+      window.setTimeout(() => {
+        if (pendingTurnRef.current !== dir) return;
+        pendingTurnRef.current = null;
+        el.classList.remove(...PAGE_ANIM_CLASSES);
+        sheetRef.current?.classList.remove(...SHEET_CLASSES);
+        flipRef.current?.cancel();
+        flipRef.current = null;
+      }, 1500);
+    },
+    [snapKey],
+  );
   turnRef.current = turnPage;
 
   /** Advance to the next page; resolves true if it moved, false at book's end. */
@@ -1246,7 +1338,10 @@ export function EpubReader({
         </div>
       </div>
 
-      <div className="relative flex-1 overflow-hidden [perspective:1800px]">
+      <div
+        ref={stageRef}
+        className="relative flex-1 overflow-hidden [perspective:1800px]"
+      >
         <div ref={hostRef} className="page-stage h-full w-full" />
         {spread ? (
           <>
@@ -1271,14 +1366,15 @@ export function EpubReader({
             background: `rgba(255,159,10,${(Math.min(prefs.warmth, 100) / 100) * 0.5})`,
           }}
         />
+        <div ref={flipLayerRef} aria-hidden="true" className="flip-layer" />
         <button
           aria-label="Previous page"
-          onClick={() => turnPage("prev")}
+          onClick={() => void turnPage("prev")}
           className="absolute inset-y-0 left-0 w-[18%]"
         />
         <button
           aria-label="Next page"
-          onClick={() => turnPage("next")}
+          onClick={() => void turnPage("next")}
           className="absolute inset-y-0 right-0 w-[18%]"
         />
         <TapZoneHint />
@@ -1336,7 +1432,7 @@ export function EpubReader({
         className="flex items-center gap-3 border-t border-gold/15 bg-background/95 px-safe py-2"
       >
         <button
-          onClick={() => turnPage("prev")}
+          onClick={() => void turnPage("prev")}
           aria-label="Previous"
           className="flex size-11 items-center justify-center text-gold"
         >
@@ -1359,7 +1455,7 @@ export function EpubReader({
           {percent}%
         </span>
         <button
-          onClick={() => turnPage("next")}
+          onClick={() => void turnPage("next")}
           aria-label="Next"
           className="flex size-11 items-center justify-center text-gold"
         >

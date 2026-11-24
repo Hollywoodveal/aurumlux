@@ -28,11 +28,17 @@ final class WebViewController: UIViewController {
         configuration.mediaTypesRequiringUserActionForPlayback = []
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
         configuration.defaultWebpagePreferences.preferredContentMode = .mobile
+        // Lets the reader's page-turn animation show the real page as it turns.
+        let snapshotHandler = SnapshotHandler()
+        configuration.userContentController.addScriptMessageHandler(
+            snapshotHandler, contentWorld: .page, name: "aurumSnapshot"
+        )
         configuration.userContentController.addUserScript(
             WKUserScript(source: Self.nativeShim, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        snapshotHandler.webView = webView
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsLinkPreview = false
@@ -338,5 +344,53 @@ private extension UIColor {
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
         guard getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return false }
         return (0.299 * red + 0.587 * green + 0.114 * blue) < 0.5
+    }
+}
+
+// MARK: - Page snapshots
+
+/// Answers `window.webkit.messageHandlers.aurumSnapshot.postMessage({x, y,
+/// width, height})` with a JPEG data URL of that part of the screen (CSS
+/// pixels). The reader draws it on the page leaf while the page turns.
+final class SnapshotHandler: NSObject, WKScriptMessageHandlerWithReply {
+    weak var webView: WKWebView?
+
+    func userContentController(
+        _ userContentController: WKUserContentController,
+        didReceive message: WKScriptMessage,
+        replyHandler: @escaping (Any?, String?) -> Void
+    ) {
+        guard
+            let webView,
+            let body = message.body as? [String: Any],
+            let x = (body["x"] as? NSNumber)?.doubleValue,
+            let y = (body["y"] as? NSNumber)?.doubleValue,
+            let width = (body["width"] as? NSNumber)?.doubleValue,
+            let height = (body["height"] as? NSNumber)?.doubleValue,
+            width >= 1, height >= 1
+        else {
+            replyHandler(nil, "Bad snapshot request")
+            return
+        }
+        let config = WKSnapshotConfiguration()
+        config.rect = CGRect(x: x, y: y, width: width, height: height)
+        config.afterScreenUpdates = false
+        webView.takeSnapshot(with: config) { image, error in
+            guard let image else {
+                replyHandler(nil, error?.localizedDescription ?? "Snapshot failed")
+                return
+            }
+            // Encode off the main thread; reply back on it.
+            DispatchQueue.global(qos: .userInitiated).async {
+                let data = image.jpegData(compressionQuality: 0.82)
+                DispatchQueue.main.async {
+                    guard let data else {
+                        replyHandler(nil, "Snapshot failed")
+                        return
+                    }
+                    replyHandler("data:image/jpeg;base64," + data.base64EncodedString(), nil)
+                }
+            }
+        }
     }
 }
