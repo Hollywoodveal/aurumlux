@@ -49,6 +49,8 @@ import { SpokenHighlighter } from "@/lib/spoken-highlight";
 export { DEFAULT_PREFS };
 export type { ReaderPrefs, ReaderTheme, ReaderThemeChoice };
 
+const PAGE_ANIMS: ReaderPrefs["pageAnim"][] = ["turn", "slide", "fade", "none"];
+
 export function ReaderSettings({
   prefs,
   onChange,
@@ -221,7 +223,7 @@ export function ReaderSettings({
           Page turn
         </p>
         <div className="mt-2 flex gap-2">
-          {(["none", "slide", "fade"] as ReaderPrefs["pageAnim"][]).map((a) => (
+          {PAGE_ANIMS.map((a) => (
             <button
               key={a}
               onClick={() => onChange({ ...prefs, pageAnim: a })}
@@ -383,6 +385,17 @@ export function ReaderSettings({
   );
 }
 
+/** Every page-transition class, so one can be swapped for another cleanly. */
+const PAGE_ANIM_CLASSES = [
+  "page-anim-slide",
+  "page-anim-fade",
+  "page-turn-away",
+  "page-turn-back",
+  "page-turn-settle",
+];
+/** Matches the page-turn-away animation in styles.css. */
+const PAGE_TURN_MS = 260;
+
 export function EpubReader({
   book,
   prefs,
@@ -430,6 +443,9 @@ export function EpubReader({
   const [ready, setReady] = useState(false);
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
+  /** Direction of a page-turn animation waiting for its page to render. */
+  const pendingTurnRef = useRef<"next" | "prev" | null>(null);
+  const turnRef = useRef<(dir: "next" | "prev") => void>(() => undefined);
   /** Follow-along narration state: word highlighter, its document, page-turn lock. */
   const spokenRef = useRef<SpokenHighlighter | null>(null);
   const spokenDocRef = useRef<Document | null>(null);
@@ -553,9 +569,20 @@ export function EpubReader({
           "(prefers-reduced-motion: reduce)",
         ).matches;
         const el = hostRef.current;
+        const turned = pendingTurnRef.current;
+        pendingTurnRef.current = null;
         if (el && anim !== "none" && !reduceMotion) {
-          const cls = anim === "slide" ? "page-anim-slide" : "page-anim-fade";
-          el.classList.remove("page-anim-slide", "page-anim-fade");
+          // A tapped page turn finishes here: the new page settles into view
+          // (forward) or swings back down onto the stack (back). Jumps from the
+          // contents, search or read-aloud just fade in.
+          const cls = turned
+            ? turned === "next"
+              ? "page-turn-settle"
+              : "page-turn-back"
+            : anim === "slide"
+              ? "page-anim-slide"
+              : "page-anim-fade";
+          el.classList.remove(...PAGE_ANIM_CLASSES);
           // eslint-disable-next-line @typescript-eslint/no-unused-expressions
           el.offsetWidth;
           el.classList.add(cls);
@@ -565,8 +592,8 @@ export function EpubReader({
       });
 
       rendition.on("keyup", (e: KeyboardEvent) => {
-        if (e.key === "ArrowRight") rendition.next();
-        if (e.key === "ArrowLeft") rendition.prev();
+        if (e.key === "ArrowRight") turnRef.current("next");
+        if (e.key === "ArrowLeft") turnRef.current("prev");
       });
 
       // Taps inside the book document: used to jump to the spoken word.
@@ -806,6 +833,51 @@ export function EpubReader({
       doc?.body?.textContent ?? contents?.content?.textContent;
     return text?.trim() || null;
   }, []);
+
+  /**
+   * Turn the page from a tap, swipe key or arrow. With the "turn" animation
+   * the current page lifts off its left edge and turns away before the next
+   * one is shown; going back, the previous page swings down onto the stack.
+   */
+  const turnPage = useCallback((dir: "next" | "prev") => {
+    const rendition = renditionRef.current;
+    if (!rendition) return;
+    const go = () =>
+      void (dir === "next" ? rendition.next() : rendition.prev());
+    const el = hostRef.current;
+    const reduceMotion = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const loc = rendition.location;
+    const atEdge = dir === "next" ? loc?.atEnd : loc?.atStart;
+    if (
+      prefsRef.current.pageAnim !== "turn" ||
+      reduceMotion ||
+      !el ||
+      atEdge ||
+      pendingTurnRef.current
+    ) {
+      go();
+      return;
+    }
+    pendingTurnRef.current = dir;
+    el.classList.remove(...PAGE_ANIM_CLASSES);
+    if (dir === "next") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      el.offsetWidth;
+      el.classList.add("page-turn-away");
+      window.setTimeout(go, PAGE_TURN_MS);
+    } else {
+      go();
+    }
+    // If the page never moves (end of the book, a load error), put it back.
+    window.setTimeout(() => {
+      if (pendingTurnRef.current !== dir) return;
+      pendingTurnRef.current = null;
+      el.classList.remove(...PAGE_ANIM_CLASSES);
+    }, 1500);
+  }, []);
+  turnRef.current = turnPage;
 
   /** Advance to the next page; resolves true if it moved, false at book's end. */
   const advanceForSpeech = useCallback(async () => {
@@ -1102,8 +1174,8 @@ export function EpubReader({
         </div>
       </div>
 
-      <div className="relative flex-1 overflow-hidden">
-        <div ref={hostRef} className="h-full w-full" />
+      <div className="relative flex-1 overflow-hidden [perspective:1800px]">
+        <div ref={hostRef} className="page-stage h-full w-full" />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
@@ -1120,12 +1192,12 @@ export function EpubReader({
         />
         <button
           aria-label="Previous page"
-          onClick={() => renditionRef.current?.prev()}
+          onClick={() => turnPage("prev")}
           className="absolute inset-y-0 left-0 w-[18%]"
         />
         <button
           aria-label="Next page"
-          onClick={() => renditionRef.current?.next()}
+          onClick={() => turnPage("next")}
           className="absolute inset-y-0 right-0 w-[18%]"
         />
         <TapZoneHint />
@@ -1137,7 +1209,7 @@ export function EpubReader({
         className="flex items-center gap-3 border-t border-gold/15 bg-background/95 px-safe py-2"
       >
         <button
-          onClick={() => renditionRef.current?.prev()}
+          onClick={() => turnPage("prev")}
           aria-label="Previous"
           className="flex size-11 items-center justify-center text-gold"
         >
@@ -1160,7 +1232,7 @@ export function EpubReader({
           {percent}%
         </span>
         <button
-          onClick={() => renditionRef.current?.next()}
+          onClick={() => turnPage("next")}
           aria-label="Next"
           className="flex size-11 items-center justify-center text-gold"
         >

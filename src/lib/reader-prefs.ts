@@ -38,7 +38,7 @@ export type ReaderPrefs = {
   /** Amber "warmth" overlay for night reading, 0 = none, 60 = very warm. */
   warmth: number;
   /** Page transition style for paginated reading. */
-  pageAnim: "none" | "slide" | "fade";
+  pageAnim: "none" | "slide" | "fade" | "turn";
   /** Dyslexia-friendly typeface + wider tracking, overrides fontFamily. */
   dyslexic: boolean;
   /** Text-to-speech rate multiplier. */
@@ -61,7 +61,7 @@ export const DEFAULT_PREFS: ReaderPrefs = {
   fontFamily: "Georgia, serif",
   brightness: 0,
   warmth: 0,
-  pageAnim: "slide",
+  pageAnim: "turn",
   dyslexic: false,
   speechRate: 1,
   highlightWords: true,
