@@ -388,7 +388,67 @@
   animation: page-fade-in 0.2s ease-out both;
 }
 
+/* "Turn" page animation: the page hinges on its left edge like a book.
+   Forward, the current page lifts toward the reader and turns away, then the
+   next page settles out of its shadow; back, the previous page swings down. */
+.page-stage {
+  transform-origin: left center;
+  backface-visibility: hidden;
+}
+
+@keyframes page-turn-away {
+  from {
+    transform: rotateY(0deg);
+    filter: brightness(1);
+    box-shadow: 0 0 0 transparent;
+  }
+  to {
+    transform: rotateY(-88deg);
+    filter: brightness(0.55);
+    box-shadow: 18px 0 40px rgb(0 0 0 / 45%);
+  }
+}
+
+@keyframes page-turn-back {
+  from {
+    transform: rotateY(-88deg);
+    filter: brightness(0.55);
+    box-shadow: 18px 0 40px rgb(0 0 0 / 45%);
+  }
+  to {
+    transform: rotateY(0deg);
+    filter: brightness(1);
+    box-shadow: 0 0 0 transparent;
+  }
+}
+
+@keyframes page-turn-settle {
+  from {
+    filter: brightness(0.72);
+  }
+  to {
+    filter: brightness(1);
+  }
+}
+
+@utility page-turn-away {
+  animation: page-turn-away 0.26s cubic-bezier(0.45, 0, 0.75, 0.4) forwards;
+  will-change: transform, filter;
+}
+
+@utility page-turn-back {
+  animation: page-turn-back 0.34s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  will-change: transform, filter;
+}
+
+@utility page-turn-settle {
+  animation: page-turn-settle 0.24s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .page-turn-away,
+  .page-turn-back,
+  .page-turn-settle,
   .page-anim-slide,
   .page-anim-fade {
     animation: none !important;
