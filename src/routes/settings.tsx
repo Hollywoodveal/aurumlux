@@ -266,9 +266,9 @@ function SettingsPage() {
   return (
     <main
       id="main-content"
-      className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-4xl"
+      className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe-page pt-safe lg:max-w-4xl"
     >
-      <header className="flex items-center gap-3">
+      <header className="side-chrome-gap flex items-center gap-3">
         <Link to="/" aria-label="Back to library" className="icon-btn">
           <ChevronLeft className="size-[18px]" />
         </Link>
@@ -279,7 +279,7 @@ function SettingsPage() {
       <div
         role="tablist"
         aria-label="Settings sections"
-        className="segmented no-scrollbar sticky top-0 z-20 mt-6 overflow-x-auto bg-background/95 py-1 backdrop-blur"
+        className="side-chrome-gap segmented no-scrollbar sticky top-0 z-20 mt-6 overflow-x-auto bg-background/95 py-1 backdrop-blur"
       >
         {TABS.map((t) => (
           <button

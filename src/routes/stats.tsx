@@ -290,9 +290,9 @@ function StatsPage() {
     return (
       <main
         id="main-content"
-        className="mx-auto min-h-dvh w-full max-w-3xl px-safe pt-safe lg:max-w-5xl"
+        className="mx-auto min-h-dvh w-full max-w-3xl px-safe-page pt-safe lg:max-w-5xl"
       >
-        <header className="flex items-center gap-3">
+        <header className="side-chrome-gap flex items-center gap-3">
           <Link to="/" aria-label="Back to library" className="icon-btn">
             <ChevronLeft className="size-[18px]" />
           </Link>
@@ -308,9 +308,9 @@ function StatsPage() {
   return (
     <main
       id="main-content"
-      className="mx-auto min-h-dvh w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-5xl"
+      className="mx-auto min-h-dvh w-full max-w-3xl pb-16 px-safe-page pt-safe lg:max-w-5xl"
     >
-      <header className="flex items-center gap-3">
+      <header className="side-chrome-gap flex items-center gap-3">
         <Link to="/" aria-label="Back to library" className="icon-btn">
           <ChevronLeft className="size-[18px]" />
         </Link>
@@ -318,7 +318,7 @@ function StatsPage() {
         <h1 className="font-display text-3xl text-gradient-gold">Statistics</h1>
       </header>
 
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section className="side-chrome-gap mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           ["Books", books.length],
           ["Finished", stats.finished.length],

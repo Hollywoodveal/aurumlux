@@ -306,6 +306,21 @@
   padding-right: calc(env(safe-area-inset-right, 0px) + 1rem);
 }
 
+/* Main tab pages: only the inset both sides share (a landscape notch phone),
+   so a one-sided status-bar column doesn't leave a dead strip down the page.
+   The page header adds the rest back with side-chrome-gap. */
+@utility px-safe-page {
+  padding-left: calc(min(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)) + 1rem);
+  padding-right: calc(min(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)) + 1rem);
+}
+
+/* Extra room beside the header for an inset on one side only, so the title,
+   buttons and search stay clear of a side-mounted clock and status icons. */
+@utility side-chrome-gap {
+  margin-left: calc(env(safe-area-inset-left, 0px) - min(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)));
+  margin-right: calc(env(safe-area-inset-right, 0px) - min(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)));
+}
+
 @utility px-safe-sm {
   padding-left: calc(env(safe-area-inset-left, 0px) + 0.75rem);
   padding-right: calc(env(safe-area-inset-right, 0px) + 0.75rem);
