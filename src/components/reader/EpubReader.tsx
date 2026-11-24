@@ -49,6 +49,8 @@ import { SpokenHighlighter } from "@/lib/spoken-highlight";
 export { DEFAULT_PREFS };
 export type { ReaderPrefs, ReaderTheme, ReaderThemeChoice };
 
+const PAGE_ANIMS: ReaderPrefs["pageAnim"][] = ["turn", "slide", "fade", "none"];
+
 export function ReaderSettings({
   prefs,
   onChange,
@@ -221,9 +223,7 @@ export function ReaderSettings({
           Page turn
         </p>
         <div className="mt-2 flex gap-2">
-          {(
-            ["turn", "slide", "fade", "none"] as ReaderPrefs["pageAnim"][]
-          ).map((a) => (
+          {PAGE_ANIMS.map((a) => (
             <button
               key={a}
               onClick={() => onChange({ ...prefs, pageAnim: a })}
