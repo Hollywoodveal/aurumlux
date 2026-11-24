@@ -417,82 +417,85 @@ function LibraryPage() {
     <MissingFilesContext.Provider value={missingFiles}>
       <main
         id="main-content"
-        className="mx-auto min-h-dvh w-full max-w-3xl pb-24 px-safe pt-safe lg:max-w-6xl"
+        className="mx-auto min-h-dvh w-full max-w-3xl pb-24 px-safe-page pt-safe lg:max-w-6xl"
       >
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <BrandMark size={46} />
-            <div>
-              <h1 className="font-display text-4xl leading-none foil-shine">
-                Aurum <span className="sr-only">— private offline library</span>
-              </h1>
-              <p className="mt-1.5 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-                Where every page is treasured
-              </p>
-            </div>
-          </div>
-          {books.length > 0 ? (
-            <ImportButton
-              label="Add"
-              className="shrink-0 px-4 py-2 text-xs uppercase tracking-[0.14em]"
-            />
-          ) : null}
-        </header>
-
-        <div className="flex items-center gap-2">
-          <StreakPill
-            books={books}
-            dailyGoal={dailyGoal}
-            recoveries={recoveries.list}
-          />
-          <SyncDot className="mt-4" />
-        </div>
-
-        {books.length > 0 ? <StorageSafetyCard /> : null}
-
-        <div className="mt-5 flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search your library by title, author, or note"
-              placeholder="Search titles, authors, notes"
-              className="w-full rounded-full border border-gold/20 bg-secondary/60 py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-gold/50"
-            />
-          </div>
-          <div className="relative">
-            <button
-              type="button"
-              aria-label={`Sort books, currently ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
-              title={`Sort: ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
-              onClick={() => setSortOpen((v) => !v)}
-              className="icon-btn"
-            >
-              <ArrowUpDown className="size-[18px]" />
-            </button>
-            {sortOpen ? (
-              <div className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-gold/25 bg-popover shadow-lux">
-                {SORTS.map((s) => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={() => {
-                      setSort(s.key);
-                      setSortOpen(false);
-                    }}
-                    className={cn(
-                      "block w-full px-4 py-2.5 text-left text-sm",
-                      sort === s.key
-                        ? "bg-gold/10 text-gold"
-                        : "text-foreground",
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                ))}
+        <div className="side-chrome-gap">
+          <header className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <BrandMark size={46} />
+              <div>
+                <h1 className="font-display text-4xl leading-none foil-shine">
+                  Aurum{" "}
+                  <span className="sr-only">— private offline library</span>
+                </h1>
+                <p className="mt-1.5 text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+                  Where every page is treasured
+                </p>
               </div>
+            </div>
+            {books.length > 0 ? (
+              <ImportButton
+                label="Add"
+                className="shrink-0 px-4 py-2 text-xs uppercase tracking-[0.14em]"
+              />
             ) : null}
+          </header>
+
+          <div className="flex items-center gap-2">
+            <StreakPill
+              books={books}
+              dailyGoal={dailyGoal}
+              recoveries={recoveries.list}
+            />
+            <SyncDot className="mt-4" />
+          </div>
+
+          {books.length > 0 ? <StorageSafetyCard /> : null}
+
+          <div className="mt-5 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search your library by title, author, or note"
+                placeholder="Search titles, authors, notes"
+                className="w-full rounded-full border border-gold/20 bg-secondary/60 py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-gold/50"
+              />
+            </div>
+            <div className="relative">
+              <button
+                type="button"
+                aria-label={`Sort books, currently ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
+                title={`Sort: ${SORTS.find((s) => s.key === sort)?.label ?? ""}`}
+                onClick={() => setSortOpen((v) => !v)}
+                className="icon-btn"
+              >
+                <ArrowUpDown className="size-[18px]" />
+              </button>
+              {sortOpen ? (
+                <div className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-gold/25 bg-popover shadow-lux">
+                  {SORTS.map((s) => (
+                    <button
+                      key={s.key}
+                      type="button"
+                      onClick={() => {
+                        setSort(s.key);
+                        setSortOpen(false);
+                      }}
+                      className={cn(
+                        "block w-full px-4 py-2.5 text-left text-sm",
+                        sort === s.key
+                          ? "bg-gold/10 text-gold"
+                          : "text-foreground",
+                      )}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 

@@ -106,9 +106,9 @@ function NotesPage() {
   return (
     <main
       id="main-content"
-      className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe pt-safe lg:max-w-4xl"
+      className="mx-auto min-h-screen w-full max-w-3xl pb-16 px-safe-page pt-safe lg:max-w-4xl"
     >
-      <header className="flex items-center gap-3">
+      <header className="side-chrome-gap flex items-center gap-3">
         <Link to="/" aria-label="Back to library" className="icon-btn">
           <ChevronLeft className="size-[18px]" />
         </Link>
@@ -148,13 +148,15 @@ function NotesPage() {
         {counts.note} notes
       </p>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        aria-label="Search highlights, bookmarks and notes"
-        placeholder="Search your annotations"
-        className="mt-5 w-full rounded-full border border-gold/20 bg-secondary/60 px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-gold/50"
-      />
+      <div className="side-chrome-gap mt-5">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search highlights, bookmarks and notes"
+          placeholder="Search your annotations"
+          className="w-full rounded-full border border-gold/20 bg-secondary/60 px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-gold/50"
+        />
+      </div>
 
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
         {KINDS.map((k) => (
