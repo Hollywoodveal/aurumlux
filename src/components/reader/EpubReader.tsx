@@ -929,7 +929,9 @@ export function EpubReader({
       sheet.classList.remove(...SHEET_CLASSES);
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       sheet.offsetWidth;
-      sheet.classList.add(dir === "next" ? "sheet-lift-next" : "sheet-lift-prev");
+      sheet.classList.add(
+        dir === "next" ? "sheet-lift-next" : "sheet-lift-prev",
+      );
       window.setTimeout(go, SHEET_LIFT_MS);
     } else if (dir === "next") {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
