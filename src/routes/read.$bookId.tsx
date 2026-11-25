@@ -8,6 +8,7 @@ import {
 } from "@/components/reader/EpubReader";
 import { PdfReader } from "@/components/reader/PdfReader";
 import { withPrefDefaults } from "@/lib/reader-prefs";
+import { ReaderErrorBoundary } from "@/components/reader/ReaderErrorBoundary";
 import { CbzReader } from "@/components/reader/CbzReader";
 import { TxtReader } from "@/components/reader/TxtReader";
 import { BrandMark } from "@/components/BrandMark";
@@ -361,7 +362,7 @@ function ReaderPage() {
   };
 
   return (
-    <>
+    <ReaderErrorBoundary onBack={back}>
       {book.format === "pdf" ? (
         <PdfReader {...shared} />
       ) : book.format === "cbz" || book.format === "cbr" ? (
@@ -371,6 +372,6 @@ function ReaderPage() {
       ) : (
         <EpubReader {...shared} />
       )}
-    </>
+    </ReaderErrorBoundary>
   );
 }

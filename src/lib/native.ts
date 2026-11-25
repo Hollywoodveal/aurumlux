@@ -11,6 +11,9 @@ export type NativeCapabilities = {
   widgets?: boolean;
   spotlight?: boolean;
   icloud?: boolean;
+  ai?: boolean;
+  translate?: boolean;
+  hinge?: boolean;
   platform?: string;
 };
 
@@ -19,6 +22,11 @@ export type NativeEvent =
   | { type: "continueReading" }
   | { type: "openBook"; id: string; annotationId?: string }
   | { type: "navigate"; to: string }
+  | {
+      type: "hinge";
+      status: "closed" | "partiallyOpen" | "fullyOpen" | "unknown" | "none";
+      angle: number;
+    }
   | {
       type: "speech";
       kind: "start" | "word" | "drained" | "paused" | "resumed" | "stopped";
@@ -84,6 +92,7 @@ export function connectNative(): Promise<NativeCapabilities> {
     }
   ).__aurumNative = {
     receive: (event) => {
+      if (event.type === "hinge") lastHinge = event;
       for (const fn of listeners) {
         try {
           fn(event);
@@ -107,6 +116,12 @@ export function nativeCapabilities(): NativeCapabilities {
 /** True when the app offers a capability (after connectNative resolved). */
 export function hasNative(cap: keyof NativeCapabilities) {
   return isNativeApp() && Boolean(capabilities[cap]);
+}
+
+let lastHinge: Extract<NativeEvent, { type: "hinge" }> | null = null;
+/** The iPhone Duo's latest hinge report, if any. */
+export function currentHinge() {
+  return lastHinge;
 }
 
 export function onNativeEvent(fn: (event: NativeEvent) => void) {

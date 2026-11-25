@@ -122,6 +122,32 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
                 }
             }
 
+        case "aiStatus":
+            replyHandler(Intelligence.status(), nil)
+        case "aiRespond":
+            Intelligence.respond(
+                instructions: body["instructions"] as? String ?? "",
+                prompt: body["prompt"] as? String ?? ""
+            ) { result in
+                switch result {
+                case .success(let text): replyHandler(text, nil)
+                case .failure(let error): replyHandler(nil, error.localizedDescription)
+                }
+            }
+
+        case "translate":
+            guard let presenter else {
+                replyHandler(false, nil)
+                return
+            }
+            replyHandler(Translator.present(body["text"] as? String ?? "", from: presenter), nil)
+
+        case "diagnostics":
+            replyHandler(CrashReports.shared.recent(), nil)
+        case "clearDiagnostics":
+            CrashReports.shared.clear()
+            replyHandler(true, nil)
+
         case "releaseInbox":
             Inbox.release(body["id"] as? String ?? "")
             replyHandler(true, nil)
@@ -140,6 +166,9 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
             "widgets": true,
             "spotlight": true,
             "icloud": true,
+            "ai": true,
+            "translate": Translator.isSupported,
+            "hinge": true,
             "platform": "ios",
         ]
     }

@@ -78,6 +78,9 @@ final class WebViewController: UIViewController {
 
         NativeBridge.shared.presenter = self
         NativeBridge.shared.pageWillLoad()
+        // Half-folded "laptop" reading on iPhone Duo, and crash reports.
+        HingeWatcher.attach(to: view) { NativeBridge.shared.send($0) }
+        CrashReports.shared.start()
         webView.load(URLRequest(url: AppConfig.startURL))
     }
 
