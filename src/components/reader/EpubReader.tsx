@@ -661,6 +661,17 @@ export function EpubReader({
   const flipLayerRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<Flip | null>(null);
   const activeFlipRef = useRef<Flip | null>(null);
+  /** Turns a prepared leaf, once. */
+  const startFlipRef = useRef<(flip: Flip) => void>(() => undefined);
+  startFlipRef.current = (flip: Flip) => {
+    if (flipRef.current !== flip) return;
+    flipRef.current = null;
+    activeFlipRef.current = flip;
+    void flip.start().then(() => {
+      if (activeFlipRef.current === flip) activeFlipRef.current = null;
+      scheduleSnapRef.current();
+    });
+  };
   /** Photo of the spread as it is now, taken ahead of the next tap. */
   const snapRef = useRef<{ key: string; snap: Snapshot } | null>(null);
   const coverShownRef = useRef(false);
@@ -820,14 +831,14 @@ export function EpubReader({
         pendingTurnRef.current = null;
         const sheet = sheetRef.current;
         const flip = flipRef.current;
-        flipRef.current = null;
+        // A photo turn may already be under way (started as soon as the new
+        // page rendered); then this event has nothing more to animate.
+        const flipping = Boolean(turned && (flip || activeFlipRef.current));
         if (turned && flip) {
           // The new pages are in place under the photo: turn the leaf.
-          activeFlipRef.current = flip;
-          void flip.start().then(() => {
-            if (activeFlipRef.current === flip) activeFlipRef.current = null;
-            scheduleSnapRef.current();
-          });
+          startFlipRef.current(flip);
+        } else if (flipping) {
+          // already turning
         } else if (turned && spreadRef.current && sheet) {
           // Over a spread the leaf finishes turning onto the other page.
           sheet.classList.remove(...SHEET_CLASSES);
@@ -837,7 +848,7 @@ export function EpubReader({
             turned === "next" ? "sheet-land-next" : "sheet-land-prev",
           );
         }
-        if (el && anim !== "none" && !reduceMotion && !(turned && flip)) {
+        if (el && anim !== "none" && !reduceMotion && !flipping) {
           // A tapped page turn finishes here: the new page settles into view
           // (forward) or swings back down onto the stack (back). Jumps from the
           // contents, search or read-aloud just fade in.
@@ -853,7 +864,7 @@ export function EpubReader({
           el.offsetWidth;
           el.classList.add(cls);
         }
-        if (!(turned && flip)) scheduleSnapRef.current();
+        if (!flipping) scheduleSnapRef.current();
         inkRef.current?.redraw();
         relocatedResolveRef.current?.();
         relocatedResolveRef.current = null;
@@ -1173,14 +1184,23 @@ export function EpubReader({
       snapRef.current = null;
       if (photoTurn && !snap) reportSnapshotProblem();
       if (snap && stage && layer && pendingTurnRef.current === dir) {
-        flipRef.current = prepareFlip(
+        const flip = prepareFlip(
           layer,
           snap,
           dir,
           THEME_COLORS[readerThemeRef.current].bg,
           spreadRef.current ? "spread" : "single",
         );
-        go();
+        flipRef.current = flip;
+        // Only change the page once the photo is actually on screen, so the
+        // new page never flashes before the turn.
+        await flip.ready;
+        const moved = dir === "next" ? rendition.next() : rendition.prev();
+        // Turn as soon as the new page has rendered underneath.
+        void Promise.resolve(moved).then(
+          () => startFlipRef.current(flip),
+          () => undefined,
+        );
       } else if (pendingTurnRef.current !== dir) {
         go();
       } else if (spreadRef.current && sheet) {
