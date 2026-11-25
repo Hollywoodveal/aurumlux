@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Moon, Pause, Play, Settings2, Square } from "lucide-react";
 
 import { announce } from "@/lib/announce";
+import { callNative, hasNative, onNativeEvent } from "@/lib/native";
 import { cn } from "@/lib/utils";
 import { VoicePickerSheet } from "@/components/reader/VoicePickerSheet";
 import {
@@ -20,6 +21,10 @@ export type ReadAloudControls = {
 
 export const speechSupported =
   typeof window !== "undefined" && "speechSynthesis" in window;
+
+/** In the iOS app, narration runs natively: it keeps going with the screen
+ *  locked and shows on the Lock Screen. */
+const nativeSpeech = () => hasNative("speech");
 
 /** Split plain text into speakable sentence chunks. */
 function toSentences(text: string): string[] {
@@ -107,7 +112,8 @@ export function ReadAloudBar({
 
   const stop = useCallback(() => {
     activeRef.current = false;
-    if (speechSupported) window.speechSynthesis.cancel();
+    if (nativeSpeech()) void callNative("speechStop");
+    else if (speechSupported) window.speechSynthesis.cancel();
     setSpeaking(false);
     setPaused(false);
     sentencesRef.current = [];
@@ -149,6 +155,57 @@ export function ReadAloudBar({
     indexRef.current = 0;
     return sentencesRef.current.length > 0;
   }, [getSectionText, onSectionEnd]);
+
+  /** Hands the whole section to the iPhone's speech engine at once, so it
+   *  can carry on while the app is in the background. */
+  const speakNative = useCallback(() => {
+    const s = settingsRef.current;
+    void callNative("speak", {
+      items: sentencesRef.current.map((text, id) => ({ id, text })),
+      voice: s.voice,
+      rate: Math.min(2, Math.max(0.5, s.rate)),
+      pitch: Math.min(2, Math.max(0.5, s.pitch)),
+      title: mediaTitle ?? "",
+      artist: mediaArtist ?? "",
+      replace: true,
+    });
+  }, [mediaTitle, mediaArtist]);
+
+  // Events from the native speech engine.
+  useEffect(() => {
+    return onNativeEvent((event) => {
+      if (event.type !== "speech" || !activeRef.current) return;
+      switch (event.kind) {
+        case "start": {
+          const sentence = sentencesRef.current[event.id ?? -1];
+          if (sentence) onPassageRef.current?.(sentence);
+          break;
+        }
+        case "word": {
+          const start = event.start ?? 0;
+          const len = event.length ?? 0;
+          if (len > 0) onWordRef.current?.({ start, end: start + len });
+          break;
+        }
+        case "drained":
+          void (async () => {
+            const ok = await loadNextSection();
+            if (!ok || !activeRef.current) stop();
+            else speakNative();
+          })();
+          break;
+        case "paused":
+          setPaused(true);
+          break;
+        case "resumed":
+          setPaused(false);
+          break;
+        case "stopped":
+          stop();
+          break;
+      }
+    });
+  }, [loadNextSection, speakNative, stop]);
 
   /** Device-voice narration loop (works fully offline). */
   const speakNext = useCallback(() => {
@@ -203,9 +260,10 @@ export function ReadAloudBar({
       const text = full && offsetChars > 0 ? full.slice(offsetChars) : full;
       sentencesRef.current = text ? toSentences(text) : [];
       indexRef.current = 0;
-      speakNext();
+      if (nativeSpeech()) speakNative();
+      else speakNext();
     },
-    [getSectionText, speakNext],
+    [getSectionText, speakNext, speakNative],
   );
 
   /**
@@ -226,6 +284,11 @@ export function ReadAloudBar({
   }, [controls, start, stop]);
 
   const togglePause = useCallback(() => {
+    if (nativeSpeech()) {
+      void callNative(paused ? "speechResume" : "speechPause");
+      setPaused(!paused);
+      return;
+    }
     if (!speechSupported) return;
     if (paused) {
       window.speechSynthesis.resume();
@@ -257,7 +320,8 @@ export function ReadAloudBar({
   useEffect(() => {
     const ms =
       typeof navigator !== "undefined" ? navigator.mediaSession : undefined;
-    if (!ms) return;
+    // The app shows its own Lock Screen controls for native narration.
+    if (!ms || nativeSpeech()) return;
     if (!speaking) {
       ms.playbackState = "none";
       return;
@@ -295,7 +359,8 @@ export function ReadAloudBar({
   useEffect(() => {
     const teardown = () => {
       activeRef.current = false;
-      if (speechSupported) window.speechSynthesis.cancel();
+      if (nativeSpeech()) void callNative("speechStop");
+      else if (speechSupported) window.speechSynthesis.cancel();
     };
     window.addEventListener("pagehide", teardown);
     return () => {

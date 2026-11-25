@@ -6,7 +6,39 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A1B2C3D4E5F60718293A4B01 /* AurumWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B02 /* AurumWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A1B2C3D4E5F60718293A4B03 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BC547780CDB4B51AF61045C1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1B2C3D4E5F60718293A4B04;
+			remoteInfo = AurumWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A1B2C3D4E5F60718293A4B06 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A1B2C3D4E5F60718293A4B01 /* AurumWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		A1B2C3D4E5F60718293A4B02 /* AurumWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AurumWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F60718293A4B14 /* Aurum.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Aurum.entitlements; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B15 /* AurumWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AurumWidgets.entitlements; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B16 /* AurumWidgets-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "AurumWidgets-Info.plist"; sourceTree = "<group>"; };
 		74FA41F14E417C29C7DDD3D5 /* Aurum.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aurum.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3051E065284BCA49444D458 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -17,10 +49,22 @@
 			path = Aurum;
 			sourceTree = "<group>";
 		};
+		A1B2C3D4E5F60718293A4B07 /* AurumWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AurumWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		55CDC8D5C0E6CC7EE2F6A093 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60718293A4B09 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -34,7 +78,11 @@
 			isa = PBXGroup;
 			children = (
 				A01D2462B11DE39A03F2B1E7 /* Aurum */,
+				A1B2C3D4E5F60718293A4B07 /* AurumWidgets */,
 				D3051E065284BCA49444D458 /* Info.plist */,
+				A1B2C3D4E5F60718293A4B16 /* AurumWidgets-Info.plist */,
+				A1B2C3D4E5F60718293A4B14 /* Aurum.entitlements */,
+				A1B2C3D4E5F60718293A4B15 /* AurumWidgets.entitlements */,
 				EBB742D3B671AB5C1C34E32C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -43,6 +91,7 @@
 			isa = PBXGroup;
 			children = (
 				74FA41F14E417C29C7DDD3D5 /* Aurum.app */,
+				A1B2C3D4E5F60718293A4B02 /* AurumWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -57,11 +106,13 @@
 				4BD115EBE7069340E95F0801 /* Sources */,
 				55CDC8D5C0E6CC7EE2F6A093 /* Frameworks */,
 				289DF4391977AF86E39AA87F /* Resources */,
+				A1B2C3D4E5F60718293A4B06 /* Embed Foundation Extensions */,
 				E7C38D690DA46C4922144257 /* Bundle web app */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A1B2C3D4E5F60718293A4B05 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A01D2462B11DE39A03F2B1E7 /* Aurum */,
@@ -72,6 +123,28 @@
 			productName = Aurum;
 			productReference = 74FA41F14E417C29C7DDD3D5 /* Aurum.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A1B2C3D4E5F60718293A4B04 /* AurumWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B2C3D4E5F60718293A4B11 /* Build configuration list for PBXNativeTarget "AurumWidgets" */;
+			buildPhases = (
+				A1B2C3D4E5F60718293A4B08 /* Sources */,
+				A1B2C3D4E5F60718293A4B09 /* Frameworks */,
+				A1B2C3D4E5F60718293A4B10 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A1B2C3D4E5F60718293A4B07 /* AurumWidgets */,
+			);
+			name = AurumWidgets;
+			packageProductDependencies = (
+			);
+			productName = AurumWidgets;
+			productReference = A1B2C3D4E5F60718293A4B02 /* AurumWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -84,6 +157,9 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					9618444E063DA784AFC798C7 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					A1B2C3D4E5F60718293A4B04 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
@@ -103,12 +179,20 @@
 			projectRoot = "";
 			targets = (
 				9618444E063DA784AFC798C7 /* Aurum */,
+				A1B2C3D4E5F60718293A4B04 /* AurumWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		289DF4391977AF86E39AA87F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60718293A4B10 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -147,7 +231,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1B2C3D4E5F60718293A4B08 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1B2C3D4E5F60718293A4B05 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1B2C3D4E5F60718293A4B04 /* AurumWidgets */;
+			targetProxy = A1B2C3D4E5F60718293A4B03 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		AD95AEC747252425CEA44308 /* Debug */ = {
@@ -213,6 +312,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Aurum.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -244,6 +344,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Aurum.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -271,6 +372,64 @@
 			};
 			name = Release;
 		};
+		A1B2C3D4E5F60718293A4B12 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AurumWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "AurumWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Aurum;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hollywoodveal.aurum.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1B2C3D4E5F60718293A4B13 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AurumWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "AurumWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Aurum;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hollywoodveal.aurum.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -288,6 +447,15 @@
 			buildConfigurations = (
 				3524DE625774258D52596337 /* Debug */,
 				301EBF346B1FFA406540661C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1B2C3D4E5F60718293A4B11 /* Build configuration list for PBXNativeTarget "AurumWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D4E5F60718293A4B12 /* Debug */,
+				A1B2C3D4E5F60718293A4B13 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

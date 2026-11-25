@@ -16,6 +16,7 @@ import { LiveAnnouncer } from "@/components/LiveAnnouncer";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { BottomNav, TabBarSpacer } from "@/components/BottomNav";
 import { Celebration } from "@/components/Celebration";
+import { NativeBridge } from "@/components/NativeBridge";
 import { registerServiceWorker } from "@/lib/pwa";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
@@ -216,6 +217,7 @@ function RootComponent() {
       <TabBarSpacer />
       <BottomNav />
       <Celebration />
+      <NativeBridge />
       <LiveAnnouncer />
       <UpdatePrompt />
       <InstallPrompt />
