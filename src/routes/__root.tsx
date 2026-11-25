@@ -18,6 +18,7 @@ import { BottomNav, TabBarSpacer } from "@/components/BottomNav";
 import { Celebration } from "@/components/Celebration";
 import { NativeBridge } from "@/components/NativeBridge";
 import { registerServiceWorker } from "@/lib/pwa";
+import { installErrorLog } from "@/lib/diagnostics";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
 /**
@@ -192,6 +193,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
+    installErrorLog();
     registerServiceWorker();
   }, []);
 

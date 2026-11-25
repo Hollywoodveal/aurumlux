@@ -6,6 +6,7 @@ import { SettingsSection } from "@/components/settings/SettingsSection";
 import { Switch } from "@/components/settings/Switch";
 import { SyncSettings } from "@/components/settings/SyncSettings";
 import { ICloudSyncSettings } from "@/components/settings/ICloudSyncSettings";
+import { DiagnosticsSettings } from "@/components/settings/DiagnosticsSettings";
 import { isNativeApp } from "@/lib/native";
 import { CoverRescanButton } from "@/components/CoverRescan";
 import { ThemePicker } from "@/components/settings/ThemePicker";
@@ -676,6 +677,13 @@ function SettingsPage() {
             >
               Replay the tour
             </button>
+          </SettingsSection>
+          <SettingsSection
+            id="problem-reports"
+            title="Problem reports"
+            className="mt-3"
+          >
+            <DiagnosticsSettings />
           </SettingsSection>
           <SettingsSection id="install" title="Install Aurum" className="mt-3">
             <p className="mt-1 text-sm text-muted-foreground">

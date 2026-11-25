@@ -9,9 +9,13 @@ import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
+  Eraser,
   List,
+  Languages,
   Palette,
   Search,
+  Sparkles,
+  Undo2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -46,7 +50,19 @@ import { DictionarySheet } from "@/components/reader/DictionarySheet";
 import { NoteComposer } from "@/components/reader/NoteComposer";
 import { SpokenHighlighter } from "@/lib/spoken-highlight";
 import { useCoverUrl } from "@/hooks/useLibrary";
-import { haptic } from "@/lib/native";
+import {
+  callNative,
+  currentHinge,
+  hasNative,
+  haptic,
+  isNativeApp,
+  onNativeEvent,
+} from "@/lib/native";
+import {
+  ReadingAssistant,
+  type AssistantTab,
+} from "@/components/reader/ReadingAssistant";
+import { INK_COLORS, InkController } from "@/lib/ink";
 import {
   canSnapshot,
   prepareFlip,
@@ -447,8 +463,13 @@ const SHEET_CLASSES = [
   "sheet-land-prev",
 ];
 const SHEET_LIFT_MS = 230;
-/** Reader width at which pages show side by side, like an open book. */
-const MIN_SPREAD_WIDTH = 700;
+/**
+ * Reader width at which pages show side by side, like an open book. 560
+ * catches the iPhone Duo's inner screen held upright (about 626 points wide,
+ * the fold running down the middle like a book's spine) while its outer
+ * screen (about 466) and ordinary iPhones held upright stay one page.
+ */
+const MIN_SPREAD_WIDTH = 560;
 
 export function EpubReader({
   book,
@@ -494,7 +515,8 @@ export function EpubReader({
   const scheduleSnapRef = useRef<() => void>(() => undefined);
   scheduleSnapRef.current = () => {
     window.clearTimeout(snapTimerRef.current);
-    if (!canSnapshot()) return;
+    // Photos only matter for the Turn animation; skip the work otherwise.
+    if (!canSnapshot() || prefsRef.current.pageAnim !== "turn") return;
     snapTimerRef.current = window.setTimeout(async () => {
       const stage = stageRef.current;
       const busy =
@@ -518,6 +540,17 @@ export function EpubReader({
   >(null);
   /** Word sent to the dictionary sheet, or null when it is closed. */
   const [lookup, setLookup] = useState<string | null>(null);
+  /** Apple Intelligence reading help (iOS app). */
+  const [assistant, setAssistant] = useState<AssistantTab | null>(null);
+  const showAssistant = isNativeApp() && hasNative("ai");
+  /** Apple Pencil ink: the controller, its canvas, and the tools' state. */
+  const inkRef = useRef<InkController | null>(null);
+  const inkCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [inkMode, setInkMode] = useState(false);
+  const [inkTool, setInkTool] = useState<{ color: string; erasing: boolean }>({
+    color: INK_COLORS[0] ?? "#d6b05c",
+    erasing: false,
+  });
 
   const [chapter, setChapter] = useState("");
   const [percent, setPercent] = useState(book.progress);
@@ -528,6 +561,90 @@ export function EpubReader({
   );
   const [query, setQuery] = useState("");
   const [ready, setReady] = useState(false);
+
+  /**
+   * iPhone Duo half-folded on a table, like a laptop: the page sits on the
+   * top half and big controls fill the bottom half.
+   */
+  const [tabletop, setTabletop] = useState(false);
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    const check = () => {
+      const h = currentHinge();
+      setTabletop(
+        Boolean(
+          h &&
+          h.status === "partiallyOpen" &&
+          h.angle >= 45 &&
+          h.angle <= 150 &&
+          window.innerWidth > window.innerHeight,
+        ),
+      );
+    };
+    check();
+    const off = onNativeEvent((e) => {
+      if (e.type === "hinge") check();
+    });
+    window.addEventListener("resize", check);
+    return () => {
+      off();
+      window.removeEventListener("resize", check);
+    };
+  }, []);
+  // The page area changed size without the window changing: re-lay pages.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      try {
+        renditionRef.current?.resize?.();
+      } catch {
+        /* not laid out yet */
+      }
+      inkRef.current?.redraw();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [tabletop]);
+
+  // Apple Pencil ink: set up once the page area exists.
+  useEffect(() => {
+    const canvas = inkCanvasRef.current;
+    const stage = stageRef.current;
+    if (!canvas || !stage) return;
+    const ink = new InkController({
+      canvas,
+      stage,
+      bookId: book.id,
+      pageKey: () => renditionRef.current?.location?.start?.cfi ?? null,
+      onModeChange: setInkMode,
+    });
+    inkRef.current = ink;
+    const ro = new ResizeObserver(() => ink.redraw());
+    ro.observe(stage);
+    return () => {
+      ro.disconnect();
+      ink.destroy();
+      inkRef.current = null;
+    };
+  }, [book.id]);
+
+  // Coming back to a book after a few days: offer a "previously" recap.
+  const offeredRecap = useRef(false);
+  useEffect(() => {
+    if (!ready || !showAssistant || offeredRecap.current) return;
+    const away = Date.now() - (book.lastOpened || Date.now());
+    if (away < 2 * 86400000 || book.progress < 2) return;
+    offeredRecap.current = true;
+    void import("@/lib/intelligence")
+      .then((m) => m.aiStatus())
+      .then((s) => {
+        if (!s.available) return;
+        toast(`Welcome back to ${book.title}`, {
+          description: "Want a quick recap of where you left off?",
+          duration: 9000,
+          action: { label: "Recap", onClick: () => setAssistant("recap") },
+        });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, showAssistant]);
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
   /** Direction of a page-turn animation waiting for its page to render. */
@@ -737,6 +854,7 @@ export function EpubReader({
           el.classList.add(cls);
         }
         if (!(turned && flip)) scheduleSnapRef.current();
+        inkRef.current?.redraw();
         relocatedResolveRef.current?.();
         relocatedResolveRef.current = null;
       });
@@ -754,7 +872,11 @@ export function EpubReader({
           view?.document ?? view?.contents?.document;
         doc?.addEventListener(
           "pointerdown",
-          (e: PointerEvent) => docTapRef.current?.(e),
+          (e: PointerEvent) => {
+            // The Apple Pencil writes on the page; a finger does the rest.
+            if (inkRef.current?.fromFrame(e, view?.iframe ?? null)) return;
+            docTapRef.current?.(e);
+          },
           true,
         );
       });
@@ -1343,6 +1465,7 @@ export function EpubReader({
       <div
         role="toolbar"
         aria-label="Reader controls"
+        hidden={tabletop}
         className="flex items-center justify-between gap-2 border-b border-gold/15 bg-background/95 px-safe-sm pb-2 pt-safe-sm"
       >
         <button
@@ -1364,6 +1487,15 @@ export function EpubReader({
           >
             <List className="size-[18px]" />
           </button>
+          {showAssistant ? (
+            <button
+              onClick={() => setAssistant("recap")}
+              aria-label="Reading assistant: recap, who's who and questions"
+              className="flex size-11 items-center justify-center"
+            >
+              <Sparkles className="size-[18px]" />
+            </button>
+          ) : null}
           <button
             onClick={() => setPanel("search")}
             aria-label="Search in book"
@@ -1390,7 +1522,11 @@ export function EpubReader({
 
       <div
         ref={stageRef}
-        className="relative flex-1 overflow-hidden [perspective:1800px]"
+        className={cn(
+          "relative overflow-hidden [perspective:1800px]",
+          tabletop ? "h-[50dvh] flex-none" : "flex-1",
+        )}
+        onPointerDownCapture={(e) => inkRef.current?.fromStage(e.nativeEvent)}
       >
         <div ref={hostRef} className="page-stage h-full w-full" />
         {spread ? (
@@ -1402,6 +1538,11 @@ export function EpubReader({
           </>
         ) : null}
         <div ref={sheetRef} aria-hidden="true" className="page-sheet" />
+        <canvas
+          ref={inkCanvasRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 size-full"
+        />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
@@ -1419,14 +1560,85 @@ export function EpubReader({
         <div ref={flipLayerRef} aria-hidden="true" className="flip-layer" />
         <button
           aria-label="Previous page"
-          onClick={() => void turnPage("prev")}
+          onClick={() => {
+            if (!inkRef.current?.isActive) void turnPage("prev");
+          }}
           className="absolute inset-y-0 left-0 w-[18%]"
         />
         <button
           aria-label="Next page"
-          onClick={() => void turnPage("next")}
+          onClick={() => {
+            if (!inkRef.current?.isActive) void turnPage("next");
+          }}
           className="absolute inset-y-0 right-0 w-[18%]"
         />
+        {inkMode ? (
+          <div
+            role="toolbar"
+            aria-label="Pencil ink"
+            className="absolute left-3 top-3 z-30 flex items-center gap-1.5 rounded-full border border-gold/30 bg-card/95 px-2 py-1.5 shadow-lux"
+          >
+            {INK_COLORS.map((c) => (
+              <button
+                key={c}
+                aria-label={`Ink colour ${c}`}
+                aria-pressed={!inkTool.erasing && inkTool.color === c}
+                onClick={() => {
+                  const ink = inkRef.current;
+                  if (ink) {
+                    ink.color = c;
+                    ink.erasing = false;
+                  }
+                  setInkTool({ color: c, erasing: false });
+                }}
+                className={cn(
+                  "size-7 rounded-full border-2",
+                  !inkTool.erasing && inkTool.color === c
+                    ? "border-ivory"
+                    : "border-transparent",
+                )}
+                style={{ background: c }}
+              />
+            ))}
+            <button
+              aria-label="Eraser"
+              aria-pressed={inkTool.erasing}
+              onClick={() => {
+                const erasing = !inkTool.erasing;
+                if (inkRef.current) inkRef.current.erasing = erasing;
+                setInkTool((t) => ({ ...t, erasing }));
+              }}
+              className={cn(
+                "flex size-9 items-center justify-center rounded-full text-gold",
+                inkTool.erasing && "bg-gold/15",
+              )}
+            >
+              <Eraser className="size-4" />
+            </button>
+            <button
+              aria-label="Undo last stroke"
+              onClick={() => inkRef.current?.undo()}
+              className="flex size-9 items-center justify-center rounded-full text-gold"
+            >
+              <Undo2 className="size-4" />
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm("Clear all ink on this page?"))
+                  inkRef.current?.clearPage();
+              }}
+              className="min-h-9 rounded-full px-2 text-[10px] uppercase tracking-widest text-gold/80"
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => inkRef.current?.setActive(false)}
+              className="min-h-9 rounded-full bg-gold/15 px-3 text-[10px] uppercase tracking-widest text-gold"
+            >
+              Done
+            </button>
+          </div>
+        ) : null}
         <TapZoneHint />
         {coverShown && prefs.showCover && coverUrl ? (
           <button
@@ -1469,6 +1681,47 @@ export function EpubReader({
           </button>
         ) : null}
       </div>
+
+      {tabletop ? (
+        <div
+          role="group"
+          aria-label="Half-folded controls"
+          className="flex flex-1 items-stretch gap-3 border-t border-gold/20 px-safe py-3"
+        >
+          <button
+            onClick={() => void turnPage("prev")}
+            aria-label="Previous page"
+            className="flex flex-1 items-center justify-center rounded-2xl border border-gold/25 bg-secondary/40 text-gold"
+          >
+            <ChevronLeft className="size-8" />
+          </button>
+          <div className="flex w-40 flex-col items-center justify-center gap-2 text-center">
+            <button
+              onClick={onBack}
+              className="text-[11px] uppercase tracking-[0.16em] text-gold/80"
+            >
+              Library
+            </button>
+            <p className="line-clamp-2 font-display text-sm text-ivory">
+              {chapter || book.title}
+            </p>
+            <button
+              onClick={() => setPanel("settings")}
+              aria-label="Reading settings"
+              className="flex size-11 items-center justify-center text-gold"
+            >
+              <Palette className="size-[18px]" />
+            </button>
+          </div>
+          <button
+            onClick={() => void turnPage("next")}
+            aria-label="Next page"
+            className="flex flex-1 items-center justify-center rounded-2xl border border-gold/25 bg-secondary/40 text-gold"
+          >
+            <ChevronRight className="size-8" />
+          </button>
+        </div>
+      ) : null}
 
       <footer
         role="group"
@@ -1542,6 +1795,28 @@ export function EpubReader({
           <BookA className="mr-1 inline size-3" />
           Define
         </button>
+        {hasNative("translate") ? (
+          <button
+            aria-label="Translate selected text"
+            onClick={() => {
+              const contents = renditionRef.current?.getContents?.()?.[0];
+              const text = String(
+                contents?.window?.getSelection?.() ?? "",
+              ).trim();
+              if (!text) {
+                toast.info(
+                  "Select a word or sentence first, then tap Translate",
+                );
+                return;
+              }
+              void callNative("translate", { text: text.slice(0, 2000) });
+            }}
+            className="min-h-11 rounded-full border border-gold/25 px-3 text-[11px] uppercase tracking-widest text-gold/80"
+          >
+            <Languages className="mr-1 inline size-3" />
+            Translate
+          </button>
+        ) : null}
 
         {goalHud}
 
@@ -1561,6 +1836,18 @@ export function EpubReader({
 
       {lookup !== null ? (
         <DictionarySheet word={lookup} onClose={() => setLookup(null)} />
+      ) : null}
+
+      {assistant ? (
+        <ReadingAssistant
+          book={book}
+          initialTab={assistant}
+          getFraction={() =>
+            Number(renditionRef.current?.location?.start?.percentage) ||
+            book.progress / 100
+          }
+          onClose={() => setAssistant(null)}
+        />
       ) : null}
 
       {panel === "settings" ? (
