@@ -81,7 +81,7 @@ export async function publishNativeSnapshots() {
   };
   const coverKey = book ? `${book.id}:${book.hasCover}` : "";
   if (coverKey !== lastCoverFor) {
-    widget.cover = book?.hasCover ? await widgetCover(book.id) : "";
+    widget["cover"] = book?.hasCover ? await widgetCover(book.id) : "";
     lastCoverFor = coverKey;
   }
   await callNative("widget", widget);
