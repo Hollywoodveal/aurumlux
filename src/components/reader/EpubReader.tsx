@@ -447,8 +447,13 @@ const SHEET_CLASSES = [
   "sheet-land-prev",
 ];
 const SHEET_LIFT_MS = 230;
-/** Reader width at which pages show side by side, like an open book. */
-const MIN_SPREAD_WIDTH = 700;
+/**
+ * Reader width at which pages show side by side, like an open book. 560
+ * catches the iPhone Duo's inner screen held upright (about 626 points wide,
+ * the fold running down the middle like a book's spine) while its outer
+ * screen (about 466) and ordinary iPhones held upright stay one page.
+ */
+const MIN_SPREAD_WIDTH = 560;
 
 export function EpubReader({
   book,
