@@ -80,6 +80,10 @@ final class WebViewController: UIViewController {
         NativeBridge.shared.pageWillLoad()
         // Half-folded "laptop" reading on iPhone Duo, and crash reports.
         HingeWatcher.attach(to: view) { NativeBridge.shared.send($0) }
+        // Drag a page's edge to turn it (see CurlDrag).
+        CurlDrag.shared.webView = webView
+        CurlDrag.shared.host = self
+        CurlDrag.shared.send = { NativeBridge.shared.send($0) }
         CrashReports.shared.start()
         webView.load(URLRequest(url: AppConfig.startURL))
     }

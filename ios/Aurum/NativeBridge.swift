@@ -145,6 +145,15 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
             PageCurl.shared.finish(in: webView, forward: (body["forward"] as? Bool) ?? true) {
                 replyHandler($0, nil)
             }
+        case "curlZones":
+            CurlDrag.shared.configure(body)
+            replyHandler(true, nil)
+        case "curlDragReady":
+            CurlDrag.shared.pageMoved()
+            replyHandler(true, nil)
+        case "curlDragRestored":
+            CurlDrag.shared.pageRestored()
+            replyHandler(true, nil)
         case "curlCancel":
             PageCurl.shared.cancel()
             replyHandler(true, nil)
@@ -197,6 +206,7 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
             "translate": Translator.isSupported,
             "hinge": true,
             "curl": true,
+            "curlDrag": true,
             "platform": "ios",
         ]
     }

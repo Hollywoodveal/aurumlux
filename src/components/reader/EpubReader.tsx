@@ -686,6 +686,109 @@ export function EpubReader({
   const [coverShown, setCoverShown] = useState(() => prefs.showCover);
   const [coverOpening, setCoverOpening] = useState(false);
   coverShownRef.current = coverShown && prefs.showCover && Boolean(coverUrl);
+
+  /**
+   * Drag-to-turn (iOS app): the app owns the outer fifth of each side of the
+   * page, where a drag curls the page under your finger and a tap turns it.
+   * The zones are switched off whenever something covers the page.
+   */
+  const curlZonesOn =
+    hasNative("curlDrag") &&
+    ready &&
+    prefs.pageAnim === "turn" &&
+    !panel &&
+    lookup === null &&
+    !assistant &&
+    !inkMode &&
+    !(coverShown && prefs.showCover && coverUrl);
+  const publishCurlZones = useCallback(() => {
+    if (!hasNative("curlDrag")) return;
+    const stage = stageRef.current;
+    const loc = renditionRef.current?.location;
+    if (!curlZonesOnRef.current || !stage) {
+      void callNative("curlZones", { enabled: false });
+      return;
+    }
+    const r = stage.getBoundingClientRect();
+    void callNative("curlZones", {
+      enabled: true,
+      x: r.left,
+      y: r.top,
+      width: r.width,
+      height: r.height,
+      spread: spreadRef.current,
+      atStart: Boolean(loc?.atStart),
+      atEnd: Boolean(loc?.atEnd),
+      paper: THEME_COLORS[readerThemeRef.current].bg,
+    });
+  }, []);
+  const publishCurlZonesRef = useRef(publishCurlZones);
+  publishCurlZonesRef.current = publishCurlZones;
+  const curlZonesOnRef = useRef(curlZonesOn);
+  curlZonesOnRef.current = curlZonesOn;
+  useEffect(() => {
+    publishCurlZones();
+  }, [curlZonesOn, spread, tabletop, publishCurlZones]);
+  useEffect(() => {
+    if (!hasNative("curlDrag")) return;
+    const stage = stageRef.current;
+    const ro = stage ? new ResizeObserver(() => publishCurlZones()) : null;
+    if (stage) ro?.observe(stage);
+    const off = onNativeEvent((e) => {
+      const rendition = renditionRef.current;
+      if (e.type === "edgeTap") {
+        void turnRef.current(e.dir);
+      } else if (e.type === "curlDrag" && rendition) {
+        // The page is being dragged: move to the next page underneath so the
+        // app can show it as the page curls away.
+        haptic();
+        nativeCurlRef.current = true;
+        pendingTurnRef.current = e.dir;
+        const moved = e.dir === "next" ? rendition.next() : rendition.prev();
+        void Promise.resolve(moved)
+          .catch(() => undefined)
+          .then(
+            () =>
+              new Promise<void>((resolve) =>
+                requestAnimationFrame(() =>
+                  requestAnimationFrame(() => resolve()),
+                ),
+              ),
+          )
+          .then(() => callNative("curlDragReady"));
+      } else if (e.type === "curlDragDone") {
+        nativeCurlRef.current = false;
+        pendingTurnRef.current = null;
+        publishCurlZones();
+      } else if (e.type === "curlDragCancel" && rendition) {
+        // Let go without turning: go back to the page you were on.
+        pendingTurnRef.current = e.dir === "next" ? "prev" : "next";
+        const back = e.dir === "next" ? rendition.prev() : rendition.next();
+        void Promise.resolve(back)
+          .catch(() => undefined)
+          .then(
+            () =>
+              new Promise<void>((resolve) =>
+                requestAnimationFrame(() =>
+                  requestAnimationFrame(() => resolve()),
+                ),
+              ),
+          )
+          .then(() => {
+            nativeCurlRef.current = false;
+            pendingTurnRef.current = null;
+            void callNative("curlDragRestored");
+            publishCurlZones();
+          });
+      }
+    });
+    return () => {
+      off();
+      ro?.disconnect();
+      void callNative("curlZones", { enabled: false });
+    };
+  }, [publishCurlZones]);
+
   /** Turning back from the first page closes the book onto its cover. */
   const showCoverRef = useRef<() => boolean>(() => false);
   showCoverRef.current = () => {
@@ -875,6 +978,7 @@ export function EpubReader({
         }
         if (!flipping) scheduleSnapRef.current();
         inkRef.current?.redraw();
+        if (!nativeCurlRef.current) publishCurlZonesRef.current();
         relocatedResolveRef.current?.();
         relocatedResolveRef.current = null;
       });
