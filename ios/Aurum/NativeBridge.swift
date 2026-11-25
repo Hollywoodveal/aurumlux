@@ -122,6 +122,33 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
                 }
             }
 
+        case "curlBegin":
+            guard let webView, let presenter else {
+                replyHandler(false, nil)
+                return
+            }
+            let rect = CGRect(
+                x: (body["x"] as? NSNumber)?.doubleValue ?? 0,
+                y: (body["y"] as? NSNumber)?.doubleValue ?? 0,
+                width: (body["width"] as? NSNumber)?.doubleValue ?? 0,
+                height: (body["height"] as? NSNumber)?.doubleValue ?? 0
+            )
+            PageCurl.shared.begin(
+                in: webView, host: presenter, rect: rect,
+                spread: (body["spread"] as? Bool) ?? false
+            ) { replyHandler($0, nil) }
+        case "curlFinish":
+            guard let webView else {
+                replyHandler(false, nil)
+                return
+            }
+            PageCurl.shared.finish(in: webView, forward: (body["forward"] as? Bool) ?? true) {
+                replyHandler($0, nil)
+            }
+        case "curlCancel":
+            PageCurl.shared.cancel()
+            replyHandler(true, nil)
+
         case "aiStatus":
             replyHandler(Intelligence.status(), nil)
         case "aiRespond":
@@ -169,6 +196,7 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
             "ai": true,
             "translate": Translator.isSupported,
             "hinge": true,
+            "curl": true,
             "platform": "ios",
         ]
     }

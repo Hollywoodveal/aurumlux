@@ -516,7 +516,12 @@ export function EpubReader({
   scheduleSnapRef.current = () => {
     window.clearTimeout(snapTimerRef.current);
     // Photos only matter for the Turn animation; skip the work otherwise.
-    if (!canSnapshot() || prefsRef.current.pageAnim !== "turn") return;
+    if (
+      !canSnapshot() ||
+      hasNative("curl") ||
+      prefsRef.current.pageAnim !== "turn"
+    )
+      return;
     snapTimerRef.current = window.setTimeout(async () => {
       const stage = stageRef.current;
       const busy =
@@ -661,6 +666,8 @@ export function EpubReader({
   const flipLayerRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<Flip | null>(null);
   const activeFlipRef = useRef<Flip | null>(null);
+  /** A native page curl is covering the page (iOS app). */
+  const nativeCurlRef = useRef(false);
   /** Turns a prepared leaf, once. */
   const startFlipRef = useRef<(flip: Flip) => void>(() => undefined);
   startFlipRef.current = (flip: Flip) => {
@@ -833,7 +840,9 @@ export function EpubReader({
         const flip = flipRef.current;
         // A photo turn may already be under way (started as soon as the new
         // page rendered); then this event has nothing more to animate.
-        const flipping = Boolean(turned && (flip || activeFlipRef.current));
+        const flipping = Boolean(
+          turned && (flip || activeFlipRef.current || nativeCurlRef.current),
+        );
         if (turned && flip) {
           // The new pages are in place under the photo: turn the leaf.
           startFlipRef.current(flip);
@@ -1145,6 +1154,13 @@ export function EpubReader({
         return;
       }
       // Tapping again mid-turn: finish that turn and move on straight away.
+      if (nativeCurlRef.current) {
+        void callNative("curlCancel");
+        nativeCurlRef.current = false;
+        pendingTurnRef.current = null;
+        go();
+        return;
+      }
       const turning = activeFlipRef.current;
       if (turning) {
         turning.cancel();
@@ -1166,6 +1182,37 @@ export function EpubReader({
       const sheet = sheetRef.current;
       const stage = stageRef.current;
       const layer = flipLayerRef.current;
+
+      // In the iOS app: Apple's own page curl, drawn natively over the page.
+      if (hasNative("curl") && stage) {
+        nativeCurlRef.current = true;
+        const r = stage.getBoundingClientRect();
+        const covered = await callNative<boolean>("curlBegin", {
+          x: r.left,
+          y: r.top,
+          width: r.width,
+          height: r.height,
+          spread: spreadRef.current,
+        });
+        const moved = dir === "next" ? rendition.next() : rendition.prev();
+        if (covered) {
+          try {
+            await moved;
+          } catch {
+            /* the page didn't move; the curl still clears itself */
+          }
+          // Let the new page paint before the app photographs it.
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          );
+          if (nativeCurlRef.current)
+            await callNative("curlFinish", { forward: dir === "next" });
+        }
+        nativeCurlRef.current = false;
+        pendingTurnRef.current = null;
+        return;
+      }
+
       // In the app: lay a photo of the page over it, render the new page
       // underneath, then turn the photographed leaf, curling like paper
       // (relocated handler). One page turning back keeps the swing-down.

@@ -14,6 +14,7 @@ export type NativeCapabilities = {
   ai?: boolean;
   translate?: boolean;
   hinge?: boolean;
+  curl?: boolean;
   platform?: string;
 };
 
