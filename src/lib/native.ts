@@ -15,6 +15,7 @@ export type NativeCapabilities = {
   translate?: boolean;
   hinge?: boolean;
   curl?: boolean;
+  curlDrag?: boolean;
   platform?: string;
 };
 
@@ -23,6 +24,11 @@ export type NativeEvent =
   | { type: "continueReading" }
   | { type: "openBook"; id: string; annotationId?: string }
   | { type: "navigate"; to: string }
+  | { type: "edgeTap"; dir: "next" | "prev" }
+  | {
+      type: "curlDrag" | "curlDragDone" | "curlDragCancel";
+      dir: "next" | "prev";
+    }
   | {
       type: "hinge";
       status: "closed" | "partiallyOpen" | "fullyOpen" | "unknown" | "none";
