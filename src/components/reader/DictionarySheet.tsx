@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Volume2, X } from "lucide-react";
+import { callNative, hasNative } from "@/lib/native";
 
 type Entry = {
   word: string;
@@ -25,8 +26,22 @@ export function DictionarySheet({
   const [entry, setEntry] = useState<Entry | null>(null);
   const [error, setError] = useState<string | null>(null);
   const term = word.trim().replace(/^[^\p{L}]+|[^\p{L}]+$/gu, "");
+  // In the iOS app, use the iPhone's own dictionary: offline, any language.
+  const [nativeFailed, setNativeFailed] = useState(false);
+  const native = hasNative("dictionary") && Boolean(term) && !nativeFailed;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
+    if (!native) return;
+    void callNative<boolean>("define", { term }).then((shown) => {
+      if (shown) onCloseRef.current();
+      else setNativeFailed(true);
+    });
+  }, [native, term]);
+
+  useEffect(() => {
+    if (native) return;
     let alive = true;
     setEntry(null);
     setError(null);
@@ -54,12 +69,14 @@ export function DictionarySheet({
     return () => {
       alive = false;
     };
-  }, [term]);
+  }, [term, native]);
 
   const speak = () => {
     if (!("speechSynthesis" in window) || !term) return;
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(term));
   };
+
+  if (native) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end">

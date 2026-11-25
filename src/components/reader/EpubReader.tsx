@@ -46,6 +46,7 @@ import { DictionarySheet } from "@/components/reader/DictionarySheet";
 import { NoteComposer } from "@/components/reader/NoteComposer";
 import { SpokenHighlighter } from "@/lib/spoken-highlight";
 import { useCoverUrl } from "@/hooks/useLibrary";
+import { haptic } from "@/lib/native";
 import {
   canSnapshot,
   prepareSpreadFlip,
@@ -971,6 +972,7 @@ export function EpubReader({
       ).matches;
       const loc = rendition.location;
       const atEdge = dir === "next" ? loc?.atEnd : loc?.atStart;
+      if (!atEdge) haptic();
       // Tapping again mid-turn: finish that turn and move on straight away.
       const turning = activeFlipRef.current;
       if (turning) {

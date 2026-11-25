@@ -5,6 +5,8 @@ import { BrandMark } from "@/components/BrandMark";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { Switch } from "@/components/settings/Switch";
 import { SyncSettings } from "@/components/settings/SyncSettings";
+import { ICloudSyncSettings } from "@/components/settings/ICloudSyncSettings";
+import { isNativeApp } from "@/lib/native";
 import { CoverRescanButton } from "@/components/CoverRescan";
 import { ThemePicker } from "@/components/settings/ThemePicker";
 
@@ -505,6 +507,16 @@ function SettingsPage() {
 
       {tab === "sync" ? (
         <div role="tabpanel" id="panel-sync" aria-labelledby="tab-sync">
+          {isNativeApp() ? (
+            <SettingsSection
+              id="icloud-sync"
+              title="iCloud sync"
+              icon={<RefreshCw className="size-4 text-gold" aria-hidden />}
+              className="mt-4"
+            >
+              <ICloudSyncSettings />
+            </SettingsSection>
+          ) : null}
           <SettingsSection
             id="webdav-sync"
             title="Sync across devices"

@@ -47,6 +47,8 @@ final class BundleSchemeHandler: NSObject, WKURLSchemeHandler {
     // MARK: - Path resolution
 
     func resolve(_ url: URL) -> URL? {
+        // Books handed over by other apps (see Inbox in NativeBridge.swift).
+        if url.path.hasPrefix("/__inbox/") { return Inbox.file(forPath: url.path) }
         var path = url.path
         if path.isEmpty || path == "/" { path = "/index.html" }
         let relative = String(path.drop(while: { $0 == "/" }))

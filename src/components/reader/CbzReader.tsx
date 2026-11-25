@@ -26,6 +26,9 @@ import {
 } from "@/lib/reader-prefs";
 import { useAppTheme } from "@/hooks/useAppTheme";
 import { BOOK_OPEN } from "@/lib/transitions";
+import { haptic } from "@/lib/native";
+
+const TURN_CLASSES = ["page-turn-away", "page-turn-back", "page-turn-settle"];
 
 type ComicPage = { name: string; entry: any };
 
@@ -164,11 +167,62 @@ export function CbzReader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pages.length]);
 
-  const goPrev = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
-  const goNext = useCallback(
-    () => setPage((p) => Math.min(pages.length || 1, p + 1)),
-    [pages.length],
+  /** The comic page hinges on its left edge like a book page ("Turn" in
+   *  Reading settings): forward it turns away, back it swings down. */
+  const stageRef = useRef<HTMLDivElement>(null);
+  const turnRef = useRef<"next" | "prev" | null>(null);
+  const pageRef = useRef(page);
+  pageRef.current = page;
+  const wantsTurn = () =>
+    prefs.pageAnim === "turn" &&
+    !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+  const turnTo = useCallback(
+    (dir: "next" | "prev") => {
+      const current = pageRef.current;
+      const target =
+        dir === "next"
+          ? Math.min(pages.length || 1, current + 1)
+          : Math.max(1, current - 1);
+      if (target === current) return;
+      haptic();
+      const el = stageRef.current;
+      if (!el || !wantsTurn() || turnRef.current) {
+        setPage(target);
+        return;
+      }
+      turnRef.current = dir;
+      el.classList.remove(...TURN_CLASSES);
+      if (dir === "next") {
+        el.classList.add("page-turn-away");
+        window.setTimeout(() => setPage(target), 260);
+      } else {
+        setPage(target);
+      }
+      // Never leave the page turned away if the image doesn't change.
+      window.setTimeout(() => {
+        if (turnRef.current !== dir) return;
+        turnRef.current = null;
+        el.classList.remove(...TURN_CLASSES);
+      }, 1500);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pages.length, prefs.pageAnim],
   );
+  const goPrev = useCallback(() => turnTo("prev"), [turnTo]);
+  const goNext = useCallback(() => turnTo("next"), [turnTo]);
+
+  // The new page is showing: finish the turn.
+  useEffect(() => {
+    const dir = turnRef.current;
+    const el = stageRef.current;
+    if (!dir || !el) return;
+    turnRef.current = null;
+    el.classList.remove(...TURN_CLASSES);
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    el.offsetWidth;
+    el.classList.add(dir === "next" ? "page-turn-settle" : "page-turn-back");
+  }, [url]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -242,7 +296,7 @@ export function CbzReader({
         </div>
       </div>
 
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-hidden [perspective:1800px]">
         {error ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
             <p className="text-sm text-muted-foreground">{error}</p>
@@ -253,7 +307,10 @@ export function CbzReader({
           </p>
         ) : (
           <>
-            <div className="flex h-full items-center justify-center overflow-auto">
+            <div
+              ref={stageRef}
+              className="page-stage flex h-full items-center justify-center overflow-auto"
+            >
               {url ? (
                 <img
                   src={url}

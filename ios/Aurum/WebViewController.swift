@@ -33,12 +33,18 @@ final class WebViewController: UIViewController {
         configuration.userContentController.addScriptMessageHandler(
             snapshotHandler, contentWorld: .page, name: "aurumSnapshot"
         )
+        // Widgets, Siri, Spotlight, read-aloud, haptics, the dictionary,
+        // iCloud and books opened from other apps (see NativeBridge).
+        configuration.userContentController.addScriptMessageHandler(
+            NativeBridge.shared, contentWorld: .page, name: "aurum"
+        )
         configuration.userContentController.addUserScript(
             WKUserScript(source: Self.nativeShim, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         snapshotHandler.webView = webView
+        NativeBridge.shared.webView = webView
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsLinkPreview = false
@@ -70,6 +76,8 @@ final class WebViewController: UIViewController {
             }
         }
 
+        NativeBridge.shared.presenter = self
+        NativeBridge.shared.pageWillLoad()
         webView.load(URLRequest(url: AppConfig.startURL))
     }
 
@@ -217,6 +225,7 @@ extension WebViewController: WKNavigationDelegate {
     /// this). Reload so the user isn't left with a blank screen. Data lives in
     /// IndexedDB, so nothing saved is lost.
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        NativeBridge.shared.pageWillLoad()
         if webView.url != nil {
             webView.reload()
         } else {
