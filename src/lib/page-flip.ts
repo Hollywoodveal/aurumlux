@@ -63,6 +63,8 @@ export async function snapshotElement(
 }
 
 export type Flip = {
+  /** Resolves once the photo is decoded and painted over the page. */
+  ready: Promise<void>;
   /** Turn the leaf; resolves once it has landed and the layer is gone. */
   start: () => Promise<void>;
   /** Remove the leaf at once. */
@@ -139,7 +141,8 @@ export function prepareFlip(
   const back = dir === "prev"; // the leaf starts lying on the left
   layer.replaceChildren();
   layer.style.opacity = "1";
-  layer.style.visibility = "visible";
+  // Shown in `ready`, once the photo can be painted in one go.
+  layer.style.visibility = "hidden";
 
   // The page that stays put until the leaf lands on it (spreads only).
   if (mode === "spread") {
@@ -193,7 +196,7 @@ export function prepareFlip(
       div({
         position: "absolute",
         inset: "0",
-        opacity: "0.08",
+        opacity: "0.045",
         transform: "scaleX(-1)",
         ...photo(snap, offsetX),
       }),
@@ -268,7 +271,22 @@ export function prepareFlip(
     layer.style.opacity = "1";
   };
 
+  const frame2 = () =>
+    new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  const image = new Image();
+  image.src = snap.url;
+  const ready = image
+    .decode()
+    .catch(() => undefined)
+    .then(() => {
+      if (!done) layer.style.visibility = "visible";
+      return frame2();
+    });
+
   return {
+    ready,
     cancel: clear,
     start: () =>
       new Promise<void>((resolve) => {
