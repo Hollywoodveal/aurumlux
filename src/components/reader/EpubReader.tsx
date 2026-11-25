@@ -49,8 +49,9 @@ import { useCoverUrl } from "@/hooks/useLibrary";
 import { haptic } from "@/lib/native";
 import {
   canSnapshot,
-  prepareSpreadFlip,
+  prepareFlip,
   snapshotElement,
+  snapshotError,
   type Flip,
   type Snapshot,
 } from "@/lib/page-flip";
@@ -418,6 +419,16 @@ export function ReaderSettings({
   );
 }
 
+let snapshotProblemShown = false;
+/** Says once why a page turn couldn't use the real page, so it can be fixed. */
+function reportSnapshotProblem() {
+  if (snapshotProblemShown) return;
+  snapshotProblemShown = true;
+  toast.error(
+    `Page turn animation couldn't photograph the page (${snapshotError() ?? "no reason given"}). Turning without it.`,
+  );
+}
+
 /** Every page-transition class, so one can be swapped for another cleanly. */
 const PAGE_ANIM_CLASSES = [
   "page-anim-slide",
@@ -492,7 +503,7 @@ export function EpubReader({
         activeFlipRef.current ||
         coverShownRef.current ||
         flipLayerRef.current?.style.visibility === "visible";
-      if (!stage || !spreadRef.current || busy) return;
+      if (!stage || busy) return;
       const key = snapKey();
       const snap = await snapshotElement(stage);
       if (snap && key === snapKey() && !pendingTurnRef.current) {
@@ -540,6 +551,24 @@ export function EpubReader({
   const [coverShown, setCoverShown] = useState(() => prefs.showCover);
   const [coverOpening, setCoverOpening] = useState(false);
   coverShownRef.current = coverShown && prefs.showCover && Boolean(coverUrl);
+  /** Turning back from the first page closes the book onto its cover. */
+  const showCoverRef = useRef<() => boolean>(() => false);
+  showCoverRef.current = () => {
+    if (!prefs.showCover || !coverUrl) return false;
+    setCoverOpening(false);
+    setCoverShown(true);
+    return true;
+  };
+  const openCover = useCallback(() => {
+    const reduce = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    haptic();
+    if (reduce) setCoverShown(false);
+    else setCoverOpening(true);
+  }, []);
+  const openCoverRef = useRef(openCover);
+  openCoverRef.current = openCover;
   /** Follow-along narration state: word highlighter, its document, page-turn lock. */
   const spokenRef = useRef<SpokenHighlighter | null>(null);
   const spokenDocRef = useRef<Document | null>(null);
@@ -964,6 +993,11 @@ export function EpubReader({
     async (dir: "next" | "prev") => {
       const rendition = renditionRef.current;
       if (!rendition) return;
+      // On the cover, "next" opens the book.
+      if (coverShownRef.current) {
+        if (dir === "next") openCoverRef.current();
+        return;
+      }
       const go = () =>
         void (dir === "next" ? rendition.next() : rendition.prev());
       const el = hostRef.current;
@@ -973,6 +1007,10 @@ export function EpubReader({
       const loc = rendition.location;
       const atEdge = dir === "next" ? loc?.atEnd : loc?.atStart;
       if (!atEdge) haptic();
+      if (dir === "prev" && loc?.atStart && showCoverRef.current()) {
+        haptic();
+        return;
+      }
       // Tapping again mid-turn: finish that turn and move on straight away.
       const turning = activeFlipRef.current;
       if (turning) {
@@ -995,23 +1033,33 @@ export function EpubReader({
       const sheet = sheetRef.current;
       const stage = stageRef.current;
       const layer = flipLayerRef.current;
-      if (spreadRef.current && canSnapshot() && stage && layer) {
-        // In the app: lay a photo of the spread over it, render the new pages
-        // underneath, then turn the photographed leaf (relocated handler).
-        const key = snapKey();
-        const snap =
-          snapRef.current?.key === key
+      // In the app: lay a photo of the page over it, render the new page
+      // underneath, then turn the photographed leaf, curling like paper
+      // (relocated handler). One page turning back keeps the swing-down.
+      const photoTurn = Boolean(
+        canSnapshot() &&
+        stage &&
+        layer &&
+        (spreadRef.current || dir === "next"),
+      );
+      const snap =
+        photoTurn && stage
+          ? snapRef.current?.key === snapKey()
             ? snapRef.current.snap
-            : await snapshotElement(stage);
-        snapRef.current = null;
-        if (snap && pendingTurnRef.current === dir) {
-          flipRef.current = prepareSpreadFlip(
-            layer,
-            snap,
-            dir,
-            THEME_COLORS[readerThemeRef.current].bg,
-          );
-        }
+            : await snapshotElement(stage)
+          : null;
+      snapRef.current = null;
+      if (photoTurn && !snap) reportSnapshotProblem();
+      if (snap && stage && layer && pendingTurnRef.current === dir) {
+        flipRef.current = prepareFlip(
+          layer,
+          snap,
+          dir,
+          THEME_COLORS[readerThemeRef.current].bg,
+          spreadRef.current ? "spread" : "single",
+        );
+        go();
+      } else if (pendingTurnRef.current !== dir) {
         go();
       } else if (spreadRef.current && sheet) {
         // Two pages: a leaf lifts off one page, the spread changes while it is
@@ -1384,13 +1432,7 @@ export function EpubReader({
           <button
             type="button"
             aria-label={`Open ${book.title}`}
-            onClick={() => {
-              const reduce = window.matchMedia?.(
-                "(prefers-reduced-motion: reduce)",
-              ).matches;
-              if (reduce) setCoverShown(false);
-              else setCoverOpening(true);
-            }}
+            onClick={openCover}
             onAnimationEnd={(e) => {
               if (e.target === e.currentTarget) setCoverShown(false);
             }}
