@@ -83,6 +83,7 @@ final class WebViewController: UIViewController {
         // Drag a page's edge to turn it (see CurlDrag).
         CurlDrag.shared.webView = webView
         CurlDrag.shared.host = self
+        FrontCover.shared.host = self
         CurlDrag.shared.send = { NativeBridge.shared.send($0) }
         CrashReports.shared.start()
         webView.load(URLRequest(url: AppConfig.startURL))

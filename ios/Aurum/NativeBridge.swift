@@ -158,6 +158,10 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
             PageCurl.shared.cancel()
             replyHandler(true, nil)
 
+        case "frontCover":
+            FrontCover.shared.update(body)
+            replyHandler(true, nil)
+
         case "aiStatus":
             replyHandler(Intelligence.status(), nil)
         case "aiRespond":
@@ -207,6 +211,7 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
             "hinge": true,
             "curl": true,
             "curlDrag": true,
+            "frontCover": FrontCover.isSupported,
             "platform": "ios",
         ]
     }

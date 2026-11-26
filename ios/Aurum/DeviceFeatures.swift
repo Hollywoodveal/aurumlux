@@ -166,6 +166,7 @@ enum HingeWatcher {
     private static func report(_ status: String, angle: Double, send: ([String: Any]) -> Void) {
         guard status != lastStatus else { return }
         lastStatus = status
+        FrontCover.shared.hingeChanged(status)
         send(["type": "hinge", "status": status, "angle": angle.rounded()])
     }
 }

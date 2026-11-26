@@ -53,6 +53,8 @@ export type ReaderPrefs = {
   bookTypography: boolean;
   /** Show the book's cover when it opens; tap to open it to your page. */
   showCover: boolean;
+  /** iPhone Duo: show the cover on the front screen while reading open. */
+  frontCover?: boolean;
   /** Settings version; 2 = the "turn" page animation exists. */
   prefsVersion?: number;
 };
