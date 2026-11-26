@@ -315,6 +315,36 @@ export function ReaderSettings({
           </button>
         </div>
 
+        {hasNative("frontCover") ? (
+          <div className="mt-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Cover on front screen
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                iPhone Duo, open: shows this book&apos;s cover on the outside.
+                iOS only allows this while the camera runs, so the camera light
+                stays on and it uses more battery. Nothing is recorded.
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                onChange({ ...prefs, frontCover: !prefs.frontCover })
+              }
+              aria-pressed={Boolean(prefs.frontCover)}
+              aria-label="Toggle cover on front screen"
+              className={cn(
+                "min-h-11 min-w-11 shrink-0 rounded-full border px-4 text-xs uppercase tracking-widest",
+                prefs.frontCover
+                  ? "border-gold/60 bg-gold/10 text-gold"
+                  : "border-border text-muted-foreground",
+              )}
+            >
+              {prefs.frontCover ? "On" : "Off"}
+            </button>
+          </div>
+        ) : null}
+
         <div className="mt-6 flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
@@ -686,6 +716,55 @@ export function EpubReader({
   const [coverShown, setCoverShown] = useState(() => prefs.showCover);
   const [coverOpening, setCoverOpening] = useState(false);
   coverShownRef.current = coverShown && prefs.showCover && Boolean(coverUrl);
+
+  // iPhone Duo: the book's cover on the front screen while reading open.
+  const frontCoverOn = hasNative("frontCover") && Boolean(prefs.frontCover);
+  const roundedPercent = Math.round(percent);
+  useEffect(() => {
+    if (!frontCoverOn) return;
+    let cancelled = false;
+    void (async () => {
+      let cover = "";
+      if (coverUrl) {
+        try {
+          const blob = await (await fetch(coverUrl)).blob();
+          const bitmap = await createImageBitmap(blob);
+          const scale = Math.min(
+            1,
+            1100 / Math.max(bitmap.width, bitmap.height),
+          );
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(bitmap.width * scale);
+          canvas.height = Math.round(bitmap.height * scale);
+          canvas
+            .getContext("2d")
+            ?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          bitmap.close();
+          cover = canvas.toDataURL("image/jpeg", 0.85);
+        } catch {
+          cover = "";
+        }
+      }
+      if (cancelled) return;
+      void callNative("frontCover", {
+        enabled: true,
+        title: book.title,
+        author: book.author,
+        cover,
+      });
+    })();
+    return () => {
+      cancelled = true;
+      void callNative("frontCover", { enabled: false });
+    };
+  }, [frontCoverOn, coverUrl, book.title, book.author]);
+  useEffect(() => {
+    if (frontCoverOn)
+      void callNative("frontCover", {
+        enabled: true,
+        progress: roundedPercent,
+      });
+  }, [frontCoverOn, roundedPercent]);
 
   /**
    * Drag-to-turn (iOS app): the app owns the outer fifth of each side of the

@@ -133,7 +133,7 @@
 		</dict>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Aurum uses the camera so you can take a photo for a book cover.</string>
+	<string>Aurum uses the camera so you can take a photo for a book cover, and, if you turn on "Cover on front screen", to show the book cover on iPhone Duo's front screen while you read. Nothing is recorded.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Aurum saves images you export to your photo library.</string>
 </dict>

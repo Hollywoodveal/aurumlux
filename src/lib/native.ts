@@ -16,6 +16,7 @@ export type NativeCapabilities = {
   hinge?: boolean;
   curl?: boolean;
   curlDrag?: boolean;
+  frontCover?: boolean;
   platform?: string;
 };
 

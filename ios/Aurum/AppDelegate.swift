@@ -15,6 +15,12 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         configurationForConnecting connectingSceneSession: UISceneSession,
         options: UIScene.ConnectionOptions
     ) -> UISceneConfiguration {
+        // The book cover on iPhone Duo's front screen brings its own scene.
+        if #available(iOS 27.1, *), connectingSceneSession.role == .windowCameraCaptureAccessory {
+            let configuration = UISceneConfiguration(name: "Front Cover", sessionRole: connectingSceneSession.role)
+            configuration.delegateClass = FrontCoverSceneDelegate.self
+            return configuration
+        }
         let configuration = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
         configuration.delegateClass = SceneDelegate.self
         return configuration
@@ -29,7 +35,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         willConnectTo session: UISceneSession,
         options connectionOptions: UIScene.ConnectionOptions
     ) {
-        guard let windowScene = scene as? UIWindowScene else { return }
+        guard let windowScene = scene as? UIWindowScene,
+              session.role == .windowApplication else { return }
         let window = UIWindow(windowScene: windowScene)
         window.backgroundColor = AppConfig.launchBackground
         window.rootViewController = WebViewController()
