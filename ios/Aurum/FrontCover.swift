@@ -27,6 +27,10 @@ final class FrontCover: NSObject {
 
     private var enabled = false
     private var folded = false
+    /// A small live preview on the inner screen too: iOS only treats the app
+    /// as "capturing" (and offers the front screen) when the camera's picture
+    /// is visible somewhere.
+    private var innerPreview: UIView?
     private var registrationBox: AnyObject?
     private let queue = DispatchQueue(label: "aurum.frontcover.camera")
     private var configured = false
@@ -66,11 +70,68 @@ final class FrontCover: NSObject {
         guard enabled else {
             setAccessoryEnabled(false)
             stopCamera()
+            showInnerPreview(false)
             return
         }
         registerIfNeeded()
         setAccessoryEnabled(true)
-        if folded { stopCamera() } else { startCamera() }
+        if folded {
+            stopCamera()
+            showInnerPreview(false)
+        } else {
+            startCamera()
+            showInnerPreview(true)
+        }
+    }
+
+    private func showInnerPreview(_ show: Bool) {
+        guard show else {
+            innerPreview?.removeFromSuperview()
+            innerPreview = nil
+            return
+        }
+        guard innerPreview == nil, let hostView = host?.view else { return }
+        let preview = CameraPreviewView()
+        preview.previewLayer.session = session
+        preview.previewLayer.videoGravity = .resizeAspectFill
+        preview.translatesAutoresizingMaskIntoConstraints = false
+        preview.layer.cornerRadius = 14
+        preview.layer.masksToBounds = true
+        preview.layer.borderWidth = 1
+        preview.layer.borderColor = UIColor(red: 0.84, green: 0.69, blue: 0.36, alpha: 0.6).cgColor
+        preview.isUserInteractionEnabled = false
+        preview.accessibilityLabel = "Camera on for the front-screen cover"
+        hostView.addSubview(preview)
+        NSLayoutConstraint.activate([
+            preview.widthAnchor.constraint(equalToConstant: 28),
+            preview.heightAnchor.constraint(equalToConstant: 28),
+            preview.leadingAnchor.constraint(equalTo: hostView.safeAreaLayoutGuide.leadingAnchor, constant: 8),
+            preview.bottomAnchor.constraint(equalTo: hostView.safeAreaLayoutGuide.bottomAnchor, constant: -8),
+        ])
+        innerPreview = preview
+    }
+
+    /// For the setting's status line, so problems can be seen and fixed.
+    func status() -> [String: Any] {
+        let auth: String
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized: auth = "allowed"
+        case .denied: auth = "denied"
+        case .restricted: auth = "restricted"
+        default: auth = "not asked"
+        }
+        var result: [String: Any] = [
+            "camera": auth,
+            "running": session.isRunning,
+            "hasInput": !session.inputs.isEmpty,
+            "folded": folded,
+            "registered": registrationBox != nil,
+            "enabled": enabled,
+        ]
+        if #available(iOS 27.1, *), let box = registrationBox as? AccessoryBox {
+            result["available"] = box.registration.isAvailable
+        }
+        return result
     }
 
     // MARK: Scene accessory
@@ -226,20 +287,21 @@ struct FrontCoverView: View {
 private struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
 
-    func makeUIView(context: Context) -> PreviewView {
-        let view = PreviewView()
+    func makeUIView(context: Context) -> CameraPreviewView {
+        let view = CameraPreviewView()
         view.previewLayer.session = session
         view.previewLayer.videoGravity = .resizeAspectFill
         return view
     }
 
-    func updateUIView(_ uiView: PreviewView, context: Context) {}
+    func updateUIView(_ uiView: CameraPreviewView, context: Context) {}
+}
 
-    final class PreviewView: UIView {
-        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
-        var previewLayer: AVCaptureVideoPreviewLayer {
-            // swiftlint:disable:next force_cast
-            layer as! AVCaptureVideoPreviewLayer
-        }
+/// A view whose layer shows the camera's live picture.
+final class CameraPreviewView: UIView {
+    override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+    var previewLayer: AVCaptureVideoPreviewLayer {
+        // swiftlint:disable:next force_cast
+        layer as! AVCaptureVideoPreviewLayer
     }
 }

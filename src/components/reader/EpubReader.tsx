@@ -77,6 +77,55 @@ export type { ReaderPrefs, ReaderTheme, ReaderThemeChoice };
 
 const PAGE_ANIMS: ReaderPrefs["pageAnim"][] = ["turn", "slide", "fade", "none"];
 
+type FrontStatus = {
+  camera?: string;
+  running?: boolean;
+  hasInput?: boolean;
+  folded?: boolean;
+  registered?: boolean;
+  available?: boolean;
+};
+
+/** What's stopping the front-screen cover, in plain words. */
+function FrontCoverStatus() {
+  const [s, setS] = useState<FrontStatus | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const poll = () =>
+      void callNative<FrontStatus>("frontCoverStatus").then((r) => {
+        if (alive) setS(r);
+      });
+    poll();
+    const id = window.setInterval(poll, 1500);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, []);
+  if (!s) return null;
+  const line =
+    s.camera === "denied" || s.camera === "restricted"
+      ? "Camera access is off. Turn it on in the Settings app › Aurum › Camera."
+      : s.camera === "not asked"
+        ? "Waiting for camera permission."
+        : s.folded
+          ? "Open the phone to show the cover on the front screen."
+          : !s.hasInput
+            ? "Couldn't start the rear camera."
+            : !s.running
+              ? "Starting the camera…"
+              : !s.registered
+                ? "This version of iOS doesn't offer the front screen."
+                : s.available === false
+                  ? "Camera on, but iOS isn't offering the front screen right now (the app must be full screen on the inner display)."
+                  : "Showing the cover on the front screen.";
+  return (
+    <p className="mt-2 text-[11px] text-gold/80" aria-live="polite">
+      {line}
+    </p>
+  );
+}
+
 export function ReaderSettings({
   prefs,
   onChange,
@@ -343,6 +392,9 @@ export function ReaderSettings({
               {prefs.frontCover ? "On" : "Off"}
             </button>
           </div>
+        ) : null}
+        {hasNative("frontCover") && prefs.frontCover ? (
+          <FrontCoverStatus />
         ) : null}
 
         <div className="mt-6 flex items-center justify-between">
