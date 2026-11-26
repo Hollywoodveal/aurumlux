@@ -261,7 +261,7 @@ final class CurlDrag: NSObject, UIPageViewControllerDataSource, UIPageViewContro
         let config = WKSnapshotConfiguration()
         config.rect = rect
         config.afterScreenUpdates = true
-        webView.takeSnapshot(with: config) { [weak self] image in
+        webView.takeSnapshot(with: config) { [weak self] image, _ in
             guard let self, let image else { return }
             let parts = self.split(image)
             for (vc, part) in zip(self.incoming, parts) { vc.image = part }
@@ -323,7 +323,7 @@ final class CurlDrag: NSObject, UIPageViewControllerDataSource, UIPageViewContro
         let config = WKSnapshotConfiguration()
         config.rect = rect
         config.afterScreenUpdates = false
-        webView.takeSnapshot(with: config) { [weak self] image in
+        webView.takeSnapshot(with: config) { [weak self] image, _ in
             guard let self, let image, self.movedTo == nil else { return }
             let fresh = self.placeholders(count: self.spread ? 2 : 1)
             for (vc, part) in zip(fresh, self.split(image)) { vc.image = part }

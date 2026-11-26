@@ -160,7 +160,9 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
 
         case "frontCover":
             FrontCover.shared.update(body)
-            replyHandler(true, nil)
+            replyHandler(FrontCover.shared.status(), nil)
+        case "frontCoverStatus":
+            replyHandler(FrontCover.shared.status(), nil)
 
         case "aiStatus":
             replyHandler(Intelligence.status(), nil)
